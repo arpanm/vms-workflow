@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ScopeRouteImport } from './routes/scope'
 import { Route as RequirementsRouteImport } from './routes/requirements'
 import { Route as EngagementsRouteImport } from './routes/engagements'
+import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as IndexRouteImport } from './routes/index'
 
 const ScopeRoute = ScopeRouteImport.update({
@@ -29,6 +30,11 @@ const EngagementsRoute = EngagementsRouteImport.update({
   path: '/engagements',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApprovalsRoute = ApprovalsRouteImport.update({
+  id: '/approvals',
+  path: '/approvals',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -37,12 +43,14 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/approvals': typeof ApprovalsRoute
   '/engagements': typeof EngagementsRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/approvals': typeof ApprovalsRoute
   '/engagements': typeof EngagementsRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
@@ -50,20 +58,28 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/approvals': typeof ApprovalsRoute
   '/engagements': typeof EngagementsRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/engagements' | '/requirements' | '/scope'
+  fullPaths: '/' | '/approvals' | '/engagements' | '/requirements' | '/scope'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/engagements' | '/requirements' | '/scope'
-  id: '__root__' | '/' | '/engagements' | '/requirements' | '/scope'
+  to: '/' | '/approvals' | '/engagements' | '/requirements' | '/scope'
+  id:
+    | '__root__'
+    | '/'
+    | '/approvals'
+    | '/engagements'
+    | '/requirements'
+    | '/scope'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApprovalsRoute: typeof ApprovalsRoute
   EngagementsRoute: typeof EngagementsRoute
   RequirementsRoute: typeof RequirementsRoute
   ScopeRoute: typeof ScopeRoute
@@ -92,6 +108,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EngagementsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/approvals': {
+      id: '/approvals'
+      path: '/approvals'
+      fullPath: '/approvals'
+      preLoaderRoute: typeof ApprovalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -104,6 +127,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApprovalsRoute: ApprovalsRoute,
   EngagementsRoute: EngagementsRoute,
   RequirementsRoute: RequirementsRoute,
   ScopeRoute: ScopeRoute,
