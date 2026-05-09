@@ -14,7 +14,245 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      approvals: {
+        Row: {
+          acted_at: string | null
+          approver: string
+          id: string
+          notes: string
+          requested_at: string
+          requirement_id: string | null
+          sla_hours: number
+          status: Database["public"]["Enums"]["approval_status"]
+        }
+        Insert: {
+          acted_at?: string | null
+          approver: string
+          id?: string
+          notes?: string
+          requested_at?: string
+          requirement_id?: string | null
+          sla_hours?: number
+          status?: Database["public"]["Enums"]["approval_status"]
+        }
+        Update: {
+          acted_at?: string | null
+          approver?: string
+          id?: string
+          notes?: string
+          requested_at?: string
+          requirement_id?: string | null
+          sla_hours?: number
+          status?: Database["public"]["Enums"]["approval_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "approvals_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      engagements: {
+        Row: {
+          approver: string
+          business_owner: string
+          category: Database["public"]["Enums"]["engagement_category"]
+          color: string
+          created_at: string
+          id: string
+          monthly_capacity_hours: number
+          name: string
+          vendor: string
+        }
+        Insert: {
+          approver: string
+          business_owner: string
+          category: Database["public"]["Enums"]["engagement_category"]
+          color?: string
+          created_at?: string
+          id?: string
+          monthly_capacity_hours?: number
+          name: string
+          vendor: string
+        }
+        Update: {
+          approver?: string
+          business_owner?: string
+          category?: Database["public"]["Enums"]["engagement_category"]
+          color?: string
+          created_at?: string
+          id?: string
+          monthly_capacity_hours?: number
+          name?: string
+          vendor?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          amount: number
+          currency: string
+          engagement_id: string | null
+          finance_approved_at: string | null
+          id: string
+          invoice_number: string
+          paid_at: string | null
+          period_month: string
+          status: Database["public"]["Enums"]["invoice_status"]
+          tech_approved_at: string | null
+          uploaded_at: string
+        }
+        Insert: {
+          amount?: number
+          currency?: string
+          engagement_id?: string | null
+          finance_approved_at?: string | null
+          id?: string
+          invoice_number: string
+          paid_at?: string | null
+          period_month?: string
+          status?: Database["public"]["Enums"]["invoice_status"]
+          tech_approved_at?: string | null
+          uploaded_at?: string
+        }
+        Update: {
+          amount?: number
+          currency?: string
+          engagement_id?: string | null
+          finance_approved_at?: string | null
+          id?: string
+          invoice_number?: string
+          paid_at?: string | null
+          period_month?: string
+          status?: Database["public"]["Enums"]["invoice_status"]
+          tech_approved_at?: string | null
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "engagements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      requirements: {
+        Row: {
+          acceptance_criteria: string
+          business_justification: string
+          business_owner: string
+          carry_forward: boolean
+          created_at: string
+          description: string
+          engagement_id: string | null
+          estimated_hours: number
+          id: string
+          module: string
+          priority: Database["public"]["Enums"]["req_priority"]
+          rank: number
+          status: Database["public"]["Enums"]["req_status"]
+          story_points: number
+          target_month: string
+          title: string
+          uat_cases: string
+          updated_at: string
+        }
+        Insert: {
+          acceptance_criteria?: string
+          business_justification?: string
+          business_owner?: string
+          carry_forward?: boolean
+          created_at?: string
+          description?: string
+          engagement_id?: string | null
+          estimated_hours?: number
+          id?: string
+          module?: string
+          priority?: Database["public"]["Enums"]["req_priority"]
+          rank?: number
+          status?: Database["public"]["Enums"]["req_status"]
+          story_points?: number
+          target_month?: string
+          title: string
+          uat_cases?: string
+          updated_at?: string
+        }
+        Update: {
+          acceptance_criteria?: string
+          business_justification?: string
+          business_owner?: string
+          carry_forward?: boolean
+          created_at?: string
+          description?: string
+          engagement_id?: string | null
+          estimated_hours?: number
+          id?: string
+          module?: string
+          priority?: Database["public"]["Enums"]["req_priority"]
+          rank?: number
+          status?: Database["public"]["Enums"]["req_status"]
+          story_points?: number
+          target_month?: string
+          title?: string
+          uat_cases?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "requirements_engagement_id_fkey"
+            columns: ["engagement_id"]
+            isOneToOne: false
+            referencedRelation: "engagements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      uat_items: {
+        Row: {
+          defects_open: number
+          handover_date: string | null
+          id: string
+          notes: string
+          requirement_id: string | null
+          signoff_date: string | null
+          status: Database["public"]["Enums"]["uat_status"]
+          uat_owner: string
+        }
+        Insert: {
+          defects_open?: number
+          handover_date?: string | null
+          id?: string
+          notes?: string
+          requirement_id?: string | null
+          signoff_date?: string | null
+          status?: Database["public"]["Enums"]["uat_status"]
+          uat_owner?: string
+        }
+        Update: {
+          defects_open?: number
+          handover_date?: string | null
+          id?: string
+          notes?: string
+          requirement_id?: string | null
+          signoff_date?: string | null
+          status?: Database["public"]["Enums"]["uat_status"]
+          uat_owner?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "uat_items_requirement_id_fkey"
+            columns: ["requirement_id"]
+            isOneToOne: false
+            referencedRelation: "requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +261,46 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      approval_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "auto_approved"
+        | "escalated"
+      engagement_category:
+        | "app_development"
+        | "analytics"
+        | "staff_aug"
+        | "middleware"
+        | "api_integration"
+        | "support"
+        | "innovation"
+      invoice_status:
+        | "draft"
+        | "uploaded"
+        | "tech_approved"
+        | "finance_approved"
+        | "payment_initiated"
+        | "paid"
+      req_priority: "p1" | "p2" | "p3" | "p4"
+      req_status:
+        | "draft"
+        | "submitted"
+        | "reviewed"
+        | "prioritized"
+        | "estimated"
+        | "approved"
+        | "planned"
+        | "in_development"
+        | "uat"
+        | "signed_off"
+        | "closed"
+      uat_status:
+        | "not_started"
+        | "in_progress"
+        | "blocked"
+        | "signed_off"
+        | "deemed_accepted"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +427,52 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      approval_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "auto_approved",
+        "escalated",
+      ],
+      engagement_category: [
+        "app_development",
+        "analytics",
+        "staff_aug",
+        "middleware",
+        "api_integration",
+        "support",
+        "innovation",
+      ],
+      invoice_status: [
+        "draft",
+        "uploaded",
+        "tech_approved",
+        "finance_approved",
+        "payment_initiated",
+        "paid",
+      ],
+      req_priority: ["p1", "p2", "p3", "p4"],
+      req_status: [
+        "draft",
+        "submitted",
+        "reviewed",
+        "prioritized",
+        "estimated",
+        "approved",
+        "planned",
+        "in_development",
+        "uat",
+        "signed_off",
+        "closed",
+      ],
+      uat_status: [
+        "not_started",
+        "in_progress",
+        "blocked",
+        "signed_off",
+        "deemed_accepted",
+      ],
+    },
   },
 } as const
