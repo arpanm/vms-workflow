@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as UatRouteImport } from './routes/uat'
 import { Route as ScopeRouteImport } from './routes/scope'
 import { Route as RequirementsRouteImport } from './routes/requirements'
 import { Route as EngagementsRouteImport } from './routes/engagements'
 import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as IndexRouteImport } from './routes/index'
 
+const UatRoute = UatRouteImport.update({
+  id: '/uat',
+  path: '/uat',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ScopeRoute = ScopeRouteImport.update({
   id: '/scope',
   path: '/scope',
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/engagements': typeof EngagementsRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
+  '/uat': typeof UatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/engagements': typeof EngagementsRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
+  '/uat': typeof UatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,12 +70,19 @@ export interface FileRoutesById {
   '/engagements': typeof EngagementsRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
+  '/uat': typeof UatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/approvals' | '/engagements' | '/requirements' | '/scope'
+  fullPaths:
+    | '/'
+    | '/approvals'
+    | '/engagements'
+    | '/requirements'
+    | '/scope'
+    | '/uat'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/approvals' | '/engagements' | '/requirements' | '/scope'
+  to: '/' | '/approvals' | '/engagements' | '/requirements' | '/scope' | '/uat'
   id:
     | '__root__'
     | '/'
@@ -75,6 +90,7 @@ export interface FileRouteTypes {
     | '/engagements'
     | '/requirements'
     | '/scope'
+    | '/uat'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -83,10 +99,18 @@ export interface RootRouteChildren {
   EngagementsRoute: typeof EngagementsRoute
   RequirementsRoute: typeof RequirementsRoute
   ScopeRoute: typeof ScopeRoute
+  UatRoute: typeof UatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/uat': {
+      id: '/uat'
+      path: '/uat'
+      fullPath: '/uat'
+      preLoaderRoute: typeof UatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/scope': {
       id: '/scope'
       path: '/scope'
@@ -131,6 +155,7 @@ const rootRouteChildren: RootRouteChildren = {
   EngagementsRoute: EngagementsRoute,
   RequirementsRoute: RequirementsRoute,
   ScopeRoute: ScopeRoute,
+  UatRoute: UatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
