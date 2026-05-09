@@ -9,10 +9,16 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ScopeRouteImport } from './routes/scope'
 import { Route as RequirementsRouteImport } from './routes/requirements'
 import { Route as EngagementsRouteImport } from './routes/engagements'
 import { Route as IndexRouteImport } from './routes/index'
 
+const ScopeRoute = ScopeRouteImport.update({
+  id: '/scope',
+  path: '/scope',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const RequirementsRoute = RequirementsRouteImport.update({
   id: '/requirements',
   path: '/requirements',
@@ -33,34 +39,45 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/engagements': typeof EngagementsRoute
   '/requirements': typeof RequirementsRoute
+  '/scope': typeof ScopeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/engagements': typeof EngagementsRoute
   '/requirements': typeof RequirementsRoute
+  '/scope': typeof ScopeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/engagements': typeof EngagementsRoute
   '/requirements': typeof RequirementsRoute
+  '/scope': typeof ScopeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/engagements' | '/requirements'
+  fullPaths: '/' | '/engagements' | '/requirements' | '/scope'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/engagements' | '/requirements'
-  id: '__root__' | '/' | '/engagements' | '/requirements'
+  to: '/' | '/engagements' | '/requirements' | '/scope'
+  id: '__root__' | '/' | '/engagements' | '/requirements' | '/scope'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   EngagementsRoute: typeof EngagementsRoute
   RequirementsRoute: typeof RequirementsRoute
+  ScopeRoute: typeof ScopeRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/scope': {
+      id: '/scope'
+      path: '/scope'
+      fullPath: '/scope'
+      preLoaderRoute: typeof ScopeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/requirements': {
       id: '/requirements'
       path: '/requirements'
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   EngagementsRoute: EngagementsRoute,
   RequirementsRoute: RequirementsRoute,
+  ScopeRoute: ScopeRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
