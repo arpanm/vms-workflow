@@ -1,6 +1,4 @@
-import { create } from "zustand";
-
-// Lightweight zustand-free store using React context would also work; using simple module state + listeners.
+// Lightweight global store using module state + listeners.
 type Listener = () => void;
 
 export type Role =
