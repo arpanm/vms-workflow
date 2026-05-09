@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as UatRouteImport } from './routes/uat'
 import { Route as ScopeRouteImport } from './routes/scope'
 import { Route as RequirementsRouteImport } from './routes/requirements'
+import { Route as InvoicesRouteImport } from './routes/invoices'
 import { Route as EngagementsRouteImport } from './routes/engagements'
 import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as IndexRouteImport } from './routes/index'
@@ -29,6 +30,11 @@ const ScopeRoute = ScopeRouteImport.update({
 const RequirementsRoute = RequirementsRouteImport.update({
   id: '/requirements',
   path: '/requirements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvoicesRoute = InvoicesRouteImport.update({
+  id: '/invoices',
+  path: '/invoices',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EngagementsRoute = EngagementsRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/approvals': typeof ApprovalsRoute
   '/engagements': typeof EngagementsRoute
+  '/invoices': typeof InvoicesRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
   '/uat': typeof UatRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/approvals': typeof ApprovalsRoute
   '/engagements': typeof EngagementsRoute
+  '/invoices': typeof InvoicesRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
   '/uat': typeof UatRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/approvals': typeof ApprovalsRoute
   '/engagements': typeof EngagementsRoute
+  '/invoices': typeof InvoicesRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
   '/uat': typeof UatRoute
@@ -78,16 +87,25 @@ export interface FileRouteTypes {
     | '/'
     | '/approvals'
     | '/engagements'
+    | '/invoices'
     | '/requirements'
     | '/scope'
     | '/uat'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/approvals' | '/engagements' | '/requirements' | '/scope' | '/uat'
+  to:
+    | '/'
+    | '/approvals'
+    | '/engagements'
+    | '/invoices'
+    | '/requirements'
+    | '/scope'
+    | '/uat'
   id:
     | '__root__'
     | '/'
     | '/approvals'
     | '/engagements'
+    | '/invoices'
     | '/requirements'
     | '/scope'
     | '/uat'
@@ -97,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApprovalsRoute: typeof ApprovalsRoute
   EngagementsRoute: typeof EngagementsRoute
+  InvoicesRoute: typeof InvoicesRoute
   RequirementsRoute: typeof RequirementsRoute
   ScopeRoute: typeof ScopeRoute
   UatRoute: typeof UatRoute
@@ -123,6 +142,13 @@ declare module '@tanstack/react-router' {
       path: '/requirements'
       fullPath: '/requirements'
       preLoaderRoute: typeof RequirementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invoices': {
+      id: '/invoices'
+      path: '/invoices'
+      fullPath: '/invoices'
+      preLoaderRoute: typeof InvoicesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/engagements': {
@@ -153,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApprovalsRoute: ApprovalsRoute,
   EngagementsRoute: EngagementsRoute,
+  InvoicesRoute: InvoicesRoute,
   RequirementsRoute: RequirementsRoute,
   ScopeRoute: ScopeRoute,
   UatRoute: UatRoute,
