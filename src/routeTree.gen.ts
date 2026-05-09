@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RequirementsRouteImport } from './routes/requirements'
 import { Route as EngagementsRouteImport } from './routes/engagements'
 import { Route as IndexRouteImport } from './routes/index'
 
+const RequirementsRoute = RequirementsRouteImport.update({
+  id: '/requirements',
+  path: '/requirements',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EngagementsRoute = EngagementsRouteImport.update({
   id: '/engagements',
   path: '/engagements',
@@ -26,31 +32,42 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/engagements': typeof EngagementsRoute
+  '/requirements': typeof RequirementsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/engagements': typeof EngagementsRoute
+  '/requirements': typeof RequirementsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/engagements': typeof EngagementsRoute
+  '/requirements': typeof RequirementsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/engagements'
+  fullPaths: '/' | '/engagements' | '/requirements'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/engagements'
-  id: '__root__' | '/' | '/engagements'
+  to: '/' | '/engagements' | '/requirements'
+  id: '__root__' | '/' | '/engagements' | '/requirements'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   EngagementsRoute: typeof EngagementsRoute
+  RequirementsRoute: typeof RequirementsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/requirements': {
+      id: '/requirements'
+      path: '/requirements'
+      fullPath: '/requirements'
+      preLoaderRoute: typeof RequirementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/engagements': {
       id: '/engagements'
       path: '/engagements'
@@ -71,6 +88,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   EngagementsRoute: EngagementsRoute,
+  RequirementsRoute: RequirementsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
