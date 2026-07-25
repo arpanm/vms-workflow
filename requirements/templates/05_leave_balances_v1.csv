@@ -1,0 +1,3 @@
+template_version,organization_code,employee_number,leave_type_code,entry_type,quantity_days,effective_date,reference_id,reason,approved_by_email,represented_approval_at,idempotency_reference,source_system,source_reference,notes
+1,ARROWFOUNDRY,AF-001,CL,OPENING_BALANCE,6.0,2026-06-01,OPEN-AF001-CL-202606,Opening balance at engagement start,hr.admin@example.invalid,2026-06-01T09:00:00+05:30,AF001-CL-OPEN-202606,APPROVED_SPREADSHEET,Opening leave balance register,Synthetic example
+1,ARROWFOUNDRY,AF-001,CL,MONTHLY_ACCRUAL,1.0,2026-07-01,ACCRUAL-2026-06,June monthly accrual,,2026-07-01T00:05:00+05:30,AF001-CL-ACCRUAL-2026-06,APPROVED_SPREADSHEET,Monthly accrual register,Synthetic example

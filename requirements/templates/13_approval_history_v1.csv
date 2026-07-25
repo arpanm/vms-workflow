@@ -1,0 +1,2 @@
+template_version,engagement_code,billing_month,object_type,object_external_id,object_version,action,decision,actor_email,actor_organization_code,actor_role,represented_at,comment,evidence_reference,source_system,source_reference,confidence,notes
+1,AF-RI-2026,2026-06,MONTHLY_PLAN,PLAN-AF-RI-2026-06,1,APPROVE,APPROVED,product.owner@example.invalid,RELIANCE_INTELLIGENCE,CLIENT_PRODUCT_OWNER,2026-05-30T16:00:00+05:30,Approved for June execution.,email://sample-plan-approval,ORIGINAL_EMAIL,Plan approval email,HIGH,Synthetic example

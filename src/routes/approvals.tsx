@@ -1,19 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/status-badge";
 import { useApprovals, useRequirements } from "@/lib/data-hooks";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { Check, X, Zap } from "lucide-react";
+import { requireLegacyRoute } from "@/lib/legacy-route";
+import { QueryState } from "@/components/query-state";
 
 export const Route = createFileRoute("/approvals")({
+  beforeLoad: requireLegacyRoute,
   head: () => ({
     meta: [
       { title: "Approvals — Cadence" },
-      { name: "description", content: "Approval queue with SLA timers and auto-approval fallback for stuck items." },
+      { name: "description", content: "Read-only legacy approval queue and decision history." },
     ],
   }),
   component: ApprovalsPage,
@@ -24,19 +22,10 @@ function hoursSince(iso: string) {
 }
 
 function ApprovalsPage() {
-  const qc = useQueryClient();
-  const { data: approvals = [] } = useApprovals();
-  const { data: requirements = [] } = useRequirements();
-
-  const act = async (id: string, status: "approved" | "rejected" | "auto_approved") => {
-    const { error } = await supabase
-      .from("approvals")
-      .update({ status, acted_at: new Date().toISOString() } as any)
-      .eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    toast.success(`Approval ${status.replace("_"," ")}`);
-    qc.invalidateQueries({ queryKey: ["approvals"] });
-  };
+  const approvalsQuery = useApprovals();
+  const requirementsQuery = useRequirements();
+  const approvals = approvalsQuery.data ?? [];
+  const requirements = requirementsQuery.data ?? [];
 
   const pending = approvals.filter((a) => a.status === "pending");
   const decided = approvals.filter((a) => a.status !== "pending");
@@ -45,8 +34,9 @@ function ApprovalsPage() {
     <div>
       <PageHeader
         title="Approvals"
-        description="48h SLA. After 72h system reminds, after 96h auto-approves to keep delivery momentum."
+        description="Legacy decisions remain visible for audit. Pending items require an explicit authorized human decision in the canonical workflow."
       />
+      <QueryState queries={[approvalsQuery, requirementsQuery]}>
       <div className="space-y-6 p-6">
         <Section title={`Pending (${pending.length})`}>
           {pending.length === 0 ? (
@@ -68,15 +58,9 @@ function ApprovalsPage() {
                             {breached && <span className="ml-2 text-destructive font-medium">SLA breached</span>}
                           </p>
                         </div>
-                        <Button size="sm" variant="ghost" className="gap-1.5" onClick={() => act(a.id, "auto_approved")}>
-                          <Zap className="h-4 w-4" /> Auto-approve
-                        </Button>
-                        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => act(a.id, "rejected")}>
-                          <X className="h-4 w-4" /> Reject
-                        </Button>
-                        <Button size="sm" className="gap-1.5" onClick={() => act(a.id, "approved")}>
-                          <Check className="h-4 w-4" /> Approve
-                        </Button>
+                        <span className="text-xs text-muted-foreground">
+                          Read-only legacy record
+                        </span>
                       </li>
                     );
                   })}
@@ -107,6 +91,7 @@ function ApprovalsPage() {
           </Card>
         </Section>
       </div>
+      </QueryState>
     </div>
   );
 }

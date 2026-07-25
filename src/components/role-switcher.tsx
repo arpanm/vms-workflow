@@ -8,10 +8,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { UserCircle2 } from "lucide-react";
+import { safeDemoMode } from "@/lib/feature-flags";
 
 export function RoleSwitcher() {
   const [role, setRole] = useRole();
   const current = ROLES.find((r) => r.id === role)!;
+
+  if (!safeDemoMode) return null;
 
   return (
     <div className="flex items-center gap-2">

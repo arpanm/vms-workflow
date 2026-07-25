@@ -1,0 +1,2 @@
+template_version,organization_code,engagement_code,project_code,holiday_calendar_code,calendar_version,holiday_date,holiday_name,holiday_type,day_fraction,expected_minutes,optional_flag,location_code,approved_by_email,represented_approval_at,source_system,source_reference,notes
+1,ARROWFOUNDRY,AF-RI-2026,,AF-INDIA-2026,1,2026-08-15,Independence Day,PUBLIC,1.0,0,false,INDIA,hr.admin@example.invalid,2026-01-05T10:00:00+05:30,APPROVED_SPREADSHEET,Annual holiday calendar 2026,Synthetic example

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+
+import { apiClient } from "./api-client";
 
 export type Engagement = {
   id: string;
@@ -21,8 +22,17 @@ export type Requirement = {
   priority: "p1" | "p2" | "p3" | "p4";
   rank: number;
   status:
-    | "draft" | "submitted" | "reviewed" | "prioritized" | "estimated"
-    | "approved" | "planned" | "in_development" | "uat" | "signed_off" | "closed";
+    | "draft"
+    | "submitted"
+    | "reviewed"
+    | "prioritized"
+    | "estimated"
+    | "approved"
+    | "planned"
+    | "in_development"
+    | "uat"
+    | "signed_off"
+    | "closed";
   story_points: number;
   estimated_hours: number;
   business_owner: string;
@@ -38,7 +48,7 @@ export type Approval = {
   id: string;
   requirement_id: string;
   approver: string;
-  status: "pending" | "approved" | "rejected" | "auto_approved" | "escalated";
+  status: string;
   requested_at: string;
   acted_at: string | null;
   sla_hours: number;
@@ -48,7 +58,7 @@ export type Approval = {
 export type UatItem = {
   id: string;
   requirement_id: string;
-  status: "not_started" | "in_progress" | "blocked" | "signed_off" | "deemed_accepted";
+  status: string;
   uat_owner: string;
   handover_date: string | null;
   signoff_date: string | null;
@@ -61,7 +71,13 @@ export type Invoice = {
   invoice_number: string;
   amount: number;
   currency: string;
-  status: "draft" | "uploaded" | "tech_approved" | "finance_approved" | "payment_initiated" | "paid";
+  status:
+    | "draft"
+    | "uploaded"
+    | "tech_approved"
+    | "finance_approved"
+    | "payment_initiated"
+    | "paid";
   uploaded_at: string;
   tech_approved_at: string | null;
   finance_approved_at: string | null;
@@ -69,55 +85,43 @@ export type Invoice = {
   period_month: string;
 };
 
+export const legacyQueryKeys = {
+  engagements: ["legacy", "engagements"] as const,
+  requirements: ["legacy", "requirements"] as const,
+  approvals: ["legacy", "approvals"] as const,
+  uatItems: ["legacy", "uat-items"] as const,
+  invoices: ["legacy", "invoices"] as const,
+};
+
+const legacyQuery = <T,>(path: string) => () =>
+  apiClient.get<T[]>(`/legacy/${path}`);
+
 export const useEngagements = () =>
   useQuery({
-    queryKey: ["engagements"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("engagements").select("*").order("name");
-      if (error) throw error;
-      return data as Engagement[];
-    },
+    queryKey: legacyQueryKeys.engagements,
+    queryFn: legacyQuery<Engagement>("engagements"),
   });
 
 export const useRequirements = () =>
   useQuery({
-    queryKey: ["requirements"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("requirements")
-        .select("*")
-        .order("rank", { ascending: true });
-      if (error) throw error;
-      return data as Requirement[];
-    },
+    queryKey: legacyQueryKeys.requirements,
+    queryFn: legacyQuery<Requirement>("requirements"),
   });
 
 export const useApprovals = () =>
   useQuery({
-    queryKey: ["approvals"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("approvals").select("*");
-      if (error) throw error;
-      return data as Approval[];
-    },
+    queryKey: legacyQueryKeys.approvals,
+    queryFn: legacyQuery<Approval>("approvals"),
   });
 
 export const useUat = () =>
   useQuery({
-    queryKey: ["uat_items"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("uat_items").select("*");
-      if (error) throw error;
-      return data as UatItem[];
-    },
+    queryKey: legacyQueryKeys.uatItems,
+    queryFn: legacyQuery<UatItem>("uat-items"),
   });
 
 export const useInvoices = () =>
   useQuery({
-    queryKey: ["invoices"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("invoices").select("*").order("uploaded_at", { ascending: false });
-      if (error) throw error;
-      return data as Invoice[];
-    },
+    queryKey: legacyQueryKeys.invoices,
+    queryFn: legacyQuery<Invoice>("invoices"),
   });

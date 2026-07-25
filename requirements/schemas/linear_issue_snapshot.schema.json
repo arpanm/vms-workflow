@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://governance.example.internal/schemas/linear-issue-snapshot-v1.json",
+  "title": "Linear Issue Evidence Snapshot",
+  "description": "Point-in-time evidence for one linked Linear issue; never constitutes product-owner certification by itself.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "snapshot_id",
+    "snapshot_purpose",
+    "captured_at",
+    "connection_id",
+    "linear_issue_id",
+    "identifier",
+    "url",
+    "title",
+    "provider_state",
+    "normalized_state",
+    "source_updated_at",
+    "raw_payload_sha256"
+  ],
+  "properties": {
+    "snapshot_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "snapshot_purpose": {
+      "type": "string",
+      "enum": [
+        "PLAN_BASELINE",
+        "MONTH_END",
+        "MANUAL_EVIDENCE",
+        "RECONCILIATION"
+      ]
+    },
+    "captured_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "connection_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "workspace_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "team_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "linear_issue_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*-\\d+$"
+    },
+    "url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "description_present": {
+      "type": "boolean"
+    },
+    "provider_state": {
+      "type": "string",
+      "minLength": 1
+    },
+    "provider_state_type": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "normalized_state": {
+      "type": "string",
+      "enum": [
+        "BACKLOG",
+        "PLANNED",
+        "IN_PROGRESS",
+        "BLOCKED",
+        "COMPLETED",
+        "CANCELLED",
+        "UNKNOWN"
+      ]
+    },
+    "priority": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "assignee": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "linear_user_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "display_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "email_hash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "labels": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "project_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "cycle_name": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "estimate": {
+      "type": [
+        "number",
+        "null"
+      ]
+    },
+    "due_date": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date"
+    },
+    "completed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "cancelled_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source_created_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "source_updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "stale_at_capture": {
+      "type": "boolean"
+    },
+    "capture_error_code": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "raw_payload_sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

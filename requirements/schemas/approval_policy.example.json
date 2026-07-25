@@ -1,0 +1,58 @@
+{
+  "policy_version": "1.0.0",
+  "effective_from": "2026-06-01",
+  "principles": {
+    "silence_is_approval": false,
+    "delivery_receipt_is_confirmation": false,
+    "linear_done_is_certification": false,
+    "delegation_requires_active_authority": true,
+    "post_close_change_requires_new_version": true
+  },
+  "workflows": {
+    "MONTHLY_PLAN_APPROVAL": {
+      "required_role": "RELIANCE_PRODUCT_OWNER",
+      "sla_hours": 48,
+      "reminder_hours": [
+        24,
+        48
+      ],
+      "escalation_hours": [
+        72
+      ],
+      "timeout_action": "PENDING_ESCALATED"
+    },
+    "DELIVERY_CERTIFICATION": {
+      "required_role": "RELIANCE_PRODUCT_OWNER",
+      "sla_hours": 72,
+      "reminder_hours": [
+        24,
+        48,
+        72
+      ],
+      "escalation_hours": [
+        96
+      ],
+      "timeout_action": "PENDING_ESCALATED"
+    },
+    "MONTHLY_BUSINESS_CONFIRMATION": {
+      "required_role": "RELIANCE_PRODUCT_OWNER",
+      "sla_hours": 72,
+      "reminder_hours": [
+        24,
+        48,
+        72
+      ],
+      "escalation_hours": [
+        96,
+        120
+      ],
+      "timeout_action": "NOT_CONFIRMED"
+    },
+    "PROCUREMENT_EXCEPTION": {
+      "required_role": "CENTRAL_PROCUREMENT",
+      "sla_hours": 48,
+      "timeout_action": "BLOCKED"
+    }
+  },
+  "notes": "Example only. Authorized roles, SLAs and escalation groups must be approved before production."
+}

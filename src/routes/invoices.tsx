@@ -4,8 +4,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
 import { useEngagements, useInvoices } from "@/lib/data-hooks";
 import { format, parseISO } from "date-fns";
+import { requireLegacyRoute } from "@/lib/legacy-route";
+import { QueryState } from "@/components/query-state";
 
 export const Route = createFileRoute("/invoices")({
+  beforeLoad: requireLegacyRoute,
   head: () => ({
     meta: [
       { title: "Invoices — Cadence" },
@@ -16,8 +19,10 @@ export const Route = createFileRoute("/invoices")({
 });
 
 function InvoicesPage() {
-  const { data: invoices = [] } = useInvoices();
-  const { data: engagements = [] } = useEngagements();
+  const invoicesQuery = useInvoices();
+  const engagementsQuery = useEngagements();
+  const invoices = invoicesQuery.data ?? [];
+  const engagements = engagementsQuery.data ?? [];
 
   const totals = {
     in_flight: invoices.filter((i) => i.status !== "paid").reduce((s, i) => s + Number(i.amount), 0),
@@ -30,8 +35,9 @@ function InvoicesPage() {
     <div>
       <PageHeader
         title="Invoices"
-        description="Auto-validated against scope completion, signoff and PO limits. Tracked all the way to payment initiation."
+        description="Legacy invoice records with explicit technical, finance and payment states."
       />
+      <QueryState queries={[invoicesQuery, engagementsQuery]}>
       <div className="space-y-6 p-6">
         <div className="grid gap-4 sm:grid-cols-3">
           <Stat label="In flight" value={inr(totals.in_flight)} sub={`${invoices.filter(i => i.status !== "paid").length} invoices`} />
@@ -76,6 +82,7 @@ function InvoicesPage() {
           </CardContent>
         </Card>
       </div>
+      </QueryState>
     </div>
   );
 }

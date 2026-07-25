@@ -1,0 +1,23 @@
+{
+  "connection_id": "00000000-0000-4000-8000-000000000001",
+  "organization_id": "00000000-0000-4000-8000-000000000002",
+  "provider": "LINEAR",
+  "status": "PENDING_VALIDATION",
+  "effective_from": "2026-06-01",
+  "secret_reference": "vault://integrations/linear/reliance-nam",
+  "configuration": {
+    "oauth_actor": "app",
+    "workspace_id": "replace-after-oauth",
+    "allowed_team_ids": [],
+    "normalized_state_mapping_version": "1.0.0",
+    "webhook_endpoint_path": "/api/integrations/linear/webhook"
+  },
+  "capability_certification": {
+    "checked_at": null,
+    "checked_by": null,
+    "read_issues": false,
+    "receive_issue_webhooks": false,
+    "historical_issue_state_available": false
+  },
+  "notes": "Never store client secrets, refresh tokens or greytHR credentials in this JSON or browser-visible configuration."
+}

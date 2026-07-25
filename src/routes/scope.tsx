@@ -5,10 +5,21 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge, PriorityBadge } from "@/components/status-badge";
-import { useEngagements, useRequirements, type Requirement } from "@/lib/data-hooks";
+import {
+  useEngagements,
+  useRequirements,
+  type Engagement,
+  type Requirement,
+} from "@/lib/data-hooks";
 import { Boxes, Sparkles, ArrowRight, Lock, Clock } from "lucide-react";
+import { requireLegacyRoute } from "@/lib/legacy-route";
+import { QueryState } from "@/components/query-state";
+
+const EMPTY_REQUIREMENTS: Requirement[] = [];
+const EMPTY_ENGAGEMENTS: Engagement[] = [];
 
 export const Route = createFileRoute("/scope")({
+  beforeLoad: requireLegacyRoute,
   head: () => ({
     meta: [
       { title: "Monthly Scope Engine — Cadence" },
@@ -21,8 +32,10 @@ export const Route = createFileRoute("/scope")({
 const RESERVED = { enhancements: 0.7, support: 0.15, critical: 0.10, innovation: 0.05 };
 
 function ScopePage() {
-  const { data: requirements = [] } = useRequirements();
-  const { data: engagements = [] } = useEngagements();
+  const requirementsQuery = useRequirements();
+  const engagementsQuery = useEngagements();
+  const requirements = requirementsQuery.data ?? EMPTY_REQUIREMENTS;
+  const engagements = engagementsQuery.data ?? EMPTY_ENGAGEMENTS;
   const [selectedEng, setSelectedEng] = useState<string | null>(null);
 
   // Simple greedy scope finalizer per engagement
@@ -71,6 +84,7 @@ function ScopePage() {
         <Button size="sm" className="gap-1.5"><Sparkles className="h-4 w-4" /> Run optimizer</Button>
       </PageHeader>
 
+      <QueryState queries={[requirementsQuery, engagementsQuery]}>
       <div className="grid gap-6 p-6 lg:grid-cols-[280px_1fr]">
         {/* Engagement list */}
         <div className="space-y-2">
@@ -194,6 +208,7 @@ function ScopePage() {
           </div>
         )}
       </div>
+      </QueryState>
     </div>
   );
 }

@@ -1,0 +1,2 @@
+template_version,organization_code,employee_number,override_date,resulting_classification,expected_minutes,reason_code,reason,approved_by_email,represented_approval_at,source_system,source_reference,notes
+1,ARROWFOUNDRY,AF-001,2026-06-13,WORKING,540,PROJECT_RELEASE,Approved release support working Saturday,manager@example.invalid,2026-06-10T11:00:00+05:30,APPROVED_SPREADSHEET,Release support approval,Synthetic example

@@ -1,0 +1,204 @@
+{
+  "version": "1.0.0",
+  "state_machines": {
+    "ENGAGEMENT_MONTH": {
+      "initial": "DRAFT",
+      "states": [
+        "DRAFT",
+        "PLANNING",
+        "PLAN_APPROVAL",
+        "EXECUTION",
+        "DELIVERY_SUBMISSION",
+        "CERTIFICATION",
+        "CONFIRMATION",
+        "EVIDENCE_READY",
+        "INVOICE_SUBMITTED",
+        "PROCUREMENT_REVIEW",
+        "PAYMENT_TRACKING",
+        "CLOSED",
+        "REOPENED",
+        "SUPERSEDED"
+      ],
+      "terminal_states": [
+        "CLOSED",
+        "SUPERSEDED"
+      ],
+      "transitions": [
+        [
+          "DRAFT",
+          "PLANNING"
+        ],
+        [
+          "PLANNING",
+          "PLAN_APPROVAL"
+        ],
+        [
+          "PLAN_APPROVAL",
+          "EXECUTION"
+        ],
+        [
+          "EXECUTION",
+          "DELIVERY_SUBMISSION"
+        ],
+        [
+          "DELIVERY_SUBMISSION",
+          "CERTIFICATION"
+        ],
+        [
+          "CERTIFICATION",
+          "CONFIRMATION"
+        ],
+        [
+          "CONFIRMATION",
+          "EVIDENCE_READY"
+        ],
+        [
+          "EVIDENCE_READY",
+          "INVOICE_SUBMITTED"
+        ],
+        [
+          "INVOICE_SUBMITTED",
+          "PROCUREMENT_REVIEW"
+        ],
+        [
+          "PROCUREMENT_REVIEW",
+          "PAYMENT_TRACKING"
+        ],
+        [
+          "PAYMENT_TRACKING",
+          "CLOSED"
+        ],
+        [
+          "CLOSED",
+          "REOPENED"
+        ],
+        [
+          "REOPENED",
+          "PLANNING"
+        ],
+        [
+          "REOPENED",
+          "CERTIFICATION"
+        ],
+        [
+          "REOPENED",
+          "CONFIRMATION"
+        ],
+        [
+          "REOPENED",
+          "SUPERSEDED"
+        ]
+      ]
+    },
+    "ATTENDANCE_DAY": {
+      "initial": "EXPECTED",
+      "states": [
+        "NOT_EXPECTED",
+        "EXPECTED",
+        "IN_PROGRESS",
+        "PRESENT_FULL",
+        "PRESENT_HALF",
+        "ABSENT",
+        "LEAVE_PAID",
+        "LEAVE_UNPAID",
+        "HOLIDAY",
+        "WEEKLY_OFF",
+        "EXCEPTION_PENDING",
+        "REGULARIZATION_PENDING",
+        "REGULARIZED",
+        "LOCKED",
+        "SUPERSEDED"
+      ],
+      "terminal_states": [
+        "LOCKED",
+        "SUPERSEDED"
+      ]
+    },
+    "DELIVERABLE_PLAN": {
+      "initial": "DRAFT",
+      "states": [
+        "DRAFT",
+        "SUBMITTED",
+        "CHANGES_REQUESTED",
+        "APPROVED",
+        "FROZEN",
+        "REVISION_PENDING",
+        "SUPERSEDED"
+      ],
+      "terminal_states": [
+        "FROZEN",
+        "SUPERSEDED"
+      ]
+    },
+    "DELIVERY_CERTIFICATION": {
+      "initial": "NOT_SUBMITTED",
+      "states": [
+        "NOT_SUBMITTED",
+        "VENDOR_DRAFT",
+        "SUBMITTED",
+        "CLARIFICATION_REQUESTED",
+        "ACCEPTED",
+        "ACCEPTED_WITH_OBSERVATIONS",
+        "PARTIALLY_ACCEPTED",
+        "DEFERRED",
+        "REJECTED",
+        "SUPERSEDED"
+      ],
+      "terminal_states": [
+        "ACCEPTED",
+        "ACCEPTED_WITH_OBSERVATIONS",
+        "PARTIALLY_ACCEPTED",
+        "DEFERRED",
+        "REJECTED",
+        "SUPERSEDED"
+      ]
+    },
+    "BUSINESS_CONFIRMATION": {
+      "initial": "NOT_REQUESTED",
+      "states": [
+        "NOT_REQUESTED",
+        "READY_TO_SEND",
+        "SENT",
+        "DELIVERED",
+        "REMINDER_DUE",
+        "RESPONSE_RECEIVED",
+        "VERIFICATION_PENDING",
+        "CONFIRMED",
+        "DISPUTED",
+        "EXPIRED_UNCONFIRMED",
+        "SUPERSEDED"
+      ],
+      "terminal_states": [
+        "CONFIRMED",
+        "DISPUTED",
+        "EXPIRED_UNCONFIRMED",
+        "SUPERSEDED"
+      ]
+    },
+    "INVOICE": {
+      "initial": "DRAFT",
+      "states": [
+        "DRAFT",
+        "UPLOADED",
+        "EVIDENCE_BLOCKED",
+        "READY_FOR_CONFIRMATION",
+        "CONFIRMED",
+        "READY_FOR_PROCUREMENT",
+        "SUBMITTED_TO_PROCUREMENT",
+        "PROCUREMENT_QUERY",
+        "PROCUREMENT_ACCEPTED",
+        "PAYMENT_INITIATED",
+        "PAID",
+        "REJECTED",
+        "CANCELLED",
+        "SUPERSEDED"
+      ],
+      "terminal_states": [
+        "PAID",
+        "REJECTED",
+        "CANCELLED",
+        "SUPERSEDED"
+      ]
+    }
+  }
+}

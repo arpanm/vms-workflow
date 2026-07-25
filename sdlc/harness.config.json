@@ -1,0 +1,45 @@
+{
+  "$schema": "./harness.schema.json",
+  "version": 1,
+  "codegenModel": "gpt-5.6-sol",
+  "reviewModel": "gpt-5.6-terra",
+  "documentationModel": "gpt-5.6-terra",
+  "featureRoot": "docs/features",
+  "requiredPlanningArtifacts": [
+    "TASKS.md",
+    "TEST_CASES.md"
+  ],
+  "requiredCompletedArtifacts": [
+    "TASKS.md",
+    "TEST_CASES.md",
+    "CODEGEN.md",
+    "CODE_REVIEW.md",
+    "CODE_ISSUES.md",
+    "TEST_AUTOMATION.md",
+    "TEST_REVIEW.md",
+    "TEST_ISSUES.md",
+    "CODE_ANALYSIS.md",
+    "SECURITY_ANALYSIS.md",
+    "FIXES.md",
+    "API_DOCUMENTATION.md",
+    "UI_DOCUMENTATION.md",
+    "CHANGELOG.md"
+  ],
+  "qualityCommands": [
+    "npm run typecheck",
+    "npm run lint",
+    "npm run test",
+    "npm run build",
+    "mvn -B -f backend/pom.xml verify"
+  ],
+  "features": [
+    { "id": "F00", "directory": "00-foundation", "phase": 0, "state": "active" },
+    { "id": "F01", "directory": "01-identity-core", "phase": 1, "state": "active" },
+    { "id": "F02", "directory": "02-workforce-attendance", "phase": 2, "state": "planned" },
+    { "id": "F03", "directory": "03-delivery-linear", "phase": 3, "state": "planned" },
+    { "id": "F04", "directory": "04-certification-confirmation", "phase": 4, "state": "planned" },
+    { "id": "F05", "directory": "05-evidence-invoice-reporting", "phase": 5, "state": "planned" },
+    { "id": "F06", "directory": "06-historical-migration", "phase": 6, "state": "planned" },
+    { "id": "F07", "directory": "07-hardening-go-live", "phase": 7, "state": "planned" }
+  ]
+}

@@ -1,0 +1,31 @@
+task_id,phase,epic,title,primary_prd,depends_on,requirement_ids,release_gate,priority
+P0-001,0,Baseline,Tag current repository and capture deployment/schema baseline,00;17,,RQ-034;RQ-035,Existing deployment reproducible,P0
+P0-002,0,Configuration,Add feature flags and environment validation,00;17,P0-001,RQ-034;RQ-035,Production fails closed on missing secrets,P0
+P1-001,1,Identity,Implement authenticated user profiles and organization memberships,03;13;14,P0-002,RQ-033,No anonymous production access,P0
+P1-002,1,Authorization,Implement permission evaluator and RLS policies with tests,03;14;17,P1-001,RQ-033,Unauthorized direct database access denied,P0
+P1-003,1,Core masters,Implement organizations engagements projects contacts and approval matrices,02;03;13,P1-002,RQ-001;RQ-031,Multi-organization seed works,P0
+P1-004,1,Month governance,Implement engagement-month state machine and versioning,02;13,P1-003,RQ-029,Invalid transitions blocked,P0
+P2-001,2,Employees,Implement employee lifecycle and status history,04;13;15,P1-004,RQ-002,Historical employees retained,P0
+P2-002,2,Allocations,Implement effective-dated project and deliverable allocations,04;07;13,P2-001,RQ-003,Overlap and total-allocation rules pass,P0
+P2-003,2,Calendars,Implement calendars holidays weekly offs and employee overrides,04;05;13,P2-001,RQ-007,Expectation calendar deterministic,P0
+P2-004,2,Leave,Implement leave types ledger accrual requests and LWP,04;05;13,P2-003,RQ-008,Ledger and idempotent accrual tests pass,P0
+P2-005,2,Attendance,Implement punches sessions daily computation and regularization,05;13;15,P2-003;P2-004,RQ-004;RQ-005;RQ-006,Attendance truth-table tests pass,P0
+P2-006,2,Attendance close,Implement validation exception queue and monthly snapshot,05;08;13,P2-005,RQ-024;RQ-026,Closed snapshot immutable,P0
+P3-001,3,Planning,Implement monthly plan deliverables acceptance criteria and approval/freeze,07;13;15,P1-004,RQ-011;RQ-012,Approved baseline immutable,P0
+P3-002,3,Linear,Implement OAuth connection issue resolver and normalized mapping,07;13;14;19,P3-001,RQ-014;RQ-015,Least-privilege connection verified,P0
+P3-003,3,Linear events,Implement signed webhook durable queue retry and reconciliation,07;13;14;16,P3-002,RQ-015,Duplicate/lost webhook tests pass,P0
+P3-004,3,Linear snapshots,Implement plan-time and month-end evidence snapshots,07;08;13,P3-003,RQ-016;RQ-017,Current state cannot rewrite snapshots,P0
+P3-005,3,greytHR,Implement capability certification and source modes,06;13;19,P2-006,RQ-009;RQ-010,No dual authority,P1
+P4-001,4,Delivery,Implement vendor item-level month-end submission,08;13;15,P2-006;P3-004,RQ-018,All baseline items resolved,P0
+P4-002,4,Certification,Implement product-owner certification clarification and monthly decision,08;13;15,P4-001,RQ-019,Authority and comments enforced,P0
+P4-003,4,Notifications,Implement transactional outbox templates delivery attempts and history,09;13;14,P3-001,RQ-013;RQ-020;RQ-030,Failed delivery retried without duplicates,P0
+P4-004,4,Confirmation,Implement secure confirmation request/action and verified evidence,09;13;14;15,P4-002;P4-003,RQ-021;RQ-022;RQ-023,Silence never confirms,P0
+P5-001,5,Evidence,Implement snapshots manifest package generation checksums and version history,10;13;14,P4-004,RQ-024;RQ-026,Deterministic manifest generated,P0
+P5-002,5,Invoice,Implement upload readiness procurement query exception and payment tracking,10;13;15,P5-001,RQ-025,Invoice cannot bypass missing proof,P0
+P5-003,5,Dashboards,Implement persona dashboards reports and control tower,12;13;15,P5-002,RQ-032,Metrics reconcile to source data,P1
+P6-001,6,Migration,Implement template registry dry-run row validation commit and rollback,11;13;18,P5-002,RQ-027,Invalid batches cannot partially commit,P0
+P6-002,6,Historical,Backfill from 2026-06-01 in dependency order and reconcile,11;18,P6-001,RQ-027,Counts/checksums signed off,P0
+P6-003,6,Retro governance,Implement retro plan certification confirmation and package workflows,09;11;14,P6-002,RQ-028,Represented and recorded timestamps distinct,P0
+P7-001,7,Security,Execute RLS penetration file safety secret and audit tests,14;16,P6-003,RQ-033,No critical/high finding,P0
+P7-002,7,Reliability,Execute performance retry backup restore and disaster recovery tests,13;16,P7-001,RQ-035,NFR gates met,P0
+P7-003,7,Go-live,Run parallel reconciliation training cutover and rollback drill,06;16;17,P7-002,RQ-009;RQ-035,Go-live checklist approved,P0

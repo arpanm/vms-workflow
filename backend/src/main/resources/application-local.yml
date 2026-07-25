@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: ${VMS_DATABASE_URL:jdbc:postgresql://127.0.0.1:5432/vms_workflow}
+    username: ${VMS_DATABASE_USERNAME:vms}
+    password: ${VMS_DATABASE_PASSWORD:vms_local}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${VMS_OIDC_JWKS_URI:http://127.0.0.1:9000/.well-known/jwks.json}
+
+vms:
+  security:
+    audience: ${VMS_OIDC_AUDIENCE:vms-api}
+    issuer: ${VMS_OIDC_ISSUER:http://127.0.0.1:9000}

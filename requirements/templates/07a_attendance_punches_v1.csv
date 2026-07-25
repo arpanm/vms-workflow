@@ -1,0 +1,3 @@
+template_version,organization_code,attendance_event_external_id,employee_number,event_type,occurred_at,timezone,source_system,source_reference,device_reference,supersedes_event_external_id,justification,evidence_reference,notes
+1,ARROWFOUNDRY,EVT-AF001-20260602-IN,AF-001,CHECK_IN,2026-06-02T09:00:00+05:30,Asia/Kolkata,APPROVED_SPREADSHEET,Attendance export June 2026,WEB,,,,Synthetic example
+1,ARROWFOUNDRY,EVT-AF001-20260602-OUT,AF-001,CHECK_OUT,2026-06-02T18:15:00+05:30,Asia/Kolkata,APPROVED_SPREADSHEET,Attendance export June 2026,WEB,,,,Synthetic example

@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getStatusPresentation } from "@/lib/status-presentation";
 
 const statusStyles: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -16,13 +17,12 @@ const statusStyles: Record<string, string> = {
 
   pending: "bg-warning/20 text-warning-foreground border-warning/40",
   rejected: "bg-destructive/15 text-destructive border-destructive/30",
-  auto_approved: "bg-accent/20 text-accent-foreground border-accent/40",
   escalated: "bg-destructive/15 text-destructive border-destructive/30",
 
   not_started: "bg-muted text-muted-foreground",
   in_progress: "bg-info/15 text-info-foreground border-info/30",
   blocked: "bg-destructive/15 text-destructive border-destructive/30",
-  deemed_accepted: "bg-accent/20 text-accent-foreground border-accent/40",
+  legacy_unverified: "bg-warning/20 text-warning-foreground border-warning/40",
 
   uploaded: "bg-info/15 text-info-foreground border-info/30",
   tech_approved: "bg-warning/20 text-warning-foreground border-warning/40",
@@ -39,16 +39,18 @@ const priorityStyles: Record<string, string> = {
 };
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {
+  const presentation = getStatusPresentation(status);
+
   return (
     <Badge
       variant="outline"
       className={cn(
         "rounded-full border px-2 py-0.5 text-[11px] font-medium capitalize",
-        statusStyles[status] ?? "bg-muted text-muted-foreground",
+        statusStyles[presentation.styleKey] ?? "bg-muted text-muted-foreground",
         className,
       )}
     >
-      {status.replace(/_/g, " ")}
+      {presentation.label}
     </Badge>
   );
 }

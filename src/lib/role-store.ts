@@ -1,4 +1,6 @@
 // Lightweight global store using module state + listeners.
+import { safeDemoMode } from "./feature-flags";
+
 type Listener = () => void;
 
 export type Role =
@@ -24,8 +26,11 @@ const listeners = new Set<Listener>();
 export const roleStore = {
   get: () => role,
   set: (r: Role) => {
+    if (!safeDemoMode) return;
     role = r;
-    if (typeof window !== "undefined") localStorage.setItem("role", r);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem("demo-role", r);
+    }
     listeners.forEach((l) => l());
   },
   subscribe: (l: Listener) => {
@@ -33,8 +38,8 @@ export const roleStore = {
     return () => listeners.delete(l);
   },
   init: () => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("role") as Role | null;
+    if (safeDemoMode && typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("demo-role") as Role | null;
       if (saved) role = saved;
     }
   },

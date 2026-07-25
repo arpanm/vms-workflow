@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://governance.example.internal/schemas/canonical-event-envelope-v1.json",
+  "title": "Governance Canonical Event Envelope",
+  "description": "Immutable envelope for business, integration, workflow and audit events. Business payload schemas are referenced separately.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "specversion",
+    "id",
+    "type",
+    "source",
+    "subject",
+    "time",
+    "tenant_id",
+    "organization_id",
+    "correlation_id",
+    "schema_version",
+    "actor",
+    "payload"
+  ],
+  "properties": {
+    "specversion": {
+      "const": "1.0"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^evt_[A-Za-z0-9_-]{10,}$"
+    },
+    "type": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:\\.[a-z0-9_-]+){2,}$"
+    },
+    "source": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 200
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 300
+    },
+    "time": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "tenant_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "organization_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "engagement_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "engagement_month_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uuid"
+    },
+    "correlation_id": {
+      "type": "string",
+      "minLength": 8,
+      "maxLength": 200
+    },
+    "causation_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 200
+    },
+    "idempotency_key": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 300
+    },
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "policy_version_refs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "source_system": {
+      "type": "string",
+      "enum": [
+        "INTERNAL",
+        "GREYTHR",
+        "LINEAR",
+        "EMAIL_PROVIDER",
+        "HISTORICAL_IMPORT",
+        "ADMIN_OVERRIDE",
+        "OTHER"
+      ]
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actor_type",
+        "actor_id"
+      ],
+      "properties": {
+        "actor_type": {
+          "type": "string",
+          "enum": [
+            "USER",
+            "EMPLOYEE",
+            "SERVICE",
+            "INTEGRATION",
+            "SYSTEM",
+            "HISTORICAL_IMPORT"
+          ]
+        },
+        "actor_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "authority_role": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100
+        },
+        "represented_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "recorded_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "payload": {
+      "type": "object"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

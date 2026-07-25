@@ -1,0 +1,36 @@
+{
+  "policy_version": "1.0.0",
+  "effective_from": "2026-06-01",
+  "timezone": "Asia/Kolkata",
+  "full_day_required_net_minutes": 540,
+  "half_day_required_net_minutes": 270,
+  "minimum_session_minutes": 1,
+  "maximum_session_minutes": 960,
+  "allow_multiple_sessions": true,
+  "break_policy": {
+    "mode": "EXPLICIT_UNPAID_BREAKS",
+    "default_unpaid_break_minutes": 0,
+    "deduct_only_if_recorded": true
+  },
+  "missing_checkout": {
+    "attendance_result": "EXCEPTION_PENDING",
+    "synthetic_checkout_allowed": false,
+    "regularization_required": true
+  },
+  "shortfall_resolution_order": [
+    "APPROVED_REGULARIZATION",
+    "APPROVED_PARTIAL_DAY_LEAVE",
+    "AVAILABLE_PAID_LEAVE_WITH_EMPLOYEE_REQUEST",
+    "LEAVE_WITHOUT_PAY"
+  ],
+  "weekly_off_default": [
+    "SATURDAY",
+    "SUNDAY"
+  ],
+  "allow_employee_calendar_override": true,
+  "allow_cross_midnight_shift": true,
+  "cross_midnight_attribution": "SHIFT_START_DATE",
+  "grace_minutes": 0,
+  "rounding_increment_minutes": 1,
+  "notes": "Example only. Values must be approved and configured; do not hard-code them in application logic."
+}

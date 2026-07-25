@@ -3,18 +3,36 @@ import { useMemo } from "react";
 import {
   Activity, AlertTriangle, CheckCircle2, Clock, FileText, Receipt, TrendingUp, Users,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import {
-  useApprovals, useEngagements, useInvoices, useRequirements, useUat,
+  useApprovals,
+  useEngagements,
+  useInvoices,
+  useRequirements,
+  useUat,
+  type Approval,
+  type Engagement,
+  type Invoice,
+  type Requirement,
+  type UatItem,
 } from "@/lib/data-hooks";
 import { useRole } from "@/lib/use-role";
 import { ROLES } from "@/lib/role-store";
 import {
   Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis, Cell,
 } from "recharts";
+import { featureFlags, safeDemoMode } from "@/lib/feature-flags";
+import { QueryState } from "@/components/query-state";
+
+const EMPTY_ENGAGEMENTS: Engagement[] = [];
+const EMPTY_REQUIREMENTS: Requirement[] = [];
+const EMPTY_APPROVALS: Approval[] = [];
+const EMPTY_UAT_ITEMS: UatItem[] = [];
+const EMPTY_INVOICES: Invoice[] = [];
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -28,7 +46,7 @@ export const Route = createFileRoute("/")({
 
 function KPI({
   icon: Icon, label, value, sub, accent,
-}: { icon: any; label: string; value: string; sub?: string; accent?: string }) {
+}: { icon: LucideIcon; label: string; value: string; sub?: string; accent?: string }) {
   return (
     <Card className="overflow-hidden border-border/60 shadow-[var(--shadow-card)]">
       <CardContent className="p-5">
@@ -48,13 +66,46 @@ function KPI({
 }
 
 function Dashboard() {
+  if (!featureFlags.legacyFixedCost) {
+    return (
+      <div>
+        <PageHeader
+          title="My Work"
+          description="The workforce-governance dashboard will appear as Phase 1 permissions and scope APIs are enabled."
+        />
+        <div className="p-6">
+          <Card className="border-dashed">
+            <CardContent className="py-12 text-center">
+              <p className="font-medium">Legacy fixed-cost views are disabled.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Sign-in is active; canonical organization and engagement views
+                are rolling out behind their feature flags.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return <LegacyDashboard />;
+}
+
+function LegacyDashboard() {
   const [role] = useRole();
-  const persona = ROLES.find((r) => r.id === role)!;
-  const { data: engagements = [] } = useEngagements();
-  const { data: requirements = [] } = useRequirements();
-  const { data: approvals = [] } = useApprovals();
-  const { data: uat = [] } = useUat();
-  const { data: invoices = [] } = useInvoices();
+  const persona = safeDemoMode
+    ? ROLES.find((r) => r.id === role)!
+    : { label: "your authorized scope" };
+  const engagementsQuery = useEngagements();
+  const requirementsQuery = useRequirements();
+  const approvalsQuery = useApprovals();
+  const uatQuery = useUat();
+  const invoicesQuery = useInvoices();
+  const engagements = engagementsQuery.data ?? EMPTY_ENGAGEMENTS;
+  const requirements = requirementsQuery.data ?? EMPTY_REQUIREMENTS;
+  const approvals = approvalsQuery.data ?? EMPTY_APPROVALS;
+  const uat = uatQuery.data ?? EMPTY_UAT_ITEMS;
+  const invoices = invoicesQuery.data ?? EMPTY_INVOICES;
 
   const stats = useMemo(() => {
     const totalCapacity = engagements.reduce((s, e) => s + e.monthly_capacity_hours, 0);
@@ -63,13 +114,19 @@ function Dashboard() {
       .reduce((s, r) => s + r.estimated_hours, 0);
     const utilization = totalCapacity ? Math.round((planned / totalCapacity) * 100) : 0;
     const pendingApprovals = approvals.filter((a) => a.status === "pending").length;
+    const overdueApprovals = approvals.filter(
+      (approval) =>
+        approval.status === "pending" &&
+        Date.now() - new Date(approval.requested_at).getTime() >
+          approval.sla_hours * 36e5,
+    ).length;
     const uatAging = uat.filter((u) => u.status === "in_progress").length;
     const inDev = requirements.filter((r) => r.status === "in_development").length;
     const signedOff = requirements.filter((r) => r.status === "signed_off").length;
     const invoicesPending = invoices.filter((i) => !["paid"].includes(i.status)).length;
     const invoicesValue = invoices.reduce((s, i) => s + Number(i.amount), 0);
 
-    return { totalCapacity, planned, utilization, pendingApprovals, uatAging, inDev, signedOff, invoicesPending, invoicesValue };
+    return { totalCapacity, planned, utilization, pendingApprovals, overdueApprovals, uatAging, inDev, signedOff, invoicesPending, invoicesValue };
   }, [engagements, requirements, approvals, uat, invoices]);
 
   const utilByEngagement = useMemo(
@@ -95,6 +152,7 @@ function Dashboard() {
         description={`Real-time governance health for ${persona.label}. Monthly cycle: requirement freeze → estimation → approval → sprint → UAT → invoice.`}
       />
 
+      <QueryState queries={[engagementsQuery, requirementsQuery, approvalsQuery, uatQuery, invoicesQuery]}>
       <div className="space-y-6 p-6">
         {/* KPIs */}
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -102,7 +160,7 @@ function Dashboard() {
                sub={`${stats.planned.toLocaleString()} / ${stats.totalCapacity.toLocaleString()} hrs`}
                accent="bg-accent/15 text-accent" />
           <KPI icon={Clock} label="Pending Approvals" value={String(stats.pendingApprovals)}
-               sub="SLA: 48h then auto-approve"
+               sub="Explicit decision required"
                accent="bg-warning/15 text-warning-foreground" />
           <KPI icon={AlertTriangle} label="UAT In-Flight" value={String(stats.uatAging)}
                sub={`${stats.signedOff} signed off this cycle`}
@@ -198,7 +256,7 @@ function Dashboard() {
             </CardHeader>
             <CardContent className="space-y-3">
               <Signal label="Requirement freeze adherence" value="96%" tone="success" />
-              <Signal label="Auto-approved (SLA breach)" value={`${approvals.filter(a => a.status === "auto_approved").length} this cycle`} tone="info" />
+              <Signal label="Pending decisions beyond SLA" value={`${stats.overdueApprovals} this cycle`} tone="info" />
               <Signal label="UAT aging > 4 days" value="2 items" tone="warning" />
               <Signal label="Invoices blocked > 7 days" value="1 item" tone="warning" />
               <Signal label="Active escalations" value="0" tone="success" />
@@ -207,9 +265,11 @@ function Dashboard() {
         </div>
 
         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-          <Users className="h-3.5 w-3.5" /> View tailored to <span className="font-medium text-foreground">{persona.label}</span>. Use the role switcher (top right) to see other personas.
+          <Users className="h-3.5 w-3.5" /> View tailored to <span className="font-medium text-foreground">{persona.label}</span>.
+          {safeDemoMode ? " The demo switcher changes presentation only." : ""}
         </p>
       </div>
+      </QueryState>
     </div>
   );
 }

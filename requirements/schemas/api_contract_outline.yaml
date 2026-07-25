@@ -1,0 +1,88 @@
+openapi: 3.1.0
+info:
+  title: Workforce and Delivery Governance API
+  version: 1.0.0-draft
+  description: >-
+    Contract outline only. Cursor must generate route-specific schemas, authorization checks,
+    idempotency handling, error envelopes and tests from PRDs 03, 05, 07-10 and 13-16.
+servers:
+  - url: /api
+security:
+  - userSession: []
+paths:
+  /engagement-months/{monthId}/transition:
+    post:
+      operationId: transitionEngagementMonth
+      parameters:
+        - in: path
+          name: monthId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [toState, reason]
+              properties:
+                toState: { type: string }
+                reason: { type: string, minLength: 3 }
+                expectedVersion: { type: integer, minimum: 1 }
+      responses:
+        '200': { description: Transition recorded }
+        '409': { description: Version or state conflict }
+  /attendance/check-in:
+    post:
+      operationId: checkIn
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        '201': { description: Attendance session started }
+        '409': { description: Duplicate or incompatible active session }
+  /attendance/check-out:
+    post:
+      operationId: checkOut
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Attendance session closed and day recomputed }
+        '409': { description: No compatible open session }
+  /integrations/linear/webhook:
+    post:
+      security: []
+      operationId: receiveLinearWebhook
+      description: Verify signature against raw body, deduplicate, enqueue durably, and respond rapidly.
+      responses:
+        '200': { description: Accepted for asynchronous processing }
+        '401': { description: Signature invalid }
+  /engagement-months/{monthId}/evidence-packages:
+    post:
+      operationId: generateEvidencePackage
+      parameters:
+        - in: path
+          name: monthId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: header
+          name: Idempotency-Key
+          required: true
+          schema: { type: string }
+      responses:
+        '202': { description: Generation job accepted }
+        '409': { description: Mandatory snapshot or confirmation missing }
+components:
+  securitySchemes:
+    userSession:
+      type: openIdConnect
+      openIdConnectUrl: /.well-known/openid-configuration

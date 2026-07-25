@@ -1,0 +1,10 @@
+# F01 Code Generation Summary
+
+F01 code generation used `gpt-5.6-sol` in two independent streams:
+
+- [Java/PostgreSQL backend](CODEGEN-BACKEND.md)
+- [Vite React frontend](CODEGEN-FRONTEND.md)
+
+The backend provides a secured, tenant-scoped read vertical for identity and core masters. The frontend now uses typed HTTP APIs and contains no Lovable/Supabase runtime. [Independent review](CODE_REVIEW.md) and [fix disposition](FIXES.md) remain controlling for completion status.
+
+This is not the full PRD 03 implementation: configurable roles/permissions, assignments, delegation, approval policies, mutations/audit events and a selected browser OIDC/BFF flow remain in the task backlog.

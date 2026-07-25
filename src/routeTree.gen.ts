@@ -9,37 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UatRouteImport } from './routes/uat'
-import { Route as ScopeRouteImport } from './routes/scope'
-import { Route as RequirementsRouteImport } from './routes/requirements'
-import { Route as InvoicesRouteImport } from './routes/invoices'
-import { Route as EngagementsRouteImport } from './routes/engagements'
-import { Route as ApprovalsRouteImport } from './routes/approvals'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApprovalsRouteImport } from './routes/approvals'
+import { Route as EngagementsRouteImport } from './routes/engagements'
+import { Route as InvoicesRouteImport } from './routes/invoices'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as RequirementsRouteImport } from './routes/requirements'
+import { Route as ScopeRouteImport } from './routes/scope'
+import { Route as UatRouteImport } from './routes/uat'
 
-const UatRoute = UatRouteImport.update({
-  id: '/uat',
-  path: '/uat',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ScopeRoute = ScopeRouteImport.update({
-  id: '/scope',
-  path: '/scope',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RequirementsRoute = RequirementsRouteImport.update({
-  id: '/requirements',
-  path: '/requirements',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InvoicesRoute = InvoicesRouteImport.update({
-  id: '/invoices',
-  path: '/invoices',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EngagementsRoute = EngagementsRouteImport.update({
-  id: '/engagements',
-  path: '/engagements',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApprovalsRoute = ApprovalsRouteImport.update({
@@ -47,9 +28,34 @@ const ApprovalsRoute = ApprovalsRouteImport.update({
   path: '/approvals',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const EngagementsRoute = EngagementsRouteImport.update({
+  id: '/engagements',
+  path: '/engagements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvoicesRoute = InvoicesRouteImport.update({
+  id: '/invoices',
+  path: '/invoices',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RequirementsRoute = RequirementsRouteImport.update({
+  id: '/requirements',
+  path: '/requirements',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScopeRoute = ScopeRouteImport.update({
+  id: '/scope',
+  path: '/scope',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UatRoute = UatRouteImport.update({
+  id: '/uat',
+  path: '/uat',
   getParentRoute: () => rootRouteImport,
 } as any)
 
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/approvals': typeof ApprovalsRoute
   '/engagements': typeof EngagementsRoute
   '/invoices': typeof InvoicesRoute
+  '/login': typeof LoginRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
   '/uat': typeof UatRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/approvals': typeof ApprovalsRoute
   '/engagements': typeof EngagementsRoute
   '/invoices': typeof InvoicesRoute
+  '/login': typeof LoginRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
   '/uat': typeof UatRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/approvals': typeof ApprovalsRoute
   '/engagements': typeof EngagementsRoute
   '/invoices': typeof InvoicesRoute
+  '/login': typeof LoginRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
   '/uat': typeof UatRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/approvals'
     | '/engagements'
     | '/invoices'
+    | '/login'
     | '/requirements'
     | '/scope'
     | '/uat'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/approvals'
     | '/engagements'
     | '/invoices'
+    | '/login'
     | '/requirements'
     | '/scope'
     | '/uat'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/approvals'
     | '/engagements'
     | '/invoices'
+    | '/login'
     | '/requirements'
     | '/scope'
     | '/uat'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   ApprovalsRoute: typeof ApprovalsRoute
   EngagementsRoute: typeof EngagementsRoute
   InvoicesRoute: typeof InvoicesRoute
+  LoginRoute: typeof LoginRoute
   RequirementsRoute: typeof RequirementsRoute
   ScopeRoute: typeof ScopeRoute
   UatRoute: typeof UatRoute
@@ -123,39 +136,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/uat': {
-      id: '/uat'
-      path: '/uat'
-      fullPath: '/uat'
-      preLoaderRoute: typeof UatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/scope': {
-      id: '/scope'
-      path: '/scope'
-      fullPath: '/scope'
-      preLoaderRoute: typeof ScopeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/requirements': {
-      id: '/requirements'
-      path: '/requirements'
-      fullPath: '/requirements'
-      preLoaderRoute: typeof RequirementsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/invoices': {
-      id: '/invoices'
-      path: '/invoices'
-      fullPath: '/invoices'
-      preLoaderRoute: typeof InvoicesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/engagements': {
-      id: '/engagements'
-      path: '/engagements'
-      fullPath: '/engagements'
-      preLoaderRoute: typeof EngagementsRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/approvals': {
@@ -165,11 +150,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApprovalsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/engagements': {
+      id: '/engagements'
+      path: '/engagements'
+      fullPath: '/engagements'
+      preLoaderRoute: typeof EngagementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invoices': {
+      id: '/invoices'
+      path: '/invoices'
+      fullPath: '/invoices'
+      preLoaderRoute: typeof InvoicesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/requirements': {
+      id: '/requirements'
+      path: '/requirements'
+      fullPath: '/requirements'
+      preLoaderRoute: typeof RequirementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scope': {
+      id: '/scope'
+      path: '/scope'
+      fullPath: '/scope'
+      preLoaderRoute: typeof ScopeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/uat': {
+      id: '/uat'
+      path: '/uat'
+      fullPath: '/uat'
+      preLoaderRoute: typeof UatRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApprovalsRoute: ApprovalsRoute,
   EngagementsRoute: EngagementsRoute,
   InvoicesRoute: InvoicesRoute,
+  LoginRoute: LoginRoute,
   RequirementsRoute: RequirementsRoute,
   ScopeRoute: ScopeRoute,
   UatRoute: UatRoute,

@@ -1,0 +1,125 @@
+{
+  "version": "1.0.0",
+  "errors": [
+    {
+      "code": "IMP-001",
+      "category": "FILE",
+      "severity": "ERROR",
+      "message": "Unsupported file type or template version."
+    },
+    {
+      "code": "IMP-002",
+      "category": "FILE",
+      "severity": "ERROR",
+      "message": "Required header is missing or duplicated."
+    },
+    {
+      "code": "IMP-003",
+      "category": "ROW",
+      "severity": "ERROR",
+      "message": "Required value is missing."
+    },
+    {
+      "code": "IMP-004",
+      "category": "ROW",
+      "severity": "ERROR",
+      "message": "Invalid date, timestamp, month or timezone value."
+    },
+    {
+      "code": "IMP-005",
+      "category": "REFERENCE",
+      "severity": "ERROR",
+      "message": "Referenced organization, engagement, project, employee, deliverable or user cannot be resolved."
+    },
+    {
+      "code": "IMP-006",
+      "category": "DUPLICATE",
+      "severity": "ERROR",
+      "message": "Duplicate business key exists within the file or target system."
+    },
+    {
+      "code": "IMP-007",
+      "category": "DATE_RANGE",
+      "severity": "ERROR",
+      "message": "Effective-date range is invalid or overlaps a prohibited existing range."
+    },
+    {
+      "code": "IMP-008",
+      "category": "POLICY",
+      "severity": "ERROR",
+      "message": "Value violates the effective policy or workflow-state rule."
+    },
+    {
+      "code": "IMP-009",
+      "category": "AUTHORITY",
+      "severity": "ERROR",
+      "message": "Historical approval or confirmation actor is not mapped to an authorized role."
+    },
+    {
+      "code": "IMP-010",
+      "category": "CLOSED_MONTH",
+      "severity": "ERROR",
+      "message": "Target month is closed; reopen/version authorization is required."
+    },
+    {
+      "code": "IMP-011",
+      "category": "SOURCE_CONFLICT",
+      "severity": "ERROR",
+      "message": "Record conflicts with the authoritative source for this employee-day or object."
+    },
+    {
+      "code": "IMP-012",
+      "category": "CHECKSUM",
+      "severity": "ERROR",
+      "message": "File or row checksum does not match the declared value."
+    },
+    {
+      "code": "IMP-013",
+      "category": "PII",
+      "severity": "ERROR",
+      "message": "Disallowed sensitive field detected, including salary, markup, rate or payroll data."
+    },
+    {
+      "code": "IMP-014",
+      "category": "ATTENDANCE",
+      "severity": "ERROR",
+      "message": "Punches cannot be paired deterministically or daily totals are internally inconsistent."
+    },
+    {
+      "code": "IMP-015",
+      "category": "LINEAR",
+      "severity": "WARNING",
+      "message": "Linear issue is inaccessible or current status cannot prove historical status."
+    },
+    {
+      "code": "IMP-016",
+      "category": "EMAIL",
+      "severity": "WARNING",
+      "message": "Confirmation evidence lacks a verifiable message/thread identifier or authenticated sender mapping."
+    },
+    {
+      "code": "IMP-017",
+      "category": "ROW",
+      "severity": "WARNING",
+      "message": "Optional value was normalized or truncated according to template rules."
+    },
+    {
+      "code": "IMP-018",
+      "category": "BATCH",
+      "severity": "ERROR",
+      "message": "Import batch is no longer in a state that permits commit or rollback."
+    },
+    {
+      "code": "IMP-019",
+      "category": "ORDERING",
+      "severity": "ERROR",
+      "message": "Prerequisite master or parent record has not been imported."
+    },
+    {
+      "code": "IMP-020",
+      "category": "UNKNOWN",
+      "severity": "ERROR",
+      "message": "Unexpected validation or processing error; see correlation ID."
+    }
+  ]
+}

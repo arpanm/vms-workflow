@@ -22,15 +22,16 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { featureFlags } from "@/lib/feature-flags";
 
 const nav = [
-  { title: "Executive Dashboard", url: "/", icon: LayoutDashboard, group: "Overview" },
-  { title: "Engagements", url: "/engagements", icon: Building2, group: "Overview" },
-  { title: "Requirements", url: "/requirements", icon: ListChecks, group: "Delivery" },
-  { title: "Monthly Scope Engine", url: "/scope", icon: Boxes, group: "Delivery" },
-  { title: "Approvals", url: "/approvals", icon: ShieldCheck, group: "Governance" },
-  { title: "UAT", url: "/uat", icon: ClipboardCheck, group: "Governance" },
-  { title: "Invoices", url: "/invoices", icon: Receipt, group: "Finance" },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, group: "Overview", legacy: false },
+  { title: "Engagements", url: "/engagements", icon: Building2, group: "Overview", legacy: true },
+  { title: "Requirements", url: "/requirements", icon: ListChecks, group: "Delivery", legacy: true },
+  { title: "Monthly Scope Engine", url: "/scope", icon: Boxes, group: "Delivery", legacy: true },
+  { title: "Approvals", url: "/approvals", icon: ShieldCheck, group: "Governance", legacy: true },
+  { title: "UAT", url: "/uat", icon: ClipboardCheck, group: "Governance", legacy: true },
+  { title: "Invoices", url: "/invoices", icon: Receipt, group: "Finance", legacy: true },
 ];
 
 export function AppSidebar() {
@@ -63,7 +64,11 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {nav
-                  .filter((n) => n.group === g)
+                  .filter(
+                    (n) =>
+                      n.group === g &&
+                      (!n.legacy || featureFlags.legacyFixedCost),
+                  )
                   .map((item) => {
                     const active = path === item.url;
                     return (

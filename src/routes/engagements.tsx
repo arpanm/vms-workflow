@@ -4,8 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useEngagements, useRequirements } from "@/lib/data-hooks";
 import { Building2, Users } from "lucide-react";
+import { requireLegacyRoute } from "@/lib/legacy-route";
+import { QueryState } from "@/components/query-state";
 
 export const Route = createFileRoute("/engagements")({
+  beforeLoad: requireLegacyRoute,
   head: () => ({
     meta: [
       { title: "Engagements — Cadence" },
@@ -26,15 +29,18 @@ const categoryLabels: Record<string, string> = {
 };
 
 function EngagementsPage() {
-  const { data: engagements = [] } = useEngagements();
-  const { data: requirements = [] } = useRequirements();
+  const engagementsQuery = useEngagements();
+  const requirementsQuery = useRequirements();
+  const engagements = engagementsQuery.data ?? [];
+  const requirements = requirementsQuery.data ?? [];
 
   return (
     <div>
       <PageHeader
         title="Engagements"
-        description="Each engagement runs on a fixed monthly commercial. Vendors should never sit idle — bandwidth is auto-filled from backlog."
+        description="Legacy fixed-cost engagement capacity and delivery intake."
       />
+      <QueryState queries={[engagementsQuery, requirementsQuery]}>
       <div className="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-3">
         {engagements.map((e) => {
           const items = requirements.filter((r) => r.engagement_id === e.id);
@@ -73,6 +79,7 @@ function EngagementsPage() {
           );
         })}
       </div>
+      </QueryState>
     </div>
   );
 }

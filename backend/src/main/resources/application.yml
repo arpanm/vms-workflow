@@ -1,0 +1,37 @@
+spring:
+  application:
+    name: vms-workflow-backend
+  datasource:
+    url: ${VMS_DATABASE_URL}
+    username: ${VMS_DATABASE_USERNAME}
+    password: ${VMS_DATABASE_PASSWORD}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${VMS_OIDC_JWKS_URI}
+
+vms:
+  security:
+    audience: ${VMS_OIDC_AUDIENCE}
+    issuer: ${VMS_OIDC_ISSUER}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html

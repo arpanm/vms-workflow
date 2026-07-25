@@ -1,0 +1,2 @@
+template_version,organization_code,leave_request_external_id,employee_number,leave_date,session,leave_type_code,quantity_days,request_status,decision_status,requested_at,represented_decision_at,approver_email,reason,evidence_reference,paid_lwp_classification,source_system,source_reference,notes
+1,ARROWFOUNDRY,LR-AF001-20260618,AF-001,2026-06-18,FULL_DAY,CL,1.0,SUBMITTED,APPROVED,2026-06-15T10:00:00+05:30,2026-06-16T12:00:00+05:30,manager@example.invalid,Personal leave,,PAID,APPROVED_SPREADSHEET,Leave register June 2026,Synthetic example

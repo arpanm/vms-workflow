@@ -1,0 +1,274 @@
+{
+  "manifest_version": "1.0.0",
+  "pack_name": "ArrowFoundry_Reliance_Governance_PRD_Pack",
+  "pack_version": "1.0",
+  "generated_at": "2026-07-25T19:54:40.259Z",
+  "file_count": 53,
+  "files": [
+    {
+      "path": "00_INDEX_IMPLEMENTATION_TODO.md",
+      "bytes": 17292,
+      "sha256": "4b5b045ae81997d4092262e31c0093421b8ecb1ade498f934758bb7143ff48f8"
+    },
+    {
+      "path": "01_PRODUCT_CHANGE_BRIEF_SCOPE_AND_PRINCIPLES.md",
+      "bytes": 11917,
+      "sha256": "484f6863ebf4c92f95e8ce3bb86eacb0a48395f4333505d05ce37109bf2aca47"
+    },
+    {
+      "path": "02_DOMAIN_MODEL_ORGANIZATIONS_ENGAGEMENTS_PROJECTS_MONTHS.md",
+      "bytes": 11124,
+      "sha256": "6703e05755bed55554148dbbc2e340f67a830a27f39a662371215041f89578a4"
+    },
+    {
+      "path": "03_IDENTITY_RBAC_APPROVAL_MATRIX_AND_ADMINISTRATION.md",
+      "bytes": 12291,
+      "sha256": "3384933a047e1f07d85c6c4a1a7909744758b7238f34a8940b8e0490d0307cc5"
+    },
+    {
+      "path": "04_EMPLOYEE_MASTER_ALLOCATIONS_CALENDARS_AND_LEAVE_BALANCES.md",
+      "bytes": 11940,
+      "sha256": "831186442c7c2e66138de629a6eb171122291333ae3e777dfba1e02191804365"
+    },
+    {
+      "path": "05_ATTENDANCE_CHECKIN_CHECKOUT_LEAVE_AND_REGULARIZATION.md",
+      "bytes": 14656,
+      "sha256": "f86a820c2472814e96a170ab52dcc9450b805e96d620f9e22241cf0537ab1a37"
+    },
+    {
+      "path": "06_GREYTHR_INTEGRATION_SOURCE_OF_TRUTH_AND_RECONCILIATION.md",
+      "bytes": 13133,
+      "sha256": "4615b2cd50b89835b25c6e593793ca9bd5b43a21b3840dafc04d4578147debfc"
+    },
+    {
+      "path": "07_MONTHLY_DELIVERABLE_PLANNING_AND_LINEAR_INTEGRATION.md",
+      "bytes": 12870,
+      "sha256": "445f605dd521626f19047574bb634636e2f96fe1fe53b0a78197c455db9fa4d7"
+    },
+    {
+      "path": "08_DELIVERY_EVIDENCE_CERTIFICATION_AND_MONTH_END_CLOSURE.md",
+      "bytes": 11001,
+      "sha256": "d3837a05c5c2d26b69c436905a19f025b8ef0d0520bb27a2efc95fbbf24fd76d"
+    },
+    {
+      "path": "09_EMAIL_CONFIRMATION_INGESTION_NOTIFICATIONS_AND_ESCALATIONS.md",
+      "bytes": 11734,
+      "sha256": "67531ba4652885fcf8c47a11bccd21880d9293b2abc0668c9c2e4392b5e74cbd"
+    },
+    {
+      "path": "10_INVOICE_EVIDENCE_PROCUREMENT_AND_PAYMENT_READINESS.md",
+      "bytes": 11118,
+      "sha256": "46f7e18cfebfee7ee95ebea909a63619148a4088073180c403e9a819dd4a247e"
+    },
+    {
+      "path": "11_HISTORICAL_MIGRATION_BACKFILL_AND_RETRO_APPROVALS.md",
+      "bytes": 11086,
+      "sha256": "17a320e23e78547a701ec38c67553c2490d64f1b190995dfc6a9159d332ea3ec"
+    },
+    {
+      "path": "12_DASHBOARDS_REPORTS_EXPORTS_AND_CONTROL_TOWER.md",
+      "bytes": 9494,
+      "sha256": "221c43164896e9a7c1132a4d6a1982b2f5fc2337eb7eb3fd5b8406a85c9984c5"
+    },
+    {
+      "path": "13_DATA_MODEL_API_EVENTS_BACKGROUND_JOBS_AND_STORAGE.md",
+      "bytes": 16525,
+      "sha256": "b348277d9c109344c07a1e7de03ed0550306c3b8aefb4cff6ce8b63d81144d34"
+    },
+    {
+      "path": "14_SECURITY_PRIVACY_AUDIT_RETENTION_AND_COMPLIANCE.md",
+      "bytes": 13201,
+      "sha256": "c3415901933a0b987c8f1945219bbd6dc9243129e9f79422b87de01cabd6fa5e"
+    },
+    {
+      "path": "15_UI_UX_INFORMATION_ARCHITECTURE_AND_PERSONA_FLOWS.md",
+      "bytes": 13923,
+      "sha256": "5f87165f93ad4ead0686998d734758edce0b8893a7cb781caa2912d0b1746c3e"
+    },
+    {
+      "path": "16_ACCEPTANCE_TEST_CATALOG_NFR_ROLLOUT_AND_OPERATIONS.md",
+      "bytes": 17095,
+      "sha256": "38da3da51442d95df082bc5f24e9dc64fddad0d189bfb6d697a7f69d96304d9d"
+    },
+    {
+      "path": "17_EXISTING_CODE_IMPACT_FILE_LEVEL_TODO_AND_MIGRATION_ORDER.md",
+      "bytes": 15047,
+      "sha256": "389320b849b1e76c39896f8a8e4adcca05ab23c161581364cf58cc7469801d85"
+    },
+    {
+      "path": "18_IMPORT_TEMPLATES_FIELD_DICTIONARY_AND_SAMPLE_FILES.md",
+      "bytes": 12563,
+      "sha256": "3542268dbe42cb70a698beb4f2624f7349d9d8a930060f4e9e2d867561e3a79c"
+    },
+    {
+      "path": "19_RESEARCH_FINDINGS_AND_INTEGRATION_DECISIONS.md",
+      "bytes": 9178,
+      "sha256": "c76cc9b0e989e1de0b87a8002156190a39c8ee2a23e1eb44b9b27fbc0c10c571"
+    },
+    {
+      "path": "20_ASSUMPTION_REGISTER_CONFIG_DEFAULTS_AND_DECISION_LOG.md",
+      "bytes": 10894,
+      "sha256": "552dba8226b483d2f4e5fd18a9b0811ca3531fcad82f56491059df882834215b"
+    },
+    {
+      "path": "21_REQUIREMENT_TRACEABILITY_AND_GAP_CLOSURE.md",
+      "bytes": 11996,
+      "sha256": "45350e680107d3f6f515b717f0c34669b81b2d3fd7756c1d4a044c271d2670b5"
+    },
+    {
+      "path": "22_JAVA_POSTGRES_ARCHITECTURE_OVERRIDE.md",
+      "bytes": 5606,
+      "sha256": "399851732ef0f8d5ab1cb9b11b84213a949ffa8a25ecdde5d573c587a44c1284"
+    },
+    {
+      "path": "CURSOR_START_HERE.md",
+      "bytes": 4236,
+      "sha256": "fedb22d40c7d8fe2d3b8c15079525e95885940bd1b07ed65a629977732ba6895"
+    },
+    {
+      "path": "IMPLEMENTATION_BACKLOG.csv",
+      "bytes": 4458,
+      "sha256": "7375242b35d19f3cbcd8f8577ee0e3b8a77efd3b4f169d9863f1842c0731500b"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4184,
+      "sha256": "f93d901e53b873d25842901f51ddc2eb9745544023f4f2957aa21b8f9e1ad3f6"
+    },
+    {
+      "path": "schemas/README.md",
+      "bytes": 1575,
+      "sha256": "3b59dc82e6d087f815861980d0d3a86d08ceb072063d34e97fe61f6ec8d782c9"
+    },
+    {
+      "path": "schemas/api_contract_outline.yaml",
+      "bytes": 2846,
+      "sha256": "6676bc272550b3a7b28158d6c753a97ae910de6bacc7f09ac930fa5efc3d0830"
+    },
+    {
+      "path": "schemas/approval_policy.example.json",
+      "bytes": 1407,
+      "sha256": "45b0040dc15aa06c9bf70fbf19a0e77a54d62f5996524cbd4cfb2a4ba25cbf62"
+    },
+    {
+      "path": "schemas/attendance_policy.example.json",
+      "bytes": 1108,
+      "sha256": "f735feab84762c4cc88c801b8029ec1848fe080d4f7d2ec0d8d0dace32295ce2"
+    },
+    {
+      "path": "schemas/canonical_event_envelope.schema.json",
+      "bytes": 3392,
+      "sha256": "fc37eede3384913b63215d10e23db3746edc6643668e70c137e912456bfe1ee7"
+    },
+    {
+      "path": "schemas/evidence_manifest.schema.json",
+      "bytes": 5445,
+      "sha256": "a427574364b78d125d9441c6e80a013952b6f81fa996e30468f1e3ea097c68f5"
+    },
+    {
+      "path": "schemas/import_error_codes.json",
+      "bytes": 3661,
+      "sha256": "bc74d2e6da5b8e11e5265b4010a797197e0ba0fc6d056e8e89446c5d43d2d229"
+    },
+    {
+      "path": "schemas/integration_connection.example.json",
+      "bytes": 838,
+      "sha256": "cf2c14d0d9002cd328ddf88df8ff8ad851c36b29fff57b999313149b4b306472"
+    },
+    {
+      "path": "schemas/linear_issue_snapshot.schema.json",
+      "bytes": 3762,
+      "sha256": "82144f2b2d3fc77076d9d3952e8d5d239fa8aefec68920c8db9309082e41cc15"
+    },
+    {
+      "path": "schemas/proposed_schema_outline.sql",
+      "bytes": 17838,
+      "sha256": "67086619f4bf76b3e31988a522d743650b4949fc6998a52532d62cbb013f638e"
+    },
+    {
+      "path": "schemas/workflow_state_machines.json",
+      "bytes": 4120,
+      "sha256": "f240a595b9d5d163b1eb8dcb71d17fc09aa30edee608ad8f4b83f1d9e79e08de"
+    },
+    {
+      "path": "templates/01_employees_v1.csv",
+      "bytes": 960,
+      "sha256": "7249aef8486cdc4e6ef77535a58163a9213e26388ec4564452e1fefdac879210"
+    },
+    {
+      "path": "templates/02_employee_allocations_v1.csv",
+      "bytes": 712,
+      "sha256": "7556ed679ce1e78e5deec3c836460e72f215a70af95799d34bafb13602d7a69f"
+    },
+    {
+      "path": "templates/03_holidays_v1.csv",
+      "bytes": 494,
+      "sha256": "9704101ea018b493c158983681d31ed75f1e834baa3736e60fa3198b9e441ec1"
+    },
+    {
+      "path": "templates/04_employee_date_overrides_v1.csv",
+      "bytes": 422,
+      "sha256": "eaef1c9e869af56da4895203a91ce1b78ce2f3e4ae545914cb4e0761f819e235"
+    },
+    {
+      "path": "templates/05_leave_balances_v1.csv",
+      "bytes": 692,
+      "sha256": "e351fb33240d98b0272a407944370d47ddb06c4096fba178e20bc57273cf5235"
+    },
+    {
+      "path": "templates/06_leave_requests_v1.csv",
+      "bytes": 543,
+      "sha256": "56136ccb4aea43335b7ed3c8813cdb8e98f4fd965de686ddc019461462bd2c8b"
+    },
+    {
+      "path": "templates/07a_attendance_punches_v1.csv",
+      "bytes": 562,
+      "sha256": "4ce4a20eabadbb1c6df69d679b51edad7ecac5ee3dac27d0f6b1a4b8d9854005"
+    },
+    {
+      "path": "templates/07b_attendance_daily_v1.csv",
+      "bytes": 856,
+      "sha256": "2f27a2a93da47d77b5fd13e9ea4bac9755fe08fa4a80187aaab8fbfcf6466258"
+    },
+    {
+      "path": "templates/08_deliverables_v1.csv",
+      "bytes": 1182,
+      "sha256": "010f42b0caaa4e42e071d10b96d9019e0880fdb0f85eb5e82bec67d8db4731ac"
+    },
+    {
+      "path": "templates/09_deliverable_linear_links_v1.csv",
+      "bytes": 685,
+      "sha256": "913bd6b6892f746153db66106dd9ffaad369d7efd1e7086e507b86e8c3ca53af"
+    },
+    {
+      "path": "templates/10_delivery_certifications_v1.csv",
+      "bytes": 776,
+      "sha256": "6f059fab0a694f7f7c7964a31d926d51373176b84671684d03f0364a1107e605"
+    },
+    {
+      "path": "templates/11_business_confirmations_v1.csv",
+      "bytes": 1002,
+      "sha256": "fc1a496639033e98d7074ae5077d476caf01572a33a9d45b6b78ec5cb76dbff9"
+    },
+    {
+      "path": "templates/12_invoices_v1.csv",
+      "bytes": 865,
+      "sha256": "9ab76ca9c4b8b3636c4ad5959c925c4a853e9a25520c7aeb3a8207236867338d"
+    },
+    {
+      "path": "templates/13_approval_history_v1.csv",
+      "bytes": 533,
+      "sha256": "40f7622870cee04fe97360710f417ad4317961ea569beddd4a5e01518045abd1"
+    },
+    {
+      "path": "templates/README.md",
+      "bytes": 591,
+      "sha256": "3af702a14dab1e8ae51e0a0016ce3ee42c98fc2a974ba06704096295e424899f"
+    },
+    {
+      "path": "templates/template_manifest.json",
+      "bytes": 12198,
+      "sha256": "da8aad04f46c4272c9f5d6b213c0a8d697a28b634001ad58bcb3fda0b6a9c9ba"
+    }
+  ]
+}

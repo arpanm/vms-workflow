@@ -2,50 +2,76 @@ import { createFileRoute } from "@tanstack/react-router";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { StatusBadge } from "@/components/status-badge";
-import { useRequirements, useUat } from "@/lib/data-hooks";
+import {
+  useRequirements,
+  useUat,
+  type Requirement,
+  type UatItem,
+} from "@/lib/data-hooks";
 import { differenceInDays, parseISO } from "date-fns";
 import { AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { requireLegacyRoute } from "@/lib/legacy-route";
+import { QueryState } from "@/components/query-state";
 
 export const Route = createFileRoute("/uat")({
+  beforeLoad: requireLegacyRoute,
   head: () => ({
     meta: [
       { title: "UAT — Cadence" },
-      { name: "description", content: "Track UAT handover, defects and signoff. Auto deemed-acceptance after SLA to protect vendor cashflow." },
+      { name: "description", content: "Track explicit UAT handover, defects and human signoff." },
     ],
   }),
   component: UatPage,
 });
 
 function UatPage() {
-  const { data: uat = [] } = useUat();
-  const { data: requirements = [] } = useRequirements();
+  const uatQuery = useUat();
+  const requirementsQuery = useRequirements();
+  const uat = uatQuery.data ?? [];
+  const requirements = requirementsQuery.data ?? [];
 
   const groups = {
     in_progress: uat.filter((u) => u.status === "in_progress"),
     blocked: uat.filter((u) => u.status === "blocked"),
     not_started: uat.filter((u) => u.status === "not_started"),
-    signed_off: uat.filter((u) => ["signed_off", "deemed_accepted"].includes(u.status)),
+    signed_off: uat.filter((u) => u.status === "signed_off"),
+    needs_review: uat.filter(
+      (u) =>
+        !["in_progress", "blocked", "not_started", "signed_off"].includes(
+          u.status,
+        ),
+    ),
   };
 
   return (
     <div>
       <PageHeader
         title="UAT Management"
-        description="Mandatory UAT cases up front prevent endless back-and-forth. After 5 days of no response, items are auto deemed-accepted."
+        description="UAT completion requires attributable signoff. Silence and elapsed SLAs remain unresolved exceptions."
       />
-      <div className="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-4">
+      <QueryState queries={[uatQuery, requirementsQuery]}>
+      <div className="grid gap-4 p-6 md:grid-cols-2 xl:grid-cols-5">
         <Column title="In Progress" icon={Clock} tone="bg-info/15 text-info-foreground" items={groups.in_progress} requirements={requirements} />
         <Column title="Blocked" icon={AlertTriangle} tone="bg-destructive/15 text-destructive" items={groups.blocked} requirements={requirements} />
         <Column title="Not Started" icon={Clock} tone="bg-muted text-muted-foreground" items={groups.not_started} requirements={requirements} />
         <Column title="Signed Off" icon={CheckCircle2} tone="bg-success/15 text-success-foreground" items={groups.signed_off} requirements={requirements} />
+        <Column title="Needs Explicit Review" icon={AlertTriangle} tone="bg-warning/15 text-warning-foreground" items={groups.needs_review} requirements={requirements} />
       </div>
+      </QueryState>
     </div>
   );
 }
 
 function Column({
   title, icon: Icon, tone, items, requirements,
-}: { title: string; icon: any; tone: string; items: any[]; requirements: any[] }) {
+}: {
+  title: string;
+  icon: LucideIcon;
+  tone: string;
+  items: UatItem[];
+  requirements: Requirement[];
+}) {
   return (
     <Card className="border-border/60 shadow-[var(--shadow-card)] flex flex-col min-h-[320px]">
       <CardHeader className="pb-2">
