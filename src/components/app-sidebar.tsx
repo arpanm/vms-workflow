@@ -8,6 +8,11 @@ import {
   Receipt,
   Building2,
   Sparkles,
+  UserRoundSearch,
+  Timer,
+  CalendarCheck2,
+  FileWarning,
+  CalendarClock,
 } from "lucide-react";
 
 import {
@@ -25,13 +30,18 @@ import {
 import { featureFlags } from "@/lib/feature-flags";
 
 const nav = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard, group: "Overview", legacy: false },
-  { title: "Engagements", url: "/engagements", icon: Building2, group: "Overview", legacy: true },
-  { title: "Requirements", url: "/requirements", icon: ListChecks, group: "Delivery", legacy: true },
-  { title: "Monthly Scope Engine", url: "/scope", icon: Boxes, group: "Delivery", legacy: true },
-  { title: "Approvals", url: "/approvals", icon: ShieldCheck, group: "Governance", legacy: true },
-  { title: "UAT", url: "/uat", icon: ClipboardCheck, group: "Governance", legacy: true },
-  { title: "Invoices", url: "/invoices", icon: Receipt, group: "Finance", legacy: true },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, group: "Overview", legacy: false, workforce: false },
+  { title: "Engagements", url: "/engagements", icon: Building2, group: "Overview", legacy: true, workforce: false },
+  { title: "Employees", url: "/workforce/employees", icon: UserRoundSearch, group: "Workforce", legacy: false, workforce: true },
+  { title: "Today", url: "/attendance/today", icon: Timer, group: "Workforce", legacy: false, workforce: true },
+  { title: "Leave", url: "/attendance/leave", icon: CalendarCheck2, group: "Workforce", legacy: false, workforce: true },
+  { title: "Regularizations", url: "/attendance/regularizations", icon: FileWarning, group: "Workforce", legacy: false, workforce: true },
+  { title: "Month status", url: "/attendance/month-close", icon: CalendarClock, group: "Workforce", legacy: false, workforce: true },
+  { title: "Requirements", url: "/requirements", icon: ListChecks, group: "Delivery", legacy: true, workforce: false },
+  { title: "Monthly Scope Engine", url: "/scope", icon: Boxes, group: "Delivery", legacy: true, workforce: false },
+  { title: "Approvals", url: "/approvals", icon: ShieldCheck, group: "Governance", legacy: true, workforce: false },
+  { title: "UAT", url: "/uat", icon: ClipboardCheck, group: "Governance", legacy: true, workforce: false },
+  { title: "Invoices", url: "/invoices", icon: Receipt, group: "Finance", legacy: true, workforce: false },
 ];
 
 export function AppSidebar() {
@@ -39,7 +49,7 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (s) => s.location.pathname });
 
-  const groups = ["Overview", "Delivery", "Governance", "Finance"] as const;
+  const groups = ["Overview", "Workforce", "Delivery", "Governance", "Finance"] as const;
 
   return (
     <Sidebar collapsible="icon">
@@ -67,10 +77,12 @@ export function AppSidebar() {
                   .filter(
                     (n) =>
                       n.group === g &&
-                      (!n.legacy || featureFlags.legacyFixedCost),
+                      (!n.legacy || featureFlags.legacyFixedCost) &&
+                      (!n.workforce || featureFlags.workforceGovernance),
                   )
                   .map((item) => {
-                    const active = path === item.url;
+                    const active =
+                      path === item.url || path.startsWith(`${item.url}/`);
                     return (
                       <SidebarMenuItem key={item.url}>
                         <SidebarMenuButton asChild isActive={active}>

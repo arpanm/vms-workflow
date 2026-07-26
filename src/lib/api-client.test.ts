@@ -53,4 +53,25 @@ describe("createApiClient", () => {
       correlationId: "corr-123",
     });
   });
+
+  it("uses RFC 7807 detail text returned by the Java backend", async () => {
+    const client = createApiClient({
+      fetch: (async () =>
+        new Response(
+          JSON.stringify({
+            title: "Conflict",
+            detail: "An open attendance session already exists.",
+          }),
+          {
+            status: 409,
+            headers: { "content-type": "application/problem+json" },
+          },
+        )) as typeof fetch,
+    });
+
+    await expect(client.post("/attendance/punches", {})).rejects.toMatchObject({
+      status: 409,
+      message: "An open attendance session already exists.",
+    });
+  });
 });

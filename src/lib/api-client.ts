@@ -4,6 +4,8 @@ import { publicEnvironment } from "./env";
 
 export type ApiErrorDetails = {
   message?: string;
+  detail?: string;
+  title?: string;
   code?: string;
   correlationId?: string;
   [key: string]: unknown;
@@ -53,7 +55,7 @@ function resolveUrl(baseUrl: string, path: string) {
 async function parseBody(response: Response): Promise<unknown> {
   if (response.status === 204) return undefined;
   const contentType = response.headers.get("content-type") ?? "";
-  if (contentType.includes("application/json")) {
+  if (contentType.includes("json")) {
     return response.json();
   }
   const text = await response.text();
@@ -108,6 +110,8 @@ export function createApiClient(options: ApiClientOptions = {}) {
         undefined;
       throw new ApiError(
         details?.message ??
+          details?.detail ??
+          details?.title ??
           (typeof payload === "string" ? payload : `API request failed (${response.status}).`),
         {
           status: response.status,

@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -25,6 +26,14 @@ public class ApiExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     ProblemDetail forbidden(AccessDeniedException exception, HttpServletRequest request) {
         return problem(HttpStatus.FORBIDDEN, "Forbidden", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler({DomainConflictException.class, DataIntegrityViolationException.class})
+    ProblemDetail conflict(Exception exception, HttpServletRequest request) {
+        String detail = exception instanceof DomainConflictException
+            ? exception.getMessage()
+            : "The request conflicts with an existing or constrained record.";
+        return problem(HttpStatus.CONFLICT, "Conflict", detail, request);
     }
 
     @ExceptionHandler({

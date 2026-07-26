@@ -35,7 +35,7 @@
   "features": [
     { "id": "F00", "directory": "00-foundation", "phase": 0, "state": "active" },
     { "id": "F01", "directory": "01-identity-core", "phase": 1, "state": "active" },
-    { "id": "F02", "directory": "02-workforce-attendance", "phase": 2, "state": "planned" },
+    { "id": "F02", "directory": "02-workforce-attendance", "phase": 2, "state": "active" },
     { "id": "F03", "directory": "03-delivery-linear", "phase": 3, "state": "planned" },
     { "id": "F04", "directory": "04-certification-confirmation", "phase": 4, "state": "planned" },
     { "id": "F05", "directory": "05-evidence-invoice-reporting", "phase": 5, "state": "planned" },

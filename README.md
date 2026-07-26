@@ -1,17 +1,26 @@
 # Cadence — Workforce and Delivery Evidence Governance
 
-Cadence is being rebuilt as a Java/PostgreSQL application with a standard Vite React frontend. The current working tree contains the Phase 0 foundation and a Phase 1 read-only identity/core vertical slice. Lovable, Supabase, Cloudflare and TanStack Start server dependencies have been removed.
+Cadence is being rebuilt as a Java/PostgreSQL application with a standard Vite React frontend. The current working tree contains the foundation, the read-only identity/core vertical, and a reviewed local workforce/attendance vertical. Lovable, Supabase, Cloudflare and TanStack Start server dependencies have been removed.
 
 ## Current status
+
+The detailed, continuously maintained ledger is
+[FEATURE_STATUS.md](docs/FEATURE_STATUS.md). The extensible browser/system
+regression catalog is
+[E2E_REGRESSION_CASES.md](docs/testing/E2E_REGRESSION_CASES.md).
 
 | Track | Status | Evidence |
 |---|---|---|
 | F00 foundation and SDLC harness | Implemented locally; staging backup/smoke inputs remain external blockers | [F00 tasks](docs/features/00-foundation/TASKS.md), [changelog](docs/features/00-foundation/CHANGELOG.md) |
 | F01 Java identity/core read vertical | Implemented and verified with PostgreSQL Testcontainers | [F01 tasks](docs/features/01-identity-core/TASKS.md), [codegen](docs/features/01-identity-core/CODEGEN.md) |
 | F01 production identity/provisioning | Blocked until an OIDC provider, same-origin BFF login endpoint and approved user/role provisioning path are selected/configured | [fix disposition](docs/features/01-identity-core/FIXES.md) |
-| F02–F07 product features | Planned only; their task/test specifications are ready | [feature plans](#feature-delivery-plans) |
+| F02 workforce/attendance local vertical | Implemented, independently reviewed and locally regressed; provider/admin/full-stack scope remains open | [F02 fixes](docs/features/02-workforce-attendance/FIXES.md), [API](docs/features/02-workforce-attendance/API_DOCUMENTATION.md), [UI guide](docs/features/02-workforce-attendance/UI_DOCUMENTATION.md) |
+| F03–F07 product features | Task/test specifications are ready; implementation proceeds sequentially | [feature plans](#feature-delivery-plans) |
 
-Phase 2 must not start until the production identity/BFF decision and staging tenant-isolation gate are complete.
+Production release remains blocked until the identity/BFF decision and staging
+tenant-isolation gate are complete. Local feature development uses explicit
+demo/intercepted-browser and Testcontainers boundaries documented in the
+[status ledger](docs/FEATURE_STATUS.md).
 
 ## Architecture
 
@@ -54,12 +63,20 @@ npm run lint
 npm run test
 npm run build
 mvn -B -f backend/pom.xml verify
+npm run e2e
+npm run regression
 ```
 
-The Maven verification applies Flyway to ephemeral PostgreSQL and runs 14
+The Maven verification applies Flyway to ephemeral PostgreSQL and runs 34
 integration tests covering real signed-JWT validation, lifecycle and scoped
-RBAC denial, tenant/object isolation, database constraints, legacy reads and
-OpenAPI security metadata.
+RBAC denial, tenant/object isolation, database constraints, legacy reads,
+workforce/attendance invariants and OpenAPI security metadata.
+
+`npm run regression` combines frontend checks, Maven/Testcontainers
+PostgreSQL integration and Playwright Chromium browser-contract tests. The
+Playwright API is deterministic and intercepted; it is not evidence of a real
+OIDC provider or deployed full-stack environment. See the
+[testing guide](docs/testing/README.md).
 
 ## Requirements and implementation order
 
@@ -76,7 +93,7 @@ OpenAPI security metadata.
 |---|---|---|---|
 | F00 Foundation | [Tasks](docs/features/00-foundation/TASKS.md) | [Tests](docs/features/00-foundation/TEST_CASES.md) | [Folder](docs/features/00-foundation/) |
 | F01 Identity and core | [Tasks](docs/features/01-identity-core/TASKS.md) | [Tests](docs/features/01-identity-core/TEST_CASES.md) | [Folder](docs/features/01-identity-core/) |
-| F02 Workforce and attendance | [Tasks](docs/features/02-workforce-attendance/TASKS.md) | [Tests](docs/features/02-workforce-attendance/TEST_CASES.md) | Planned |
+| F02 Workforce and attendance | [Tasks](docs/features/02-workforce-attendance/TASKS.md) | [Tests](docs/features/02-workforce-attendance/TEST_CASES.md) | [Reviewed local vertical and remaining scope](docs/features/02-workforce-attendance/) |
 | F03 Delivery and Linear | [Tasks](docs/features/03-delivery-linear/TASKS.md) | [Tests](docs/features/03-delivery-linear/TEST_CASES.md) | Planned |
 | F04 Certification and confirmation | [Tasks](docs/features/04-certification-confirmation/TASKS.md) | [Tests](docs/features/04-certification-confirmation/TEST_CASES.md) | Planned |
 | F05 Evidence, invoice and reporting | [Tasks](docs/features/05-evidence-invoice-reporting/TASKS.md) | [Tests](docs/features/05-evidence-invoice-reporting/TEST_CASES.md) | Planned |
@@ -90,7 +107,12 @@ OpenAPI security metadata.
 ## Operations
 
 - [Rollback and recovery](docs/operations/ROLLBACK.md)
+- [Detailed feature status and open issues](docs/FEATURE_STATUS.md)
+- [End-to-end regression case catalog](docs/testing/E2E_REGRESSION_CASES.md)
+- [Testing and Playwright guide](docs/testing/README.md)
 - [F01 API documentation](docs/features/01-identity-core/API_DOCUMENTATION.md)
 - [F01 UI guide](docs/features/01-identity-core/UI_DOCUMENTATION.md)
+- [F02 API documentation](docs/features/02-workforce-attendance/API_DOCUMENTATION.md)
+- [F02 UI guide](docs/features/02-workforce-attendance/UI_DOCUMENTATION.md)
 
 Do not store salary, CTC, markup, employee billing rates or payroll calculations. Do not infer human approval from silence, delivery receipts, elapsed time or external ticket status.

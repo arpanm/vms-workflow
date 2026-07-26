@@ -17,6 +17,12 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RequirementsRouteImport } from './routes/requirements'
 import { Route as ScopeRouteImport } from './routes/scope'
 import { Route as UatRouteImport } from './routes/uat'
+import { Route as AttendanceLeaveRouteImport } from './routes/attendance.leave'
+import { Route as AttendanceMonthCloseRouteImport } from './routes/attendance.month-close'
+import { Route as AttendanceRegularizationsRouteImport } from './routes/attendance.regularizations'
+import { Route as AttendanceTodayRouteImport } from './routes/attendance.today'
+import { Route as WorkforceEmployeesIndexRouteImport } from './routes/workforce.employees.index'
+import { Route as WorkforceEmployeesEmployeeIdRouteImport } from './routes/workforce.employees.$employeeId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -58,6 +64,38 @@ const UatRoute = UatRouteImport.update({
   path: '/uat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AttendanceLeaveRoute = AttendanceLeaveRouteImport.update({
+  id: '/attendance/leave',
+  path: '/attendance/leave',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AttendanceMonthCloseRoute = AttendanceMonthCloseRouteImport.update({
+  id: '/attendance/month-close',
+  path: '/attendance/month-close',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AttendanceRegularizationsRoute =
+  AttendanceRegularizationsRouteImport.update({
+    id: '/attendance/regularizations',
+    path: '/attendance/regularizations',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AttendanceTodayRoute = AttendanceTodayRouteImport.update({
+  id: '/attendance/today',
+  path: '/attendance/today',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkforceEmployeesIndexRoute = WorkforceEmployeesIndexRouteImport.update({
+  id: '/workforce/employees/',
+  path: '/workforce/employees/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WorkforceEmployeesEmployeeIdRoute =
+  WorkforceEmployeesEmployeeIdRouteImport.update({
+    id: '/workforce/employees/$employeeId',
+    path: '/workforce/employees/$employeeId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -68,6 +106,12 @@ export interface FileRoutesByFullPath {
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
   '/uat': typeof UatRoute
+  '/attendance/leave': typeof AttendanceLeaveRoute
+  '/attendance/month-close': typeof AttendanceMonthCloseRoute
+  '/attendance/regularizations': typeof AttendanceRegularizationsRoute
+  '/attendance/today': typeof AttendanceTodayRoute
+  '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
+  '/workforce/employees/': typeof WorkforceEmployeesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -78,6 +122,12 @@ export interface FileRoutesByTo {
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
   '/uat': typeof UatRoute
+  '/attendance/leave': typeof AttendanceLeaveRoute
+  '/attendance/month-close': typeof AttendanceMonthCloseRoute
+  '/attendance/regularizations': typeof AttendanceRegularizationsRoute
+  '/attendance/today': typeof AttendanceTodayRoute
+  '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
+  '/workforce/employees': typeof WorkforceEmployeesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -89,6 +139,12 @@ export interface FileRoutesById {
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
   '/uat': typeof UatRoute
+  '/attendance/leave': typeof AttendanceLeaveRoute
+  '/attendance/month-close': typeof AttendanceMonthCloseRoute
+  '/attendance/regularizations': typeof AttendanceRegularizationsRoute
+  '/attendance/today': typeof AttendanceTodayRoute
+  '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
+  '/workforce/employees/': typeof WorkforceEmployeesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -101,6 +157,12 @@ export interface FileRouteTypes {
     | '/requirements'
     | '/scope'
     | '/uat'
+    | '/attendance/leave'
+    | '/attendance/month-close'
+    | '/attendance/regularizations'
+    | '/attendance/today'
+    | '/workforce/employees/$employeeId'
+    | '/workforce/employees/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -111,6 +173,12 @@ export interface FileRouteTypes {
     | '/requirements'
     | '/scope'
     | '/uat'
+    | '/attendance/leave'
+    | '/attendance/month-close'
+    | '/attendance/regularizations'
+    | '/attendance/today'
+    | '/workforce/employees/$employeeId'
+    | '/workforce/employees'
   id:
     | '__root__'
     | '/'
@@ -121,6 +189,12 @@ export interface FileRouteTypes {
     | '/requirements'
     | '/scope'
     | '/uat'
+    | '/attendance/leave'
+    | '/attendance/month-close'
+    | '/attendance/regularizations'
+    | '/attendance/today'
+    | '/workforce/employees/$employeeId'
+    | '/workforce/employees/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -132,6 +206,12 @@ export interface RootRouteChildren {
   RequirementsRoute: typeof RequirementsRoute
   ScopeRoute: typeof ScopeRoute
   UatRoute: typeof UatRoute
+  AttendanceLeaveRoute: typeof AttendanceLeaveRoute
+  AttendanceMonthCloseRoute: typeof AttendanceMonthCloseRoute
+  AttendanceRegularizationsRoute: typeof AttendanceRegularizationsRoute
+  AttendanceTodayRoute: typeof AttendanceTodayRoute
+  WorkforceEmployeesEmployeeIdRoute: typeof WorkforceEmployeesEmployeeIdRoute
+  WorkforceEmployeesIndexRoute: typeof WorkforceEmployeesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -192,6 +272,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/attendance/leave': {
+      id: '/attendance/leave'
+      path: '/attendance/leave'
+      fullPath: '/attendance/leave'
+      preLoaderRoute: typeof AttendanceLeaveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/attendance/month-close': {
+      id: '/attendance/month-close'
+      path: '/attendance/month-close'
+      fullPath: '/attendance/month-close'
+      preLoaderRoute: typeof AttendanceMonthCloseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/attendance/regularizations': {
+      id: '/attendance/regularizations'
+      path: '/attendance/regularizations'
+      fullPath: '/attendance/regularizations'
+      preLoaderRoute: typeof AttendanceRegularizationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/attendance/today': {
+      id: '/attendance/today'
+      path: '/attendance/today'
+      fullPath: '/attendance/today'
+      preLoaderRoute: typeof AttendanceTodayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workforce/employees/': {
+      id: '/workforce/employees/'
+      path: '/workforce/employees'
+      fullPath: '/workforce/employees/'
+      preLoaderRoute: typeof WorkforceEmployeesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/workforce/employees/$employeeId': {
+      id: '/workforce/employees/$employeeId'
+      path: '/workforce/employees/$employeeId'
+      fullPath: '/workforce/employees/$employeeId'
+      preLoaderRoute: typeof WorkforceEmployeesEmployeeIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -204,6 +326,12 @@ const rootRouteChildren: RootRouteChildren = {
   RequirementsRoute: RequirementsRoute,
   ScopeRoute: ScopeRoute,
   UatRoute: UatRoute,
+  AttendanceLeaveRoute: AttendanceLeaveRoute,
+  AttendanceMonthCloseRoute: AttendanceMonthCloseRoute,
+  AttendanceRegularizationsRoute: AttendanceRegularizationsRoute,
+  AttendanceTodayRoute: AttendanceTodayRoute,
+  WorkforceEmployeesEmployeeIdRoute: WorkforceEmployeesEmployeeIdRoute,
+  WorkforceEmployeesIndexRoute: WorkforceEmployeesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
