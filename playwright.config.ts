@@ -111,5 +111,14 @@ export default defineConfig({
         baseURL: "http://127.0.0.1:4173",
       },
     },
+    {
+      name: "f04-certification-chromium",
+      testMatch: /certification\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: "http://127.0.0.1:4173",
+        timezoneId: "America/New_York",
+      },
+    },
   ],
 });

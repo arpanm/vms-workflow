@@ -18,12 +18,12 @@ export function RoleSwitcher() {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="hidden sm:flex flex-col items-end leading-tight">
+      <div className="hidden flex-col items-end leading-tight xl:flex">
         <span className="text-xs text-muted-foreground">Viewing as</span>
         <span className="text-sm font-medium">{current.persona}</span>
       </div>
       <Select value={role} onValueChange={(v) => setRole(v as typeof role)}>
-        <SelectTrigger className="h-9 w-[200px] gap-2">
+        <SelectTrigger className="h-9 w-[140px] gap-2 sm:w-[200px]">
           <UserCircle2 className="h-4 w-4 text-muted-foreground" />
           <SelectValue />
         </SelectTrigger>

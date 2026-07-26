@@ -21,7 +21,14 @@ import { Route as AttendanceLeaveRouteImport } from './routes/attendance.leave'
 import { Route as AttendanceMonthCloseRouteImport } from './routes/attendance.month-close'
 import { Route as AttendanceRegularizationsRouteImport } from './routes/attendance.regularizations'
 import { Route as AttendanceTodayRouteImport } from './routes/attendance.today'
+import { Route as CertificationIndexRouteImport } from './routes/certification.index'
+import { Route as CertificationMonthIdRouteImport } from './routes/certification.$monthId'
+import { Route as ConfirmationIndexRouteImport } from './routes/confirmation.index'
+import { Route as ConfirmationMonthIdRouteImport } from './routes/confirmation.$monthId'
 import { Route as DeliveryIntegrationHealthRouteImport } from './routes/delivery.integration-health'
+import { Route as CertificationMonthIdIndexRouteImport } from './routes/certification.$monthId.index'
+import { Route as CertificationMonthIdReviewRouteImport } from './routes/certification.$monthId.review'
+import { Route as ConfirmationRequestsRequestIdRouteImport } from './routes/confirmation.requests.$requestId'
 import { Route as DeliveryPlansIndexRouteImport } from './routes/delivery.plans.index'
 import { Route as DeliveryPlansPlanIdRouteImport } from './routes/delivery.plans.$planId'
 import { Route as DeliveryPlansNewRouteImport } from './routes/delivery.plans.new'
@@ -89,10 +96,48 @@ const AttendanceTodayRoute = AttendanceTodayRouteImport.update({
   path: '/attendance/today',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CertificationIndexRoute = CertificationIndexRouteImport.update({
+  id: '/certification/',
+  path: '/certification/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CertificationMonthIdRoute = CertificationMonthIdRouteImport.update({
+  id: '/certification/$monthId',
+  path: '/certification/$monthId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfirmationIndexRoute = ConfirmationIndexRouteImport.update({
+  id: '/confirmation/',
+  path: '/confirmation/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfirmationMonthIdRoute = ConfirmationMonthIdRouteImport.update({
+  id: '/confirmation/$monthId',
+  path: '/confirmation/$monthId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DeliveryIntegrationHealthRoute =
   DeliveryIntegrationHealthRouteImport.update({
     id: '/delivery/integration-health',
     path: '/delivery/integration-health',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const CertificationMonthIdIndexRoute =
+  CertificationMonthIdIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => CertificationMonthIdRoute,
+  } as any)
+const CertificationMonthIdReviewRoute =
+  CertificationMonthIdReviewRouteImport.update({
+    id: '/review',
+    path: '/review',
+    getParentRoute: () => CertificationMonthIdRoute,
+  } as any)
+const ConfirmationRequestsRequestIdRoute =
+  ConfirmationRequestsRequestIdRouteImport.update({
+    id: '/confirmation/requests/$requestId',
+    path: '/confirmation/requests/$requestId',
     getParentRoute: () => rootRouteImport,
   } as any)
 const DeliveryPlansIndexRoute = DeliveryPlansIndexRouteImport.update({
@@ -135,10 +180,17 @@ export interface FileRoutesByFullPath {
   '/attendance/month-close': typeof AttendanceMonthCloseRoute
   '/attendance/regularizations': typeof AttendanceRegularizationsRoute
   '/attendance/today': typeof AttendanceTodayRoute
+  '/certification/$monthId': typeof CertificationMonthIdRouteWithChildren
+  '/confirmation/$monthId': typeof ConfirmationMonthIdRoute
   '/delivery/integration-health': typeof DeliveryIntegrationHealthRoute
+  '/certification/': typeof CertificationIndexRoute
+  '/confirmation/': typeof ConfirmationIndexRoute
+  '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
+  '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
   '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
   '/delivery/plans/new': typeof DeliveryPlansNewRoute
   '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
+  '/certification/$monthId/': typeof CertificationMonthIdIndexRoute
   '/delivery/plans/': typeof DeliveryPlansIndexRoute
   '/workforce/employees/': typeof WorkforceEmployeesIndexRoute
 }
@@ -155,10 +207,16 @@ export interface FileRoutesByTo {
   '/attendance/month-close': typeof AttendanceMonthCloseRoute
   '/attendance/regularizations': typeof AttendanceRegularizationsRoute
   '/attendance/today': typeof AttendanceTodayRoute
+  '/confirmation/$monthId': typeof ConfirmationMonthIdRoute
   '/delivery/integration-health': typeof DeliveryIntegrationHealthRoute
+  '/certification': typeof CertificationIndexRoute
+  '/confirmation': typeof ConfirmationIndexRoute
+  '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
+  '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
   '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
   '/delivery/plans/new': typeof DeliveryPlansNewRoute
   '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
+  '/certification/$monthId': typeof CertificationMonthIdIndexRoute
   '/delivery/plans': typeof DeliveryPlansIndexRoute
   '/workforce/employees': typeof WorkforceEmployeesIndexRoute
 }
@@ -176,10 +234,17 @@ export interface FileRoutesById {
   '/attendance/month-close': typeof AttendanceMonthCloseRoute
   '/attendance/regularizations': typeof AttendanceRegularizationsRoute
   '/attendance/today': typeof AttendanceTodayRoute
+  '/certification/$monthId': typeof CertificationMonthIdRouteWithChildren
+  '/confirmation/$monthId': typeof ConfirmationMonthIdRoute
   '/delivery/integration-health': typeof DeliveryIntegrationHealthRoute
+  '/certification/': typeof CertificationIndexRoute
+  '/confirmation/': typeof ConfirmationIndexRoute
+  '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
+  '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
   '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
   '/delivery/plans/new': typeof DeliveryPlansNewRoute
   '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
+  '/certification/$monthId/': typeof CertificationMonthIdIndexRoute
   '/delivery/plans/': typeof DeliveryPlansIndexRoute
   '/workforce/employees/': typeof WorkforceEmployeesIndexRoute
 }
@@ -198,10 +263,17 @@ export interface FileRouteTypes {
     | '/attendance/month-close'
     | '/attendance/regularizations'
     | '/attendance/today'
+    | '/certification/$monthId'
+    | '/confirmation/$monthId'
     | '/delivery/integration-health'
+    | '/certification/'
+    | '/confirmation/'
+    | '/certification/$monthId/review'
+    | '/confirmation/requests/$requestId'
     | '/delivery/plans/$planId'
     | '/delivery/plans/new'
     | '/workforce/employees/$employeeId'
+    | '/certification/$monthId/'
     | '/delivery/plans/'
     | '/workforce/employees/'
   fileRoutesByTo: FileRoutesByTo
@@ -218,10 +290,16 @@ export interface FileRouteTypes {
     | '/attendance/month-close'
     | '/attendance/regularizations'
     | '/attendance/today'
+    | '/confirmation/$monthId'
     | '/delivery/integration-health'
+    | '/certification'
+    | '/confirmation'
+    | '/certification/$monthId/review'
+    | '/confirmation/requests/$requestId'
     | '/delivery/plans/$planId'
     | '/delivery/plans/new'
     | '/workforce/employees/$employeeId'
+    | '/certification/$monthId'
     | '/delivery/plans'
     | '/workforce/employees'
   id:
@@ -238,10 +316,17 @@ export interface FileRouteTypes {
     | '/attendance/month-close'
     | '/attendance/regularizations'
     | '/attendance/today'
+    | '/certification/$monthId'
+    | '/confirmation/$monthId'
     | '/delivery/integration-health'
+    | '/certification/'
+    | '/confirmation/'
+    | '/certification/$monthId/review'
+    | '/confirmation/requests/$requestId'
     | '/delivery/plans/$planId'
     | '/delivery/plans/new'
     | '/workforce/employees/$employeeId'
+    | '/certification/$monthId/'
     | '/delivery/plans/'
     | '/workforce/employees/'
   fileRoutesById: FileRoutesById
@@ -259,7 +344,12 @@ export interface RootRouteChildren {
   AttendanceMonthCloseRoute: typeof AttendanceMonthCloseRoute
   AttendanceRegularizationsRoute: typeof AttendanceRegularizationsRoute
   AttendanceTodayRoute: typeof AttendanceTodayRoute
+  CertificationMonthIdRoute: typeof CertificationMonthIdRouteWithChildren
+  ConfirmationMonthIdRoute: typeof ConfirmationMonthIdRoute
   DeliveryIntegrationHealthRoute: typeof DeliveryIntegrationHealthRoute
+  CertificationIndexRoute: typeof CertificationIndexRoute
+  ConfirmationIndexRoute: typeof ConfirmationIndexRoute
+  ConfirmationRequestsRequestIdRoute: typeof ConfirmationRequestsRequestIdRoute
   DeliveryPlansPlanIdRoute: typeof DeliveryPlansPlanIdRoute
   DeliveryPlansNewRoute: typeof DeliveryPlansNewRoute
   WorkforceEmployeesEmployeeIdRoute: typeof WorkforceEmployeesEmployeeIdRoute
@@ -353,11 +443,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AttendanceTodayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/certification/': {
+      id: '/certification/'
+      path: '/certification'
+      fullPath: '/certification/'
+      preLoaderRoute: typeof CertificationIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/certification/$monthId': {
+      id: '/certification/$monthId'
+      path: '/certification/$monthId'
+      fullPath: '/certification/$monthId'
+      preLoaderRoute: typeof CertificationMonthIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/confirmation/': {
+      id: '/confirmation/'
+      path: '/confirmation'
+      fullPath: '/confirmation/'
+      preLoaderRoute: typeof ConfirmationIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/confirmation/$monthId': {
+      id: '/confirmation/$monthId'
+      path: '/confirmation/$monthId'
+      fullPath: '/confirmation/$monthId'
+      preLoaderRoute: typeof ConfirmationMonthIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/delivery/integration-health': {
       id: '/delivery/integration-health'
       path: '/delivery/integration-health'
       fullPath: '/delivery/integration-health'
       preLoaderRoute: typeof DeliveryIntegrationHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/certification/$monthId/': {
+      id: '/certification/$monthId/'
+      path: '/'
+      fullPath: '/certification/$monthId/'
+      preLoaderRoute: typeof CertificationMonthIdIndexRouteImport
+      parentRoute: typeof CertificationMonthIdRoute
+    }
+    '/certification/$monthId/review': {
+      id: '/certification/$monthId/review'
+      path: '/review'
+      fullPath: '/certification/$monthId/review'
+      preLoaderRoute: typeof CertificationMonthIdReviewRouteImport
+      parentRoute: typeof CertificationMonthIdRoute
+    }
+    '/confirmation/requests/$requestId': {
+      id: '/confirmation/requests/$requestId'
+      path: '/confirmation/requests/$requestId'
+      fullPath: '/confirmation/requests/$requestId'
+      preLoaderRoute: typeof ConfirmationRequestsRequestIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/delivery/plans/': {
@@ -398,6 +537,19 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface CertificationMonthIdRouteChildren {
+  CertificationMonthIdReviewRoute: typeof CertificationMonthIdReviewRoute
+  CertificationMonthIdIndexRoute: typeof CertificationMonthIdIndexRoute
+}
+
+const CertificationMonthIdRouteChildren: CertificationMonthIdRouteChildren = {
+  CertificationMonthIdReviewRoute: CertificationMonthIdReviewRoute,
+  CertificationMonthIdIndexRoute: CertificationMonthIdIndexRoute,
+}
+
+const CertificationMonthIdRouteWithChildren =
+  CertificationMonthIdRoute._addFileChildren(CertificationMonthIdRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApprovalsRoute: ApprovalsRoute,
@@ -411,7 +563,12 @@ const rootRouteChildren: RootRouteChildren = {
   AttendanceMonthCloseRoute: AttendanceMonthCloseRoute,
   AttendanceRegularizationsRoute: AttendanceRegularizationsRoute,
   AttendanceTodayRoute: AttendanceTodayRoute,
+  CertificationMonthIdRoute: CertificationMonthIdRouteWithChildren,
+  ConfirmationMonthIdRoute: ConfirmationMonthIdRoute,
   DeliveryIntegrationHealthRoute: DeliveryIntegrationHealthRoute,
+  CertificationIndexRoute: CertificationIndexRoute,
+  ConfirmationIndexRoute: ConfirmationIndexRoute,
+  ConfirmationRequestsRequestIdRoute: ConfirmationRequestsRequestIdRoute,
   DeliveryPlansPlanIdRoute: DeliveryPlansPlanIdRoute,
   DeliveryPlansNewRoute: DeliveryPlansNewRoute,
   WorkforceEmployeesEmployeeIdRoute: WorkforceEmployeesEmployeeIdRoute,

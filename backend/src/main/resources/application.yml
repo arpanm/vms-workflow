@@ -25,6 +25,22 @@ vms:
   security:
     audience: ${VMS_OIDC_AUDIENCE}
     issuer: ${VMS_OIDC_ISSUER}
+  certification:
+    token-ttl: ${VMS_CERTIFICATION_TOKEN_TTL:PT72H}
+    default-confirmation-due: ${VMS_CERTIFICATION_CONFIRMATION_DUE:PT120H}
+    token-work-factor: ${VMS_CERTIFICATION_TOKEN_WORK_FACTOR:120000}
+    email-provider-status: ${VMS_CERTIFICATION_EMAIL_PROVIDER_STATUS:NOT_CONFIGURED}
+    token-handoff-key: ${VMS_CERTIFICATION_TOKEN_HANDOFF_KEY:}
+    token-handoff-key-version: ${VMS_CERTIFICATION_TOKEN_HANDOFF_KEY_VERSION:local-v1}
+    inbound-signing-secret: ${VMS_CERTIFICATION_INBOUND_SIGNING_SECRET:}
+    inbound-replay-window: ${VMS_CERTIFICATION_INBOUND_REPLAY_WINDOW:PT5M}
+    rate-limit:
+      mutations-per-minute: ${VMS_CERTIFICATION_MUTATIONS_PER_MINUTE:120}
+      actions-per-minute: ${VMS_CERTIFICATION_ACTIONS_PER_MINUTE:20}
+      inbound-per-minute: ${VMS_CERTIFICATION_INBOUND_PER_MINUTE:30}
+      replays-per-minute: ${VMS_CERTIFICATION_REPLAYS_PER_MINUTE:10}
+    object-storage-provider-status: ${VMS_CERTIFICATION_OBJECT_STORAGE_STATUS:NOT_CONFIGURED}
+    f05-handoff-status: ${VMS_CERTIFICATION_F05_HANDOFF_STATUS:NOT_CONFIGURED}
 
 management:
   endpoints:

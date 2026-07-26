@@ -16,10 +16,7 @@ import { RoleSwitcher } from "@/components/role-switcher";
 import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
-import {
-  SessionProvider,
-  useSession,
-} from "@/features/auth/session-provider";
+import { SessionProvider, useSession } from "@/features/auth/session-provider";
 import { safeDemoMode } from "@/lib/feature-flags";
 
 function NotFoundComponent() {
@@ -70,8 +67,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Cadence — Workforce & Delivery Governance" },
       {
         name: "description",
-        content:
-          "Workforce, delivery evidence and month-close governance across organizations.",
+        content: "Workforce, delivery evidence and month-close governance across organizations.",
       },
     ],
   }),
@@ -115,13 +111,7 @@ function ApplicationGate() {
   }
 
   if (!safeDemoMode && !user) {
-    return (
-      <Navigate
-        to="/login"
-        search={{ returnTo: pathname }}
-        replace
-      />
-    );
+    return <Navigate to="/login" search={{ returnTo: pathname }} replace />;
   }
 
   return <ApplicationShell />;
@@ -137,13 +127,11 @@ function ApplicationShell() {
           <header className="sticky top-0 z-10 flex h-14 items-center justify-between gap-3 border-b border-border bg-background/80 px-4 backdrop-blur">
             <div className="flex items-center gap-2">
               <SidebarTrigger />
-              <div className="hidden flex-col leading-tight md:flex">
+              <div className="hidden flex-col leading-tight lg:flex">
                 <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
                   Cadence
                 </span>
-                <span className="text-sm font-medium">
-                  Workforce & Delivery Governance
-                </span>
+                <span className="text-sm font-medium">Workforce & Delivery Governance</span>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -167,16 +155,11 @@ function UserMenu() {
 
   return (
     <div className="flex items-center gap-2">
-      <div className="hidden text-right leading-tight sm:block">
+      <div className="hidden text-right leading-tight xl:block">
         <p className="text-sm font-medium">{user.displayName}</p>
         <p className="text-xs text-muted-foreground">{user.email}</p>
       </div>
-      <Button
-        variant="outline"
-        size="sm"
-        className="gap-1.5"
-        onClick={() => void signOut()}
-      >
+      <Button variant="outline" size="sm" className="gap-1.5" onClick={() => void signOut()}>
         <LogOut className="h-4 w-4" />
         Sign out
       </Button>

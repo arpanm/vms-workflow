@@ -37,7 +37,7 @@
     { "id": "F01", "directory": "01-identity-core", "phase": 1, "state": "active" },
     { "id": "F02", "directory": "02-workforce-attendance", "phase": 2, "state": "active" },
     { "id": "F03", "directory": "03-delivery-linear", "phase": 3, "state": "active" },
-    { "id": "F04", "directory": "04-certification-confirmation", "phase": 4, "state": "planned" },
+    { "id": "F04", "directory": "04-certification-confirmation", "phase": 4, "state": "active" },
     { "id": "F05", "directory": "05-evidence-invoice-reporting", "phase": 5, "state": "planned" },
     { "id": "F06", "directory": "06-historical-migration", "phase": 6, "state": "planned" },
     { "id": "F07", "directory": "07-hardening-go-live", "phase": 7, "state": "planned" }

@@ -16,13 +16,18 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain apiSecurity(HttpSecurity http, SecurityProblemWriter problems) throws Exception {
+    SecurityFilterChain apiSecurity(
+        HttpSecurity http,
+        SecurityProblemWriter problems,
+        CertificationRateLimitFilter certificationRateLimit
+    ) throws Exception {
         return http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
@@ -39,6 +44,9 @@ public class SecurityConfig {
                     problems.write(request, response, 401, "Unauthorized", "A valid bearer token is required."))
                 .accessDeniedHandler((request, response, exception) ->
                     problems.write(request, response, 403, "Forbidden", "The authenticated identity is not authorized for this resource.")))
+            .addFilterAfter(
+                certificationRateLimit,
+                BearerTokenAuthenticationFilter.class)
             .build();
     }
 

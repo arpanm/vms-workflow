@@ -4,13 +4,14 @@ This file is the single detailed delivery ledger. Update it after every
 codegen, review, fix and regression run. Task/test documents remain the detailed
 specifications; this ledger records what is actually complete now.
 
-**Last updated:** 2026-07-26 12:00 IST
-**Repository commit under test:** `b4f209b` plus active F03 worktree
-**Working-tree context:** The F03 provider-neutral local vertical and
-browser-contract harness are present in the active worktree. The hardened F03
-Playwright project, complete F00–F03 Playwright matrix, typecheck and lint pass.
-Live provider, full-stack identity/BFF and controlled-environment acceptance
-remain open.
+**Last updated:** 2026-07-26 20:22 IST (root-verified F04 V13 final P1 closure)
+**Repository commit under test:** `1d09068` plus active F04 worktree
+**Working-tree context:** F03 is reviewed, regression-tested and committed
+locally. F04 product code and executable backend/frontend/Playwright test
+automation are present and independently reviewed. The initial red product
+tests are preserved as history; later local remediation is recorded below.
+Live providers, full-stack identity/BFF and controlled-environment acceptance
+remain open and must not be represented as local completion.
 
 ## Overall status
 
@@ -20,7 +21,7 @@ remain open.
 | F01 Identity/core | Partial vertical slice implemented and locally verified | JWT resource server validation, active scoped RBAC reads, tenant/object denial, Flyway core catalog, Testcontainers coverage, OpenAPI bearer metadata, demo safety banner, read-only legacy routes, redirect defense | Real OIDC/BFF login/logout, approved provisioning, active scope selector/navigation, contacts, approval/delegation model, guarded month transitions/history, separate migration/runtime DB roles, generated client/schema gates, staging exit evidence | 9 Playwright cases passing as part of the 26-case browser run; prior Java/PostgreSQL and frontend validation | None in latest recorded lanes; full-stack lane unavailable |
 | F02 Workforce/attendance | Reviewed local vertical accepted; broader feature partial | Effective employee/lifecycle reads, allocations, self-only employee discovery and commands, attendance projection/punches, missing-checkout handling, immutable per-working-date leave allocation/ledger, regularization submission, complete allocated-month snapshot/reopen lineage, effective capability fail-closed checks, API/UI docs and SDLC review artifacts | greytHR discovery/sync/reconciliation/cutover; calendar/policy admin UI; leave approval/cancellation; regularization review/dual-control correction; breaks/overnight shifts; CSV imports; real BFF/provider/browser-to-Java/PostgreSQL staging E2E | 7 F02 cases passing as part of the 26-case browser run; prior integrated frontend/Java/PostgreSQL suite recorded green | None in latest local lanes; external full-stack lane unavailable |
 | F03 Delivery/Linear | Provider-neutral local vertical reviewed; broader feature partial | PostgreSQL/Flyway delivery schema, plan/create/submit/approval/freeze/revision services, exact checksum/baseline evidence, recorded Linear link/current/snapshot and signed-webhook processing, tenant/security/OpenAPI checks, delivery UI/integration-health states and final documentation; V10 resolves reviewed local P0 integrity findings | Local P1 queue/retry/dead-letter/replay, reconciliation, exhaustive quorum/cycle/allocation/perimeter and Swagger/least-privilege coverage; live Linear OAuth/PKCE/GraphQL/webhook/mail; real BFF-to-Java-to-PostgreSQL and tenant-authorized provider acceptance | 47 frontend tests, 49 Spring/Testcontainers tests, and 26/26 intercepted Playwright cases (8 F03/cross-feature) passing | No unresolved local P0; local P1 and external/full-stack gates remain open |
-| F04 Certification/confirmation | Planned | Task and test specifications | All implementation, review, automation, docs and provider-neutral confirmation integration | None | Not run; feature absent |
+| F04 Certification/confirmation | Local provider-neutral vertical complete; release acceptance blocked | Java/PostgreSQL/Flyway V11–V13 vertical, secured APIs/OpenAPI, immutable lineage, local workers/F05 handoff, React vendor/review/governance/in-app flows, final V13 P1 fixes and consolidated harness documentation | Pre-V13 data audit/remediation, live sender/mailbox/storage, deployment grants/platform controls, SSO/OTP/step-up, F05 consumer acceptance, and non-intercepted browser/BFF/Java/PostgreSQL acceptance | **Root verified:** 111 backend (109 integration + 2 unit), 64 frontend, 59 intercepted Playwright (33 F04 + 26 prior) | Final independent GO: no remaining local P0/P1 in new-write paths; external/deployment/data/system gates remain open |
 | F05 Evidence/invoice/reporting | Planned | Task and test specifications | All implementation, storage/security review, deterministic package tests, docs | None | Not run; feature absent |
 | F06 Historical migration | Planned | Task and test specifications | All implementation, templates, reconciliation, rollback, automation and docs | None | Not run; feature absent |
 | F07 Hardening/go-live | Planned | Task and test specifications | Security/NFR/accessibility/DR/release-environment regression and sign-offs | None | Not run; release gate absent |
@@ -44,11 +45,24 @@ remain open.
 | STATUS-ISSUE-013 | F03 | Open local scope | Backend/frontend/QA | Complete exhaustive quorum/concurrency, dependency/cycle/allocation, queue crash/retry/dead-letter/replay, scheduled reconciliation, OpenAPI audience and least-privilege-role coverage before claiming full local F03 completion. |
 | STATUS-BLOCK-014 | F03 | Release blocker; external | Tenant product/security/operations | Approve/configure Linear OAuth app/workspace/scopes/webhook secret and mail provider/sender/contact groups; run live OAuth/GraphQL/webhook and commitment-mail acceptance without exposing credentials. |
 | STATUS-BLOCK-015 | F03 | Test-lane blocker; external | Identity/operations | Run real browser-to-BFF-to-Java-to-PostgreSQL F03 journeys in a controlled environment. Current Playwright results are deterministic intercepted browser-contract evidence only. |
+| STATUS-ISSUE-016 | F04 | Open local P1 set | Backend/database | Resolve reviewed DB scope/immutability/SOD, request-expiry/quorum notification, evidence-policy, readiness-manifest, outbox/jobs, lifecycle/inbound/closure and durable F05 handoff findings in `CODE_ISSUES-BACKEND.md`. |
+| STATUS-ISSUE-017 | F04 | Open local frontend set | Frontend/API | Resolve nested routing, retry-intent, dirty submit, criterion evidence, reviewer contract, exact-scope, timezone, form sync/accessibility/error-redaction and responsive findings in `CODE_ISSUES-FRONTEND.md`. |
+| STATUS-ISSUE-018 | F04 | Expected red automation | Feature fix agents | Latest F04 automation preserves 15 backend assertion failures plus one NPE, one frontend unit failure and ten Playwright failures. All known harness defects were removed before classification; independent test review is in progress. |
+| STATUS-BLOCK-019 | F04 | Release blocker; external | Tenant product/security/operations | Approve mail sender/provider, controlled mailbox/callback security, recipient/quorum/delegation/SLA/retention policy, SSO/OTP/step-up and sandbox/live acceptance. Provider-neutral local states must not be represented as live delivery. |
 
 Detailed F01 review dispositions are in
 [F01 FIXES.md](features/01-identity-core/FIXES.md).
 Detailed F02 findings and post-fix dispositions are in
 [F02 FIXES.md](features/02-workforce-attendance/FIXES.md).
+
+### F04 issue-status supersession
+
+`STATUS-ISSUE-016` through `STATUS-ISSUE-018` above preserve the initial red
+review history. They are resolved locally in the active worktree; detailed
+mapping is in [F04 FIXES.md](features/04-certification-confirmation/FIXES.md).
+`STATUS-BLOCK-019` remains open, together with storage, deployment-grant,
+platform-hardening, and full-stack acceptance gates in
+[F04 CODE_ISSUES.md](features/04-certification-confirmation/CODE_ISSUES.md).
 
 ## Regression ledger
 
@@ -78,6 +92,11 @@ Detailed F02 findings and post-fix dispositions are in
 | 2026-07-26 11:28 IST | Hardened F03 E2E contract sync, post-format final state | `npm run e2e` | 26 passed, 0 failed | Definitive complete F00–F03 Chromium browser-contract rerun; deterministic intercepted APIs only |
 | 2026-07-26 11:28 IST | Hardened F03 E2E contract sync, post-format final state | `npm run typecheck` and `npm run lint` | Passed | TypeScript emitted no errors; ESLint emitted 0 errors and 6 existing Fast Refresh warnings |
 | 2026-07-26 12:00 IST | Final reviewed post-V10 F03 worktree | `npm run regression` | Passed: 47 frontend, 49 backend, 26 Playwright | Typecheck, unit, production build, Flyway V1–V10 on PostgreSQL 18, all Java integration tests and the complete intercepted Chromium matrix passed |
+| 2026-07-26 13:14 IST | Initial reviewed F04 product + backend automation | `mvn -B -f backend/pom.xml verify` | 79 run: 63 passed, 15 failed, 1 error | All 49 legacy cases pass; 30 F04 cases produce 14 passes, 15 mapped product assertion failures and one product NPE |
+| 2026-07-26 13:14 IST | Initial reviewed F04 frontend automation | `npm run test` | 57 passed, 1 failed | `F04-UNIT-API-004` preserves retry-intent/idempotency defect `F04-FE-004` |
+| 2026-07-26 13:14 IST | Initial reviewed F04 browser automation | `npm run e2e` | 40 passed, 10 failed | All 26 F00–F03 and 14 F04 cases pass; ten F04 product failures map to FE-001/005–012 and responsive/contract gaps |
+| 2026-07-26 19:35 IST | Root-verified F04 consolidated remediation worktree | `npm run regression` | Passed: 64 frontend, 107 backend, 59 Playwright | Typecheck/build, Flyway V1–V12 on PostgreSQL 18, all Java integration tests, and complete intercepted Chromium matrix passed; not provider/full-stack evidence |
+| 2026-07-26 20:22 IST | Root-verified F04 V13 final-P1 worktree | `npm run regression` | Passed: 64 frontend, 111 backend, 59 Playwright | Typecheck/build, Flyway V1–V13 on PostgreSQL 18, all 109 Java integration + 2 unit tests, and complete intercepted Chromium matrix passed |
 | 2026-07-26 (baseline commit) | `221a7c9` | `mvn -B -f backend/pom.xml verify` | 14 passed, 0 failed | None; Spring HTTP/JWT/Testcontainers PostgreSQL lane |
 | 2026-07-26 (baseline commit) | `221a7c9` | `npm run test` | 15 passed, 0 failed | None; frontend unit/contract lane |
 
