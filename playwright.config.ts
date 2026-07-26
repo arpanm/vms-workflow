@@ -37,20 +37,19 @@ export default defineConfig({
   },
   webServer: [
     {
-      command:
-        "npm run dev -- --host 127.0.0.1 --port 4173 --strictPort",
+      command: "npm run dev -- --host 127.0.0.1 --port 4173 --strictPort",
       url: "http://127.0.0.1:4173",
       env: {
         ...sharedEnvironment,
         VITE_DEMO_MODE: "true",
         VITE_FEATURE_WORKFORCE_GOVERNANCE: "true",
+        VITE_FEATURE_LINEAR: "true",
       },
       reuseExistingServer: false,
       timeout: 120_000,
     },
     {
-      command:
-        "npm run dev -- --host 127.0.0.1 --port 4174 --strictPort",
+      command: "npm run dev -- --host 127.0.0.1 --port 4174 --strictPort",
       url: "http://127.0.0.1:4174",
       env: {
         ...sharedEnvironment,
@@ -60,8 +59,7 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command:
-        "npm run dev -- --host 127.0.0.1 --port 4175 --strictPort",
+      command: "npm run dev -- --host 127.0.0.1 --port 4175 --strictPort",
       url: "http://127.0.0.1:4175",
       env: {
         ...sharedEnvironment,
@@ -100,6 +98,14 @@ export default defineConfig({
     {
       name: "workforce-chromium",
       testMatch: /workforce\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: "http://127.0.0.1:4173",
+      },
+    },
+    {
+      name: "delivery-chromium",
+      testMatch: /delivery\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         baseURL: "http://127.0.0.1:4173",

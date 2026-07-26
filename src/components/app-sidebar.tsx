@@ -13,6 +13,8 @@ import {
   CalendarCheck2,
   FileWarning,
   CalendarClock,
+  GanttChartSquare,
+  HeartPulse,
 } from "lucide-react";
 
 import {
@@ -30,18 +32,20 @@ import {
 import { featureFlags } from "@/lib/feature-flags";
 
 const nav = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard, group: "Overview", legacy: false, workforce: false },
-  { title: "Engagements", url: "/engagements", icon: Building2, group: "Overview", legacy: true, workforce: false },
-  { title: "Employees", url: "/workforce/employees", icon: UserRoundSearch, group: "Workforce", legacy: false, workforce: true },
-  { title: "Today", url: "/attendance/today", icon: Timer, group: "Workforce", legacy: false, workforce: true },
-  { title: "Leave", url: "/attendance/leave", icon: CalendarCheck2, group: "Workforce", legacy: false, workforce: true },
-  { title: "Regularizations", url: "/attendance/regularizations", icon: FileWarning, group: "Workforce", legacy: false, workforce: true },
-  { title: "Month status", url: "/attendance/month-close", icon: CalendarClock, group: "Workforce", legacy: false, workforce: true },
-  { title: "Requirements", url: "/requirements", icon: ListChecks, group: "Delivery", legacy: true, workforce: false },
-  { title: "Monthly Scope Engine", url: "/scope", icon: Boxes, group: "Delivery", legacy: true, workforce: false },
-  { title: "Approvals", url: "/approvals", icon: ShieldCheck, group: "Governance", legacy: true, workforce: false },
-  { title: "UAT", url: "/uat", icon: ClipboardCheck, group: "Governance", legacy: true, workforce: false },
-  { title: "Invoices", url: "/invoices", icon: Receipt, group: "Finance", legacy: true, workforce: false },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, group: "Overview", legacy: false, workforce: false, delivery: false },
+  { title: "Engagements", url: "/engagements", icon: Building2, group: "Overview", legacy: true, workforce: false, delivery: false },
+  { title: "Employees", url: "/workforce/employees", icon: UserRoundSearch, group: "Workforce", legacy: false, workforce: true, delivery: false },
+  { title: "Today", url: "/attendance/today", icon: Timer, group: "Workforce", legacy: false, workforce: true, delivery: false },
+  { title: "Leave", url: "/attendance/leave", icon: CalendarCheck2, group: "Workforce", legacy: false, workforce: true, delivery: false },
+  { title: "Regularizations", url: "/attendance/regularizations", icon: FileWarning, group: "Workforce", legacy: false, workforce: true, delivery: false },
+  { title: "Month status", url: "/attendance/month-close", icon: CalendarClock, group: "Workforce", legacy: false, workforce: true, delivery: false },
+  { title: "Delivery plans", url: "/delivery/plans", icon: GanttChartSquare, group: "Delivery", legacy: false, workforce: false, delivery: true },
+  { title: "Linear health", url: "/delivery/integration-health", icon: HeartPulse, group: "Delivery", legacy: false, workforce: false, delivery: true },
+  { title: "Requirements", url: "/requirements", icon: ListChecks, group: "Delivery", legacy: true, workforce: false, delivery: false },
+  { title: "Monthly Scope Engine", url: "/scope", icon: Boxes, group: "Delivery", legacy: true, workforce: false, delivery: false },
+  { title: "Approvals", url: "/approvals", icon: ShieldCheck, group: "Governance", legacy: true, workforce: false, delivery: false },
+  { title: "UAT", url: "/uat", icon: ClipboardCheck, group: "Governance", legacy: true, workforce: false, delivery: false },
+  { title: "Invoices", url: "/invoices", icon: Receipt, group: "Finance", legacy: true, workforce: false, delivery: false },
 ];
 
 export function AppSidebar() {
@@ -78,7 +82,8 @@ export function AppSidebar() {
                     (n) =>
                       n.group === g &&
                       (!n.legacy || featureFlags.legacyFixedCost) &&
-                      (!n.workforce || featureFlags.workforceGovernance),
+                      (!n.workforce || featureFlags.workforceGovernance) &&
+                      (!n.delivery || featureFlags.linear),
                   )
                   .map((item) => {
                     const active =

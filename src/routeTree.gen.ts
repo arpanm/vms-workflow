@@ -21,6 +21,10 @@ import { Route as AttendanceLeaveRouteImport } from './routes/attendance.leave'
 import { Route as AttendanceMonthCloseRouteImport } from './routes/attendance.month-close'
 import { Route as AttendanceRegularizationsRouteImport } from './routes/attendance.regularizations'
 import { Route as AttendanceTodayRouteImport } from './routes/attendance.today'
+import { Route as DeliveryIntegrationHealthRouteImport } from './routes/delivery.integration-health'
+import { Route as DeliveryPlansIndexRouteImport } from './routes/delivery.plans.index'
+import { Route as DeliveryPlansPlanIdRouteImport } from './routes/delivery.plans.$planId'
+import { Route as DeliveryPlansNewRouteImport } from './routes/delivery.plans.new'
 import { Route as WorkforceEmployeesIndexRouteImport } from './routes/workforce.employees.index'
 import { Route as WorkforceEmployeesEmployeeIdRouteImport } from './routes/workforce.employees.$employeeId'
 
@@ -85,6 +89,27 @@ const AttendanceTodayRoute = AttendanceTodayRouteImport.update({
   path: '/attendance/today',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DeliveryIntegrationHealthRoute =
+  DeliveryIntegrationHealthRouteImport.update({
+    id: '/delivery/integration-health',
+    path: '/delivery/integration-health',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DeliveryPlansIndexRoute = DeliveryPlansIndexRouteImport.update({
+  id: '/delivery/plans/',
+  path: '/delivery/plans/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeliveryPlansPlanIdRoute = DeliveryPlansPlanIdRouteImport.update({
+  id: '/delivery/plans/$planId',
+  path: '/delivery/plans/$planId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DeliveryPlansNewRoute = DeliveryPlansNewRouteImport.update({
+  id: '/delivery/plans/new',
+  path: '/delivery/plans/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WorkforceEmployeesIndexRoute = WorkforceEmployeesIndexRouteImport.update({
   id: '/workforce/employees/',
   path: '/workforce/employees/',
@@ -110,7 +135,11 @@ export interface FileRoutesByFullPath {
   '/attendance/month-close': typeof AttendanceMonthCloseRoute
   '/attendance/regularizations': typeof AttendanceRegularizationsRoute
   '/attendance/today': typeof AttendanceTodayRoute
+  '/delivery/integration-health': typeof DeliveryIntegrationHealthRoute
+  '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
+  '/delivery/plans/new': typeof DeliveryPlansNewRoute
   '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
+  '/delivery/plans/': typeof DeliveryPlansIndexRoute
   '/workforce/employees/': typeof WorkforceEmployeesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -126,7 +155,11 @@ export interface FileRoutesByTo {
   '/attendance/month-close': typeof AttendanceMonthCloseRoute
   '/attendance/regularizations': typeof AttendanceRegularizationsRoute
   '/attendance/today': typeof AttendanceTodayRoute
+  '/delivery/integration-health': typeof DeliveryIntegrationHealthRoute
+  '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
+  '/delivery/plans/new': typeof DeliveryPlansNewRoute
   '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
+  '/delivery/plans': typeof DeliveryPlansIndexRoute
   '/workforce/employees': typeof WorkforceEmployeesIndexRoute
 }
 export interface FileRoutesById {
@@ -143,7 +176,11 @@ export interface FileRoutesById {
   '/attendance/month-close': typeof AttendanceMonthCloseRoute
   '/attendance/regularizations': typeof AttendanceRegularizationsRoute
   '/attendance/today': typeof AttendanceTodayRoute
+  '/delivery/integration-health': typeof DeliveryIntegrationHealthRoute
+  '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
+  '/delivery/plans/new': typeof DeliveryPlansNewRoute
   '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
+  '/delivery/plans/': typeof DeliveryPlansIndexRoute
   '/workforce/employees/': typeof WorkforceEmployeesIndexRoute
 }
 export interface FileRouteTypes {
@@ -161,7 +198,11 @@ export interface FileRouteTypes {
     | '/attendance/month-close'
     | '/attendance/regularizations'
     | '/attendance/today'
+    | '/delivery/integration-health'
+    | '/delivery/plans/$planId'
+    | '/delivery/plans/new'
     | '/workforce/employees/$employeeId'
+    | '/delivery/plans/'
     | '/workforce/employees/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -177,7 +218,11 @@ export interface FileRouteTypes {
     | '/attendance/month-close'
     | '/attendance/regularizations'
     | '/attendance/today'
+    | '/delivery/integration-health'
+    | '/delivery/plans/$planId'
+    | '/delivery/plans/new'
     | '/workforce/employees/$employeeId'
+    | '/delivery/plans'
     | '/workforce/employees'
   id:
     | '__root__'
@@ -193,7 +238,11 @@ export interface FileRouteTypes {
     | '/attendance/month-close'
     | '/attendance/regularizations'
     | '/attendance/today'
+    | '/delivery/integration-health'
+    | '/delivery/plans/$planId'
+    | '/delivery/plans/new'
     | '/workforce/employees/$employeeId'
+    | '/delivery/plans/'
     | '/workforce/employees/'
   fileRoutesById: FileRoutesById
 }
@@ -210,7 +259,11 @@ export interface RootRouteChildren {
   AttendanceMonthCloseRoute: typeof AttendanceMonthCloseRoute
   AttendanceRegularizationsRoute: typeof AttendanceRegularizationsRoute
   AttendanceTodayRoute: typeof AttendanceTodayRoute
+  DeliveryIntegrationHealthRoute: typeof DeliveryIntegrationHealthRoute
+  DeliveryPlansPlanIdRoute: typeof DeliveryPlansPlanIdRoute
+  DeliveryPlansNewRoute: typeof DeliveryPlansNewRoute
   WorkforceEmployeesEmployeeIdRoute: typeof WorkforceEmployeesEmployeeIdRoute
+  DeliveryPlansIndexRoute: typeof DeliveryPlansIndexRoute
   WorkforceEmployeesIndexRoute: typeof WorkforceEmployeesIndexRoute
 }
 
@@ -300,6 +353,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AttendanceTodayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/delivery/integration-health': {
+      id: '/delivery/integration-health'
+      path: '/delivery/integration-health'
+      fullPath: '/delivery/integration-health'
+      preLoaderRoute: typeof DeliveryIntegrationHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/delivery/plans/': {
+      id: '/delivery/plans/'
+      path: '/delivery/plans'
+      fullPath: '/delivery/plans/'
+      preLoaderRoute: typeof DeliveryPlansIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/delivery/plans/$planId': {
+      id: '/delivery/plans/$planId'
+      path: '/delivery/plans/$planId'
+      fullPath: '/delivery/plans/$planId'
+      preLoaderRoute: typeof DeliveryPlansPlanIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/delivery/plans/new': {
+      id: '/delivery/plans/new'
+      path: '/delivery/plans/new'
+      fullPath: '/delivery/plans/new'
+      preLoaderRoute: typeof DeliveryPlansNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/workforce/employees/': {
       id: '/workforce/employees/'
       path: '/workforce/employees'
@@ -330,7 +411,11 @@ const rootRouteChildren: RootRouteChildren = {
   AttendanceMonthCloseRoute: AttendanceMonthCloseRoute,
   AttendanceRegularizationsRoute: AttendanceRegularizationsRoute,
   AttendanceTodayRoute: AttendanceTodayRoute,
+  DeliveryIntegrationHealthRoute: DeliveryIntegrationHealthRoute,
+  DeliveryPlansPlanIdRoute: DeliveryPlansPlanIdRoute,
+  DeliveryPlansNewRoute: DeliveryPlansNewRoute,
   WorkforceEmployeesEmployeeIdRoute: WorkforceEmployeesEmployeeIdRoute,
+  DeliveryPlansIndexRoute: DeliveryPlansIndexRoute,
   WorkforceEmployeesIndexRoute: WorkforceEmployeesIndexRoute,
 }
 export const routeTree = rootRouteImport

@@ -1,6 +1,6 @@
 # Cadence — Workforce and Delivery Evidence Governance
 
-Cadence is being rebuilt as a Java/PostgreSQL application with a standard Vite React frontend. The current working tree contains the foundation, the read-only identity/core vertical, and a reviewed local workforce/attendance vertical. Lovable, Supabase, Cloudflare and TanStack Start server dependencies have been removed.
+Cadence is being rebuilt as a Java/PostgreSQL application with a standard Vite React frontend. The current working tree contains the foundation, the read-only identity/core vertical, a reviewed local workforce/attendance vertical, and a reviewed provider-neutral delivery/Linear demonstrator. Lovable, Supabase, Cloudflare and TanStack Start server dependencies have been removed.
 
 ## Current status
 
@@ -15,7 +15,8 @@ regression catalog is
 | F01 Java identity/core read vertical | Implemented and verified with PostgreSQL Testcontainers | [F01 tasks](docs/features/01-identity-core/TASKS.md), [codegen](docs/features/01-identity-core/CODEGEN.md) |
 | F01 production identity/provisioning | Blocked until an OIDC provider, same-origin BFF login endpoint and approved user/role provisioning path are selected/configured | [fix disposition](docs/features/01-identity-core/FIXES.md) |
 | F02 workforce/attendance local vertical | Implemented, independently reviewed and locally regressed; provider/admin/full-stack scope remains open | [F02 fixes](docs/features/02-workforce-attendance/FIXES.md), [API](docs/features/02-workforce-attendance/API_DOCUMENTATION.md), [UI guide](docs/features/02-workforce-attendance/UI_DOCUMENTATION.md) |
-| F03–F07 product features | Task/test specifications are ready; implementation proceeds sequentially | [feature plans](#feature-delivery-plans) |
+| F03 Delivery and Linear | Reviewed provider-neutral local demonstrator; P0 resolved by V10, local P1 and live-provider/BFF gates remain open | [F03 evidence](docs/features/03-delivery-linear/CODEGEN.md), [API](docs/features/03-delivery-linear/API_DOCUMENTATION.md), [UI](docs/features/03-delivery-linear/UI_DOCUMENTATION.md) |
+| F04–F07 product features | Task/test specifications are ready; implementation proceeds sequentially | [feature plans](#feature-delivery-plans) |
 
 Production release remains blocked until the identity/BFF decision and staging
 tenant-isolation gate are complete. Local feature development uses explicit
@@ -67,10 +68,11 @@ npm run e2e
 npm run regression
 ```
 
-The Maven verification applies Flyway to ephemeral PostgreSQL and runs 34
+The Maven verification applies Flyway to ephemeral PostgreSQL and runs 49
 integration tests covering real signed-JWT validation, lifecycle and scoped
 RBAC denial, tenant/object isolation, database constraints, legacy reads,
-workforce/attendance invariants and OpenAPI security metadata.
+workforce/attendance invariants, delivery/Linear integrity and OpenAPI security
+metadata.
 
 `npm run regression` combines frontend checks, Maven/Testcontainers
 PostgreSQL integration and Playwright Chromium browser-contract tests. The
@@ -94,7 +96,7 @@ OIDC provider or deployed full-stack environment. See the
 | F00 Foundation | [Tasks](docs/features/00-foundation/TASKS.md) | [Tests](docs/features/00-foundation/TEST_CASES.md) | [Folder](docs/features/00-foundation/) |
 | F01 Identity and core | [Tasks](docs/features/01-identity-core/TASKS.md) | [Tests](docs/features/01-identity-core/TEST_CASES.md) | [Folder](docs/features/01-identity-core/) |
 | F02 Workforce and attendance | [Tasks](docs/features/02-workforce-attendance/TASKS.md) | [Tests](docs/features/02-workforce-attendance/TEST_CASES.md) | [Reviewed local vertical and remaining scope](docs/features/02-workforce-attendance/) |
-| F03 Delivery and Linear | [Tasks](docs/features/03-delivery-linear/TASKS.md) | [Tests](docs/features/03-delivery-linear/TEST_CASES.md) | Planned |
+| F03 Delivery and Linear | [Tasks](docs/features/03-delivery-linear/TASKS.md) | [Tests](docs/features/03-delivery-linear/TEST_CASES.md) | [Reviewed local evidence](docs/features/03-delivery-linear/CODEGEN.md), [fix disposition](docs/features/03-delivery-linear/FIXES.md), [API](docs/features/03-delivery-linear/API_DOCUMENTATION.md), [UI](docs/features/03-delivery-linear/UI_DOCUMENTATION.md) |
 | F04 Certification and confirmation | [Tasks](docs/features/04-certification-confirmation/TASKS.md) | [Tests](docs/features/04-certification-confirmation/TEST_CASES.md) | Planned |
 | F05 Evidence, invoice and reporting | [Tasks](docs/features/05-evidence-invoice-reporting/TASKS.md) | [Tests](docs/features/05-evidence-invoice-reporting/TEST_CASES.md) | Planned |
 | F06 Historical migration | [Tasks](docs/features/06-historical-migration/TASKS.md) | [Tests](docs/features/06-historical-migration/TEST_CASES.md) | Planned |
@@ -114,5 +116,7 @@ OIDC provider or deployed full-stack environment. See the
 - [F01 UI guide](docs/features/01-identity-core/UI_DOCUMENTATION.md)
 - [F02 API documentation](docs/features/02-workforce-attendance/API_DOCUMENTATION.md)
 - [F02 UI guide](docs/features/02-workforce-attendance/UI_DOCUMENTATION.md)
+- [F03 API documentation](docs/features/03-delivery-linear/API_DOCUMENTATION.md)
+- [F03 UI guide](docs/features/03-delivery-linear/UI_DOCUMENTATION.md)
 
 Do not store salary, CTC, markup, employee billing rates or payroll calculations. Do not infer human approval from silence, delivery receipts, elapsed time or external ticket status.
