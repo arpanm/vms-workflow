@@ -26,6 +26,9 @@ import { Route as CertificationMonthIdRouteImport } from './routes/certification
 import { Route as ConfirmationIndexRouteImport } from './routes/confirmation.index'
 import { Route as ConfirmationMonthIdRouteImport } from './routes/confirmation.$monthId'
 import { Route as DeliveryIntegrationHealthRouteImport } from './routes/delivery.integration-health'
+import { Route as FinanceIndexRouteImport } from './routes/finance.index'
+import { Route as FinanceProcurementRouteImport } from './routes/finance.procurement'
+import { Route as FinanceReportsRouteImport } from './routes/finance.reports'
 import { Route as CertificationMonthIdIndexRouteImport } from './routes/certification.$monthId.index'
 import { Route as CertificationMonthIdReviewRouteImport } from './routes/certification.$monthId.review'
 import { Route as ConfirmationRequestsRequestIdRouteImport } from './routes/confirmation.requests.$requestId'
@@ -122,6 +125,21 @@ const DeliveryIntegrationHealthRoute =
     path: '/delivery/integration-health',
     getParentRoute: () => rootRouteImport,
   } as any)
+const FinanceIndexRoute = FinanceIndexRouteImport.update({
+  id: '/finance/',
+  path: '/finance/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceProcurementRoute = FinanceProcurementRouteImport.update({
+  id: '/finance/procurement',
+  path: '/finance/procurement',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FinanceReportsRoute = FinanceReportsRouteImport.update({
+  id: '/finance/reports',
+  path: '/finance/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CertificationMonthIdIndexRoute =
   CertificationMonthIdIndexRouteImport.update({
     id: '/',
@@ -183,8 +201,11 @@ export interface FileRoutesByFullPath {
   '/certification/$monthId': typeof CertificationMonthIdRouteWithChildren
   '/confirmation/$monthId': typeof ConfirmationMonthIdRoute
   '/delivery/integration-health': typeof DeliveryIntegrationHealthRoute
+  '/finance/procurement': typeof FinanceProcurementRoute
+  '/finance/reports': typeof FinanceReportsRoute
   '/certification/': typeof CertificationIndexRoute
   '/confirmation/': typeof ConfirmationIndexRoute
+  '/finance/': typeof FinanceIndexRoute
   '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
   '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
   '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
@@ -209,8 +230,11 @@ export interface FileRoutesByTo {
   '/attendance/today': typeof AttendanceTodayRoute
   '/confirmation/$monthId': typeof ConfirmationMonthIdRoute
   '/delivery/integration-health': typeof DeliveryIntegrationHealthRoute
+  '/finance/procurement': typeof FinanceProcurementRoute
+  '/finance/reports': typeof FinanceReportsRoute
   '/certification': typeof CertificationIndexRoute
   '/confirmation': typeof ConfirmationIndexRoute
+  '/finance': typeof FinanceIndexRoute
   '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
   '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
   '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
@@ -237,8 +261,11 @@ export interface FileRoutesById {
   '/certification/$monthId': typeof CertificationMonthIdRouteWithChildren
   '/confirmation/$monthId': typeof ConfirmationMonthIdRoute
   '/delivery/integration-health': typeof DeliveryIntegrationHealthRoute
+  '/finance/procurement': typeof FinanceProcurementRoute
+  '/finance/reports': typeof FinanceReportsRoute
   '/certification/': typeof CertificationIndexRoute
   '/confirmation/': typeof ConfirmationIndexRoute
+  '/finance/': typeof FinanceIndexRoute
   '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
   '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
   '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
@@ -266,8 +293,11 @@ export interface FileRouteTypes {
     | '/certification/$monthId'
     | '/confirmation/$monthId'
     | '/delivery/integration-health'
+    | '/finance/procurement'
+    | '/finance/reports'
     | '/certification/'
     | '/confirmation/'
+    | '/finance/'
     | '/certification/$monthId/review'
     | '/confirmation/requests/$requestId'
     | '/delivery/plans/$planId'
@@ -292,8 +322,11 @@ export interface FileRouteTypes {
     | '/attendance/today'
     | '/confirmation/$monthId'
     | '/delivery/integration-health'
+    | '/finance/procurement'
+    | '/finance/reports'
     | '/certification'
     | '/confirmation'
+    | '/finance'
     | '/certification/$monthId/review'
     | '/confirmation/requests/$requestId'
     | '/delivery/plans/$planId'
@@ -319,8 +352,11 @@ export interface FileRouteTypes {
     | '/certification/$monthId'
     | '/confirmation/$monthId'
     | '/delivery/integration-health'
+    | '/finance/procurement'
+    | '/finance/reports'
     | '/certification/'
     | '/confirmation/'
+    | '/finance/'
     | '/certification/$monthId/review'
     | '/confirmation/requests/$requestId'
     | '/delivery/plans/$planId'
@@ -347,8 +383,11 @@ export interface RootRouteChildren {
   CertificationMonthIdRoute: typeof CertificationMonthIdRouteWithChildren
   ConfirmationMonthIdRoute: typeof ConfirmationMonthIdRoute
   DeliveryIntegrationHealthRoute: typeof DeliveryIntegrationHealthRoute
+  FinanceProcurementRoute: typeof FinanceProcurementRoute
+  FinanceReportsRoute: typeof FinanceReportsRoute
   CertificationIndexRoute: typeof CertificationIndexRoute
   ConfirmationIndexRoute: typeof ConfirmationIndexRoute
+  FinanceIndexRoute: typeof FinanceIndexRoute
   ConfirmationRequestsRequestIdRoute: typeof ConfirmationRequestsRequestIdRoute
   DeliveryPlansPlanIdRoute: typeof DeliveryPlansPlanIdRoute
   DeliveryPlansNewRoute: typeof DeliveryPlansNewRoute
@@ -478,6 +517,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeliveryIntegrationHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/finance/': {
+      id: '/finance/'
+      path: '/finance'
+      fullPath: '/finance/'
+      preLoaderRoute: typeof FinanceIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/finance/procurement': {
+      id: '/finance/procurement'
+      path: '/finance/procurement'
+      fullPath: '/finance/procurement'
+      preLoaderRoute: typeof FinanceProcurementRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/finance/reports': {
+      id: '/finance/reports'
+      path: '/finance/reports'
+      fullPath: '/finance/reports'
+      preLoaderRoute: typeof FinanceReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/certification/$monthId/': {
       id: '/certification/$monthId/'
       path: '/'
@@ -566,8 +626,11 @@ const rootRouteChildren: RootRouteChildren = {
   CertificationMonthIdRoute: CertificationMonthIdRouteWithChildren,
   ConfirmationMonthIdRoute: ConfirmationMonthIdRoute,
   DeliveryIntegrationHealthRoute: DeliveryIntegrationHealthRoute,
+  FinanceProcurementRoute: FinanceProcurementRoute,
+  FinanceReportsRoute: FinanceReportsRoute,
   CertificationIndexRoute: CertificationIndexRoute,
   ConfirmationIndexRoute: ConfirmationIndexRoute,
+  FinanceIndexRoute: FinanceIndexRoute,
   ConfirmationRequestsRequestIdRoute: ConfirmationRequestsRequestIdRoute,
   DeliveryPlansPlanIdRoute: DeliveryPlansPlanIdRoute,
   DeliveryPlansNewRoute: DeliveryPlansNewRoute,

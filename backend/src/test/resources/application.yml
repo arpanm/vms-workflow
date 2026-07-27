@@ -1,0 +1,9 @@
+vms:
+  finance:
+    local-scanner-enabled: true
+    cursor-signing-secret: test-only-finance-cursor-secret-0123456789abcdef
+spring:
+  datasource:
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 1

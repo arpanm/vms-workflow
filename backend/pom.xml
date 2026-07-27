@@ -20,6 +20,7 @@
     <properties>
         <java.version>25</java.version>
         <springdoc.version>3.0.3</springdoc.version>
+        <vms.build.directory>${project.basedir}/target</vms.build.directory>
     </properties>
 
     <dependencies>
@@ -90,6 +91,7 @@
     </dependencies>
 
     <build>
+        <directory>${vms.build.directory}</directory>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>

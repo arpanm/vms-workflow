@@ -12,6 +12,7 @@ const publicEnvironmentSchema = z.object({
   VITE_OIDC_LOGIN_PATH: originRelativePath.optional(),
   VITE_OIDC_LOGOUT_PATH: originRelativePath.default("/api/v1/auth/logout"),
   VITE_DEMO_MODE: z.enum(["true", "false"]).optional(),
+  VITE_E2E_SYSTEM_AUTH: z.enum(["true", "false"]).optional(),
 });
 
 export type PublicEnvironment = z.infer<typeof publicEnvironmentSchema>;
@@ -30,6 +31,9 @@ export function validatePublicEnvironment(
 
   if (production && parsed.VITE_DEMO_MODE === "true") {
     throw new Error("VITE_DEMO_MODE must be false in production.");
+  }
+  if (production && parsed.VITE_E2E_SYSTEM_AUTH === "true") {
+    throw new Error("VITE_E2E_SYSTEM_AUTH must be false in production.");
   }
 
   return parsed;

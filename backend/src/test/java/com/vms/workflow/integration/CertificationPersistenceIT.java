@@ -58,7 +58,7 @@ class CertificationPersistenceIT {
     @Test
     void emptyDatabaseMigrationsExposeF04SchemaWithoutCommercialData()
         throws Exception {
-        assertEquals("1003", jdbc.queryForObject("""
+        assertEquals("1004", jdbc.queryForObject("""
             SELECT version FROM flyway_schema_history
             WHERE success ORDER BY installed_rank DESC LIMIT 1
             """, String.class));

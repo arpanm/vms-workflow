@@ -165,11 +165,11 @@ class CertificationClockIT {
             INSERT INTO confirmation_secure_tokens
                 (id, request_id, request_version,
                  eligible_confirmer_subject, token_hash, token_salt,
-                 hash_algorithm, work_factor, expires_at)
-            VALUES (?, ?, ?, 'user-reliance', ?, ?, ?, ?, ?)
+                 hash_algorithm, work_factor, expires_at, created_at)
+            VALUES (?, ?, ?, 'user-reliance', ?, ?, ?, ?, ?, ?)
             """, UUID.randomUUID(), request.requestId(), request.version(),
             issued.encodedHash(), issued.encodedSalt(), issued.algorithm(),
-            issued.workFactor(), expiresAt);
+            issued.workFactor(), expiresAt, BASE);
         return issued;
     }
 

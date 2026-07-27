@@ -17,7 +17,8 @@ regression catalog is
 | F02 workforce/attendance local vertical | Implemented, independently reviewed and locally regressed; provider/admin/full-stack scope remains open | [F02 fixes](docs/features/02-workforce-attendance/FIXES.md), [API](docs/features/02-workforce-attendance/API_DOCUMENTATION.md), [UI guide](docs/features/02-workforce-attendance/UI_DOCUMENTATION.md) |
 | F03 Delivery and Linear | Reviewed provider-neutral local demonstrator; P0 resolved by V10, local P1 and live-provider/BFF gates remain open | [F03 evidence](docs/features/03-delivery-linear/CODEGEN.md), [API](docs/features/03-delivery-linear/API_DOCUMENTATION.md), [UI](docs/features/03-delivery-linear/UI_DOCUMENTATION.md) |
 | F04 Certification and confirmation | Local Java/PostgreSQL + React provider-neutral vertical verified: 111 backend, 64 frontend and 59 intercepted Playwright tests pass; provider/full-stack gates remain open | [F04 evidence](docs/features/04-certification-confirmation/CODEGEN.md), [API](docs/features/04-certification-confirmation/API_DOCUMENTATION.md), [UI](docs/features/04-certification-confirmation/UI_DOCUMENTATION.md) |
-| F05–F07 product features | Task/test specifications are ready; implementation proceeds sequentially | [feature plans](#feature-delivery-plans) |
+| F05 evidence, invoice and reporting | Locally quality-gated: 154/154 backend, 88/88 Vitest, 69/69 combined Playwright and 3/3 isolated system E2E; performance/scale and external release gates remain ACTION_REQUIRED | [F05 status](docs/FEATURE_STATUS.md), [F05 E2E catalog](docs/testing/E2E_REGRESSION_CASES.md), [F05 closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md) |
+| F06–F07 product features | Task/test specifications are ready; implementation proceeds sequentially | [feature plans](#feature-delivery-plans) |
 
 Production release remains blocked until the identity/BFF decision and staging
 tenant-isolation gate are complete. Local feature development uses explicit
@@ -99,7 +100,7 @@ OIDC provider or deployed full-stack environment. See the
 | F02 Workforce and attendance | [Tasks](docs/features/02-workforce-attendance/TASKS.md) | [Tests](docs/features/02-workforce-attendance/TEST_CASES.md) | [Reviewed local vertical and remaining scope](docs/features/02-workforce-attendance/) |
 | F03 Delivery and Linear | [Tasks](docs/features/03-delivery-linear/TASKS.md) | [Tests](docs/features/03-delivery-linear/TEST_CASES.md) | [Reviewed local evidence](docs/features/03-delivery-linear/CODEGEN.md), [fix disposition](docs/features/03-delivery-linear/FIXES.md), [API](docs/features/03-delivery-linear/API_DOCUMENTATION.md), [UI](docs/features/03-delivery-linear/UI_DOCUMENTATION.md) |
 | F04 Certification and confirmation | [Tasks](docs/features/04-certification-confirmation/TASKS.md) | [Tests](docs/features/04-certification-confirmation/TEST_CASES.md) | [Codegen](docs/features/04-certification-confirmation/CODEGEN.md), [review](docs/features/04-certification-confirmation/CODE_REVIEW.md), [fixes](docs/features/04-certification-confirmation/FIXES.md), [API](docs/features/04-certification-confirmation/API_DOCUMENTATION.md), [UI](docs/features/04-certification-confirmation/UI_DOCUMENTATION.md) |
-| F05 Evidence, invoice and reporting | [Tasks](docs/features/05-evidence-invoice-reporting/TASKS.md) | [Tests](docs/features/05-evidence-invoice-reporting/TEST_CASES.md) | Planned |
+| F05 Evidence, invoice and reporting | [Tasks](docs/features/05-evidence-invoice-reporting/TASKS.md) | [Tests](docs/features/05-evidence-invoice-reporting/TEST_CASES.md) | [Codegen](docs/features/05-evidence-invoice-reporting/CODEGEN.md), [reviews/issues](docs/features/05-evidence-invoice-reporting/FINAL_ISSUES.md), [closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md), [API](docs/features/05-evidence-invoice-reporting/API_DOCUMENTATION.md), [UI](docs/features/05-evidence-invoice-reporting/UI_DOCUMENTATION.md) |
 | F06 Historical migration | [Tasks](docs/features/06-historical-migration/TASKS.md) | [Tests](docs/features/06-historical-migration/TEST_CASES.md) | Planned |
 | F07 Hardening and go-live | [Tasks](docs/features/07-hardening-go-live/TASKS.md) | [Tests](docs/features/07-hardening-go-live/TEST_CASES.md) | Planned |
 
@@ -121,5 +122,9 @@ OIDC provider or deployed full-stack environment. See the
 - [F03 UI guide](docs/features/03-delivery-linear/UI_DOCUMENTATION.md)
 - [F04 API documentation](docs/features/04-certification-confirmation/API_DOCUMENTATION.md)
 - [F04 UI guide](docs/features/04-certification-confirmation/UI_DOCUMENTATION.md)
+- [F05 architecture](docs/features/05-evidence-invoice-reporting/ARCHITECTURE.md)
+- [F05 API documentation](docs/features/05-evidence-invoice-reporting/API_DOCUMENTATION.md)
+- [F05 UI guide](docs/features/05-evidence-invoice-reporting/UI_DOCUMENTATION.md)
+- [F05 runbook](docs/features/05-evidence-invoice-reporting/RUNBOOK.md)
 
 Do not store salary, CTC, markup, employee billing rates or payroll calculations. Do not infer human approval from silence, delivery receipts, elapsed time or external ticket status.

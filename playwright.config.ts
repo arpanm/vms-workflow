@@ -15,7 +15,11 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  // Keep the full regression deterministic on developer machines as well as
+  // CI. Several suites share the three bounded Vite servers; allowing
+  // Playwright to expand to every local CPU can starve route transitions and
+  // turn otherwise healthy journeys into timeout-only flakes.
+  workers: 2,
   reporter: [
     ["list"],
     [
@@ -118,6 +122,15 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         baseURL: "http://127.0.0.1:4173",
         timezoneId: "America/New_York",
+      },
+    },
+    {
+      name: "f05-finance-chromium",
+      testMatch: /finance(?:-accessibility)?\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: "http://127.0.0.1:4173",
+        timezoneId: "Asia/Kolkata",
       },
     },
   ],

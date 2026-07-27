@@ -15,6 +15,10 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  servlet:
+    multipart:
+      max-file-size: ${VMS_FINANCE_MAX_FILE_SIZE:25MB}
+      max-request-size: ${VMS_FINANCE_MAX_REQUEST_SIZE:26MB}
   security:
     oauth2:
       resourceserver:
@@ -41,6 +45,14 @@ vms:
       replays-per-minute: ${VMS_CERTIFICATION_REPLAYS_PER_MINUTE:10}
     object-storage-provider-status: ${VMS_CERTIFICATION_OBJECT_STORAGE_STATUS:NOT_CONFIGURED}
     f05-handoff-status: ${VMS_CERTIFICATION_F05_HANDOFF_STATUS:NOT_CONFIGURED}
+  finance:
+    local-scanner-enabled: ${VMS_FINANCE_LOCAL_SCANNER_ENABLED:false}
+    cursor-signing-secret: ${VMS_FINANCE_CURSOR_SIGNING_SECRET:}
+    cursor-ttl: ${VMS_FINANCE_CURSOR_TTL:PT30M}
+    rate-limit:
+      mutations-per-minute: ${VMS_FINANCE_MUTATIONS_PER_MINUTE:120}
+      downloads-per-minute: ${VMS_FINANCE_DOWNLOADS_PER_MINUTE:60}
+      exports-per-minute: ${VMS_FINANCE_EXPORTS_PER_MINUTE:20}
 
 management:
   endpoints:

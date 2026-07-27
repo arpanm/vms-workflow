@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 import { mockLegacyApi } from "./fixtures/api";
+import { mockFinanceApi } from "./fixtures/finance-api";
 import "./fixtures/quality-gates";
 
 test.beforeEach(async ({ page }) => {
   await mockLegacyApi(page);
+  await mockFinanceApi(page);
 });
 
 test("[E2E-F00-001] demo shell identifies its safety boundary and exposes enabled routes", async ({
@@ -88,7 +90,7 @@ test("[E2E-F01-003] unverified UAT states remain in the explicit-review queue", 
   ).toBeVisible();
 });
 
-test("[E2E-F01-004] every enabled legacy screen renders its fixture-backed primary content", async ({
+test("[E2E-F01-004] every enabled core screen renders its fixture-backed primary content", async ({
   page,
 }) => {
   const screens = [
@@ -109,8 +111,8 @@ test("[E2E-F01-004] every enabled legacy screen renders its fixture-backed prima
     },
     {
       path: "/invoices",
-      heading: "Invoices",
-      evidence: "INV-2026-006",
+      heading: "Finance evidence workspace",
+      evidence: "AF-2026-071",
     },
   ];
 

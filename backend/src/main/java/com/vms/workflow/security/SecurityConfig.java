@@ -26,7 +26,8 @@ public class SecurityConfig {
     SecurityFilterChain apiSecurity(
         HttpSecurity http,
         SecurityProblemWriter problems,
-        CertificationRateLimitFilter certificationRateLimit
+        CertificationRateLimitFilter certificationRateLimit,
+        FinanceRateLimitFilter financeRateLimit
     ) throws Exception {
         return http
             .csrf(csrf -> csrf.disable())
@@ -47,6 +48,9 @@ public class SecurityConfig {
             .addFilterAfter(
                 certificationRateLimit,
                 BearerTokenAuthenticationFilter.class)
+            .addFilterAfter(
+                financeRateLimit,
+                CertificationRateLimitFilter.class)
             .build();
     }
 

@@ -17,6 +17,8 @@ import {
   HeartPulse,
   BadgeCheck,
   SendHorizontal,
+  FileBarChart,
+  ScanSearch,
 } from "lucide-react";
 
 import {
@@ -32,8 +34,19 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { featureFlags } from "@/lib/feature-flags";
+import type { Role } from "@/lib/role-store";
+import { useRole } from "@/lib/use-role";
 
-const nav = [
+const nav: Array<{
+  title: string;
+  url: string;
+  icon: typeof LayoutDashboard;
+  group: string;
+  legacy: boolean;
+  workforce: boolean;
+  delivery: boolean;
+  financeRoles?: Role[];
+}> = [
   {
     title: "Dashboard",
     url: "/",
@@ -42,6 +55,7 @@ const nav = [
     legacy: false,
     workforce: false,
     delivery: false,
+    financeRoles: undefined,
   },
   {
     title: "Engagements",
@@ -170,13 +184,34 @@ const nav = [
     delivery: false,
   },
   {
-    title: "Invoices",
-    url: "/invoices",
+    title: "Finance workspace",
+    url: "/finance",
     icon: Receipt,
     group: "Finance",
-    legacy: true,
+    legacy: false,
     workforce: false,
     delivery: false,
+    financeRoles: ["pmo", "vendor_pm", "finance"],
+  },
+  {
+    title: "Procurement",
+    url: "/finance/procurement",
+    icon: ScanSearch,
+    group: "Finance",
+    legacy: false,
+    workforce: false,
+    delivery: false,
+    financeRoles: ["pmo", "approver", "procurement", "finance"],
+  },
+  {
+    title: "Finance reports",
+    url: "/finance/reports",
+    icon: FileBarChart,
+    group: "Finance",
+    legacy: false,
+    workforce: false,
+    delivery: false,
+    financeRoles: ["pmo", "biz_lead", "approver", "procurement", "finance"],
   },
 ];
 
@@ -184,6 +219,7 @@ export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (s) => s.location.pathname });
+  const [role] = useRole();
 
   const groups = ["Overview", "Workforce", "Delivery", "Governance", "Finance"] as const;
 
@@ -215,7 +251,8 @@ export function AppSidebar() {
                       n.group === g &&
                       (!n.legacy || featureFlags.legacyFixedCost) &&
                       (!n.workforce || featureFlags.workforceGovernance) &&
-                      (!n.delivery || featureFlags.linear),
+                      (!n.delivery || featureFlags.linear) &&
+                      (!n.financeRoles || n.financeRoles.includes(role)),
                   )
                   .map((item) => {
                     const active = path === item.url || path.startsWith(`${item.url}/`);

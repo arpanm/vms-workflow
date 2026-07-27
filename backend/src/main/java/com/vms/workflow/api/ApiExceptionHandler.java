@@ -88,7 +88,8 @@ public class ApiExceptionHandler {
         LOGGER.error(
             "Unhandled API failure correlationId={} exceptionType={}",
             CorrelationIdFilter.from(request),
-            exception.getClass().getSimpleName());
+            exception.getClass().getSimpleName(),
+            exception);
         return problem(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "Internal Server Error",

@@ -79,8 +79,12 @@ export function createApiClient(options: ApiClientOptions = {}) {
 
     let body: BodyInit | undefined;
     if (requestOptions.body !== undefined) {
-      headers.set("Content-Type", "application/json");
-      body = JSON.stringify(requestOptions.body);
+      if (requestOptions.body instanceof FormData) {
+        body = requestOptions.body;
+      } else {
+        headers.set("Content-Type", "application/json");
+        body = JSON.stringify(requestOptions.body);
+      }
     }
 
     let response: Response;
@@ -125,12 +129,58 @@ export function createApiClient(options: ApiClientOptions = {}) {
     return payload as T;
   }
 
+  async function download(path: string, requestOptions: RequestOptions = {}) {
+    const headers = new Headers(requestOptions.headers);
+    headers.set("Accept", "application/octet-stream");
+
+    const accessToken = await accessTokenProvider.getAccessToken();
+    if (accessToken) {
+      headers.set("Authorization", `Bearer ${accessToken}`);
+    }
+
+    let response: Response;
+    try {
+      response = await fetchImpl(resolveUrl(baseUrl, path), {
+        ...requestOptions,
+        body: undefined,
+        credentials: "include",
+        headers,
+      });
+    } catch {
+      throw new ApiError("The download service could not be reached.", { status: 0 });
+    }
+
+    if (!response.ok) {
+      const payload = await parseBody(response);
+      const details =
+        payload && typeof payload === "object" && !Array.isArray(payload)
+          ? (payload as ApiErrorDetails)
+          : undefined;
+      throw new ApiError(details?.detail ?? details?.message ?? "The download is unavailable.", {
+        status: response.status,
+        code: details?.code,
+        correlationId:
+          response.headers.get("x-correlation-id") ?? details?.correlationId ?? undefined,
+        details,
+      });
+    }
+
+    const disposition = response.headers.get("content-disposition") ?? "";
+    const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+    const quotedName = disposition.match(/filename="([^"]+)"/i)?.[1];
+    const fileName = decodeURIComponent(encodedName ?? quotedName ?? "download");
+    return { blob: await response.blob(), fileName };
+  }
+
   return {
     request,
     get: <T>(path: string, options?: RequestOptions) =>
       request<T>(path, { ...options, method: "GET" }),
     post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
       request<T>(path, { ...options, method: "POST", body }),
+    postForm: <T>(path: string, body: FormData, options?: RequestOptions) =>
+      request<T>(path, { ...options, method: "POST", body }),
+    download,
   };
 }
 

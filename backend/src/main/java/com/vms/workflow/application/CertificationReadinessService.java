@@ -601,8 +601,10 @@ public class CertificationReadinessService {
         UUID sourceId,
         OffsetDateTime checkedAt
     ) {
+        boolean hasBlockingIssue = blockers.stream()
+            .anyMatch(blocker -> "BLOCKING".equals(blocker.severity()));
         return new ReadinessPillar(
-            key, label, blockers.isEmpty() ? "READY" : "BLOCKED",
+            key, label, hasBlockingIssue ? "BLOCKED" : "READY",
             string(sourceId), sourceId == null ? "UNKNOWN" : "CURRENT",
             checkedAt, List.copyOf(blockers));
     }

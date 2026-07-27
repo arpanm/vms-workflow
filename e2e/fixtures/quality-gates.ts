@@ -42,20 +42,26 @@ test.beforeEach(async ({ page }) => {
   });
 
   page.on("request", (request) => {
-    if (!request.url().includes("/api/v1/certification/")) return;
+    if (
+      !request.url().includes("/api/v1/certification/") &&
+      !request.url().includes("/api/v1/finance/")
+    ) return;
     const rendered = `${request.url()} ${request.postData() ?? ""}`;
     if (restrictedContent.test(rendered)) {
-      errors.push(`restricted certification request content: ${rendered}`);
+      errors.push(`restricted governed-workflow request content: ${rendered}`);
     }
   });
 
   page.on("response", (response) => {
-    if (!response.url().includes("/api/v1/certification/")) return;
+    if (
+      !response.url().includes("/api/v1/certification/") &&
+      !response.url().includes("/api/v1/finance/")
+    ) return;
     const scan = response
       .text()
       .then((body) => {
         if (restrictedContent.test(body)) {
-          errors.push(`restricted certification response content: ${response.url()}`);
+          errors.push(`restricted governed-workflow response content: ${response.url()}`);
         }
       })
       .catch(() => undefined);

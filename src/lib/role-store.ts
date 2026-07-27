@@ -9,6 +9,7 @@ export type Role =
   | "vendor_pm"
   | "approver"
   | "uat_owner"
+  | "procurement"
   | "finance";
 
 export const ROLES: { id: Role; label: string; persona: string }[] = [
@@ -17,6 +18,7 @@ export const ROLES: { id: Role; label: string; persona: string }[] = [
   { id: "vendor_pm", label: "Vendor PM", persona: "Automatrix" },
   { id: "approver", label: "Approver", persona: "Asish" },
   { id: "uat_owner", label: "UAT Owner", persona: "Karthik M." },
+  { id: "procurement", label: "Procurement", persona: "Procurement Review" },
   { id: "finance", label: "Finance", persona: "AP Team" },
 ];
 

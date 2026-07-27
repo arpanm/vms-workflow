@@ -16,6 +16,12 @@ describe("validatePublicEnvironment", () => {
     ).toThrow("VITE_DEMO_MODE must be false in production");
   });
 
+  it("rejects the system-E2E token bridge in production", () => {
+    expect(() =>
+      validatePublicEnvironment({ VITE_E2E_SYSTEM_AUTH: "true" }, true),
+    ).toThrow("VITE_E2E_SYSTEM_AUTH must be false in production");
+  });
+
   it("accepts explicit OIDC paths without browser secrets", () => {
     expect(
       validatePublicEnvironment(

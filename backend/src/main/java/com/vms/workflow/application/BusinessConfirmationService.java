@@ -370,9 +370,9 @@ public class BusinessConfirmationService {
         if (token != null) {
             jdbc.update("""
                 UPDATE confirmation_secure_tokens
-                SET consumed_at = CURRENT_TIMESTAMP, consumed_by_subject = ?
+                SET consumed_at = ?, consumed_by_subject = ?
                 WHERE id = ? AND consumed_at IS NULL
-                """, subject, token.id());
+                """, evaluatedAt, subject, token.id());
             tokenHandoffs.revokeToken(token.id(), "TOKEN_CONSUMED");
             securityEvents.recordBestEffort(
                 request.monthId(), "SECURE_CONFIRMATION_TOKEN_CONSUMED",
@@ -460,7 +460,7 @@ public class BusinessConfirmationService {
         if ("CONFIRMED".equals(resultingState)) {
             ReadinessView ready = readiness.evaluateAuthorized(
                 subject, request.monthId());
-            UUID runId = readinessRunId(request.monthId());
+            UUID runId = readinessRunId(request.monthId(), ready);
             persistAndPublishF05Handoff(
                 subject, request, ready, runId, correlationId);
         }
@@ -665,7 +665,7 @@ public class BusinessConfirmationService {
         if ("CONFIRMED".equals(resultingState)) {
             ReadinessView ready = readiness.evaluateAuthorized(
                 represented.actorSubject(), request.monthId());
-            UUID runId = readinessRunId(request.monthId());
+            UUID runId = readinessRunId(request.monthId(), ready);
             persistAndPublishF05Handoff(
                 represented.actorSubject(), request, ready, runId,
                 correlationId);
@@ -811,7 +811,8 @@ public class BusinessConfirmationService {
             ReadinessView ready = readiness.evaluateAuthorized(
                 subject, request.monthId());
             persistAndPublishF05Handoff(
-                subject, request, ready, readinessRunId(request.monthId()),
+                subject, request, ready,
+                readinessRunId(request.monthId(), ready),
                 correlationId);
         }
         return governanceDecisionView(decisionId);
@@ -1854,12 +1855,15 @@ public class BusinessConfirmationService {
         return value == null ? "CAPTURED_ELIGIBLE_AUTHORITY" : String.valueOf(value);
     }
 
-    private UUID readinessRunId(UUID monthId) {
+    private UUID readinessRunId(UUID monthId, ReadinessView ready) {
+        String version = ready.inputManifestVersion();
+        String hash = version != null && version.startsWith("f04-readiness-v1:")
+            ? version.substring("f04-readiness-v1:".length()) : null;
         return jdbc.query("""
             SELECT id FROM certification_readiness_runs
-            WHERE engagement_month_id = ?
-            ORDER BY evaluated_at DESC LIMIT 1
-            """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null, monthId);
+            WHERE engagement_month_id = ? AND input_hash = ?
+            """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null,
+            monthId, hash);
     }
 
     private UUID priorResult(

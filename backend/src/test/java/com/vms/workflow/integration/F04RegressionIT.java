@@ -100,6 +100,13 @@ class F04RegressionIT {
     void f04DoesNotCreateF05InvoicePackageOrProcurementFacts()
         throws Exception {
         int importedLegacyInvoices = count("SELECT COUNT(*) FROM legacy_invoices");
+        int financeInvoices = count("SELECT COUNT(*) FROM invoices");
+        int financeInvoiceVersions =
+            count("SELECT COUNT(*) FROM invoice_versions");
+        int procurementReviews =
+            count("SELECT COUNT(*) FROM procurement_reviews");
+        int evidencePackages =
+            count("SELECT COUNT(*) FROM evidence_package_versions");
         F04TestSupport.CompletedCertification completed =
             F04TestSupport.completedCertification(mvc, mapper, jdbc);
         String planChecksum = jdbc.queryForObject("""
@@ -173,13 +180,13 @@ class F04RegressionIT {
             """, completed.baseline().planVersionId()));
         assertEquals(importedLegacyInvoices,
             count("SELECT COUNT(*) FROM legacy_invoices"));
-        assertEquals(0, count("""
-            SELECT COUNT(*) FROM information_schema.tables
-            WHERE table_schema = 'public'
-              AND table_name IN (
-                'invoices','invoice_versions','procurement_reviews',
-                'evidence_packages','evidence_package_versions')
-            """));
+        assertEquals(financeInvoices, count("SELECT COUNT(*) FROM invoices"));
+        assertEquals(financeInvoiceVersions,
+            count("SELECT COUNT(*) FROM invoice_versions"));
+        assertEquals(procurementReviews,
+            count("SELECT COUNT(*) FROM procurement_reviews"));
+        assertEquals(evidencePackages,
+            count("SELECT COUNT(*) FROM evidence_package_versions"));
     }
 
     private F04TestSupport.CompletedCertification completeExistingBaseline(
