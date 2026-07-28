@@ -1,4 +1,6 @@
 vms:
+  migration:
+    local-scanner-enabled: true
   finance:
     local-scanner-enabled: true
     cursor-signing-secret: test-only-finance-cursor-secret-0123456789abcdef

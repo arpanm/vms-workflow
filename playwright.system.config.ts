@@ -5,7 +5,7 @@ const baseURL =
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: /finance-system\.spec\.ts/,
+  testMatch: /(?:finance|migration)-system\.spec\.ts/,
   fullyParallel: false,
   forbidOnly: true,
   retries: 0,
@@ -33,6 +33,11 @@ export default defineConfig({
   projects: [
     {
       name: "f05-finance-system-chromium",
+      testMatch: /finance-system\.spec\.ts/,
+    },
+    {
+      name: "f06-migration-system-chromium",
+      testMatch: /migration-system\.spec\.ts/,
     },
   ],
 });

@@ -53,6 +53,15 @@ vms:
       mutations-per-minute: ${VMS_FINANCE_MUTATIONS_PER_MINUTE:120}
       downloads-per-minute: ${VMS_FINANCE_DOWNLOADS_PER_MINUTE:60}
       exports-per-minute: ${VMS_FINANCE_EXPORTS_PER_MINUTE:20}
+  migration:
+    local-scanner-enabled: ${VMS_MIGRATION_LOCAL_SCANNER_ENABLED:false}
+    retention-days: ${VMS_MIGRATION_RETENTION_DAYS:2555}
+    worker-enabled: ${VMS_MIGRATION_WORKER_ENABLED:false}
+    worker-delay: ${VMS_MIGRATION_WORKER_DELAY:PT30S}
+    worker-initial-delay: ${VMS_MIGRATION_WORKER_INITIAL_DELAY:PT30S}
+    worker-batch-size: ${VMS_MIGRATION_WORKER_BATCH_SIZE:5}
+    worker-lease-seconds: ${VMS_MIGRATION_WORKER_LEASE_SECONDS:120}
+    worker-recovery-age-seconds: ${VMS_MIGRATION_WORKER_RECOVERY_AGE_SECONDS:300}
 
 management:
   endpoints:

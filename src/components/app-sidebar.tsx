@@ -19,6 +19,7 @@ import {
   SendHorizontal,
   FileBarChart,
   ScanSearch,
+  DatabaseBackup,
 } from "lucide-react";
 
 import {
@@ -212,6 +213,16 @@ const nav: Array<{
     workforce: false,
     delivery: false,
     financeRoles: ["pmo", "biz_lead", "approver", "procurement", "finance"],
+  },
+  {
+    title: "Historical migration",
+    url: "/migration",
+    icon: DatabaseBackup,
+    group: "Governance",
+    legacy: false,
+    workforce: false,
+    delivery: false,
+    financeRoles: ["pmo"],
   },
 ];
 

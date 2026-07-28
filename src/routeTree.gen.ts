@@ -29,6 +29,7 @@ import { Route as DeliveryIntegrationHealthRouteImport } from './routes/delivery
 import { Route as FinanceIndexRouteImport } from './routes/finance.index'
 import { Route as FinanceProcurementRouteImport } from './routes/finance.procurement'
 import { Route as FinanceReportsRouteImport } from './routes/finance.reports'
+import { Route as MigrationIndexRouteImport } from './routes/migration.index'
 import { Route as CertificationMonthIdIndexRouteImport } from './routes/certification.$monthId.index'
 import { Route as CertificationMonthIdReviewRouteImport } from './routes/certification.$monthId.review'
 import { Route as ConfirmationRequestsRequestIdRouteImport } from './routes/confirmation.requests.$requestId'
@@ -140,6 +141,11 @@ const FinanceReportsRoute = FinanceReportsRouteImport.update({
   path: '/finance/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MigrationIndexRoute = MigrationIndexRouteImport.update({
+  id: '/migration/',
+  path: '/migration/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CertificationMonthIdIndexRoute =
   CertificationMonthIdIndexRouteImport.update({
     id: '/',
@@ -206,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/certification/': typeof CertificationIndexRoute
   '/confirmation/': typeof ConfirmationIndexRoute
   '/finance/': typeof FinanceIndexRoute
+  '/migration/': typeof MigrationIndexRoute
   '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
   '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
   '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
@@ -235,6 +242,7 @@ export interface FileRoutesByTo {
   '/certification': typeof CertificationIndexRoute
   '/confirmation': typeof ConfirmationIndexRoute
   '/finance': typeof FinanceIndexRoute
+  '/migration': typeof MigrationIndexRoute
   '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
   '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
   '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
@@ -266,6 +274,7 @@ export interface FileRoutesById {
   '/certification/': typeof CertificationIndexRoute
   '/confirmation/': typeof ConfirmationIndexRoute
   '/finance/': typeof FinanceIndexRoute
+  '/migration/': typeof MigrationIndexRoute
   '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
   '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
   '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
@@ -298,6 +307,7 @@ export interface FileRouteTypes {
     | '/certification/'
     | '/confirmation/'
     | '/finance/'
+    | '/migration/'
     | '/certification/$monthId/review'
     | '/confirmation/requests/$requestId'
     | '/delivery/plans/$planId'
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/certification'
     | '/confirmation'
     | '/finance'
+    | '/migration'
     | '/certification/$monthId/review'
     | '/confirmation/requests/$requestId'
     | '/delivery/plans/$planId'
@@ -357,6 +368,7 @@ export interface FileRouteTypes {
     | '/certification/'
     | '/confirmation/'
     | '/finance/'
+    | '/migration/'
     | '/certification/$monthId/review'
     | '/confirmation/requests/$requestId'
     | '/delivery/plans/$planId'
@@ -388,6 +400,7 @@ export interface RootRouteChildren {
   CertificationIndexRoute: typeof CertificationIndexRoute
   ConfirmationIndexRoute: typeof ConfirmationIndexRoute
   FinanceIndexRoute: typeof FinanceIndexRoute
+  MigrationIndexRoute: typeof MigrationIndexRoute
   ConfirmationRequestsRequestIdRoute: typeof ConfirmationRequestsRequestIdRoute
   DeliveryPlansPlanIdRoute: typeof DeliveryPlansPlanIdRoute
   DeliveryPlansNewRoute: typeof DeliveryPlansNewRoute
@@ -538,6 +551,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FinanceReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/migration/': {
+      id: '/migration/'
+      path: '/migration'
+      fullPath: '/migration/'
+      preLoaderRoute: typeof MigrationIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/certification/$monthId/': {
       id: '/certification/$monthId/'
       path: '/'
@@ -631,6 +651,7 @@ const rootRouteChildren: RootRouteChildren = {
   CertificationIndexRoute: CertificationIndexRoute,
   ConfirmationIndexRoute: ConfirmationIndexRoute,
   FinanceIndexRoute: FinanceIndexRoute,
+  MigrationIndexRoute: MigrationIndexRoute,
   ConfirmationRequestsRequestIdRoute: ConfirmationRequestsRequestIdRoute,
   DeliveryPlansPlanIdRoute: DeliveryPlansPlanIdRoute,
   DeliveryPlansNewRoute: DeliveryPlansNewRoute,

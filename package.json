@@ -16,6 +16,7 @@
     "test:coverage": "vitest run --coverage --exclude 'e2e/**'",
     "e2e": "playwright test",
     "e2e:finance:system": "node scripts/run-finance-system-e2e.mjs",
+    "e2e:migration:system": "node scripts/run-migration-system-e2e.mjs",
     "e2e:headed": "playwright test --headed",
     "e2e:report": "playwright show-report node_modules/.cache/playwright-report",
     "regression": "npm run typecheck && npm run test && npm run build && mvn -B -f backend/pom.xml verify && npm run e2e",

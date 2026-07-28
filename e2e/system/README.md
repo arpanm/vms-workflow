@@ -1,4 +1,4 @@
-# F05 real-system Playwright runner
+# F05 and F06 real-system Playwright runners
 
 This runner verifies F05 against the packaged application boundaries rather
 than browser request interception:
@@ -12,6 +12,7 @@ Run it from the repository root:
 
 ```bash
 npm run e2e:finance:system
+npm run e2e:migration:system
 ```
 
 Prerequisites are Docker, Java 25, Maven, Node.js dependencies and the
@@ -24,7 +25,8 @@ Playwright Chromium browser. The runner:
    test fixtures and `e2e/system/db/V2000__finance_system_e2e_seed.sql`;
 4. starts Vite on a random local port with the dedicated non-production system
    token bridge enabled;
-5. runs only the `f05-finance-system-chromium` Playwright project; and
+5. runs only the selected `f05-finance-system-chromium` or
+   `f06-migration-system-chromium` Playwright project; and
 6. terminates both servers and removes the PostgreSQL container on success,
    failure, `SIGINT` or `SIGTERM`.
 
@@ -33,6 +35,12 @@ invoice create/upload/scan, exact package/readiness/submission, Procurement
 query/review and exception guard, finance payment history, restricted export
 denials, expiring and revoked download authority, cross-scope denial, and a
 browser-rendered finance workspace backed by the real API.
+
+The F06 runner additionally covers server-derived migration scope/template
+catalog, multipart upload and scan, validation/reconciliation, forged-role
+denial and independent SoD approval, commit with domain visibility, audit and
+unconsumed compensation, safe error export/rejected-only reprocess, and
+current-time retro requests.
 
 ## Authentication safety
 

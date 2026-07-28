@@ -18,7 +18,8 @@ regression catalog is
 | F03 Delivery and Linear | Reviewed provider-neutral local demonstrator; P0 resolved by V10, local P1 and live-provider/BFF gates remain open | [F03 evidence](docs/features/03-delivery-linear/CODEGEN.md), [API](docs/features/03-delivery-linear/API_DOCUMENTATION.md), [UI](docs/features/03-delivery-linear/UI_DOCUMENTATION.md) |
 | F04 Certification and confirmation | Local Java/PostgreSQL + React provider-neutral vertical verified: 111 backend, 64 frontend and 59 intercepted Playwright tests pass; provider/full-stack gates remain open | [F04 evidence](docs/features/04-certification-confirmation/CODEGEN.md), [API](docs/features/04-certification-confirmation/API_DOCUMENTATION.md), [UI](docs/features/04-certification-confirmation/UI_DOCUMENTATION.md) |
 | F05 evidence, invoice and reporting | Locally quality-gated: 154/154 backend, 88/88 Vitest, 69/69 combined Playwright and 3/3 isolated system E2E; performance/scale and external release gates remain ACTION_REQUIRED | [F05 status](docs/FEATURE_STATUS.md), [F05 E2E catalog](docs/testing/E2E_REGRESSION_CASES.md), [F05 closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md) |
-| F06–F07 product features | Task/test specifications are ready; implementation proceeds sequentially | [feature plans](#feature-delivery-plans) |
+| F06 historical migration | Locally quality-gated: 172/172 backend, 90/90 Vitest, 74/74 combined Playwright and 6/6 real local system journeys; production scanner/storage/capacity/rehearsal gates remain ACTION_REQUIRED | [F06 status](docs/FEATURE_STATUS.md), [tasks](docs/features/06-historical-migration/TASKS.md), [tests](docs/features/06-historical-migration/TEST_CASES.md), [review](docs/features/06-historical-migration/FINAL_REVIEW.md), [API](docs/features/06-historical-migration/API_DOCUMENTATION.md), [UI](docs/features/06-historical-migration/UI_DOCUMENTATION.md) |
+| F07 hardening/go-live | Detailed 85-task and 76-test catalogs complete; implementation is the active feature | [tasks](docs/features/07-hardening-go-live/TASKS.md), [tests](docs/features/07-hardening-go-live/TEST_CASES.md) |
 
 Production release remains blocked until the identity/BFF decision and staging
 tenant-isolation gate are complete. Local feature development uses explicit
@@ -70,11 +71,11 @@ npm run e2e
 npm run regression
 ```
 
-The Maven verification applies Flyway to ephemeral PostgreSQL and runs 49
-integration tests covering real signed-JWT validation, lifecycle and scoped
-RBAC denial, tenant/object isolation, database constraints, legacy reads,
-workforce/attendance invariants, delivery/Linear integrity and OpenAPI security
-metadata.
+The Maven verification applies Flyway V1–V20 to ephemeral PostgreSQL and
+currently runs 14 unit plus 158 integration tests covering signed-JWT
+validation, lifecycle/scoped RBAC denial, tenant/object isolation, database
+constraints, workforce/attendance, delivery/Linear, certification/confirmation,
+finance, historical migration and OpenAPI security metadata.
 
 `npm run regression` combines frontend checks, Maven/Testcontainers
 PostgreSQL integration and Playwright Chromium browser-contract tests. The
@@ -101,8 +102,8 @@ OIDC provider or deployed full-stack environment. See the
 | F03 Delivery and Linear | [Tasks](docs/features/03-delivery-linear/TASKS.md) | [Tests](docs/features/03-delivery-linear/TEST_CASES.md) | [Reviewed local evidence](docs/features/03-delivery-linear/CODEGEN.md), [fix disposition](docs/features/03-delivery-linear/FIXES.md), [API](docs/features/03-delivery-linear/API_DOCUMENTATION.md), [UI](docs/features/03-delivery-linear/UI_DOCUMENTATION.md) |
 | F04 Certification and confirmation | [Tasks](docs/features/04-certification-confirmation/TASKS.md) | [Tests](docs/features/04-certification-confirmation/TEST_CASES.md) | [Codegen](docs/features/04-certification-confirmation/CODEGEN.md), [review](docs/features/04-certification-confirmation/CODE_REVIEW.md), [fixes](docs/features/04-certification-confirmation/FIXES.md), [API](docs/features/04-certification-confirmation/API_DOCUMENTATION.md), [UI](docs/features/04-certification-confirmation/UI_DOCUMENTATION.md) |
 | F05 Evidence, invoice and reporting | [Tasks](docs/features/05-evidence-invoice-reporting/TASKS.md) | [Tests](docs/features/05-evidence-invoice-reporting/TEST_CASES.md) | [Codegen](docs/features/05-evidence-invoice-reporting/CODEGEN.md), [reviews/issues](docs/features/05-evidence-invoice-reporting/FINAL_ISSUES.md), [closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md), [API](docs/features/05-evidence-invoice-reporting/API_DOCUMENTATION.md), [UI](docs/features/05-evidence-invoice-reporting/UI_DOCUMENTATION.md) |
-| F06 Historical migration | [Tasks](docs/features/06-historical-migration/TASKS.md) | [Tests](docs/features/06-historical-migration/TEST_CASES.md) | Planned |
-| F07 Hardening and go-live | [Tasks](docs/features/07-hardening-go-live/TASKS.md) | [Tests](docs/features/07-hardening-go-live/TEST_CASES.md) | Planned |
+| F06 Historical migration | [Tasks](docs/features/06-historical-migration/TASKS.md) | [Tests](docs/features/06-historical-migration/TEST_CASES.md) | [Codegen](docs/features/06-historical-migration/CODEGEN.md), [reviews/issues](docs/features/06-historical-migration/FINAL_ISSUES.md), [API](docs/features/06-historical-migration/API_DOCUMENTATION.md), [UI](docs/features/06-historical-migration/UI_DOCUMENTATION.md), [runbook](docs/features/06-historical-migration/RUNBOOK.md) |
+| F07 Hardening and go-live | [Tasks](docs/features/07-hardening-go-live/TASKS.md) | [Tests](docs/features/07-hardening-go-live/TEST_CASES.md) | Implementation in progress |
 
 ## SDLC harness
 
@@ -126,5 +127,10 @@ OIDC provider or deployed full-stack environment. See the
 - [F05 API documentation](docs/features/05-evidence-invoice-reporting/API_DOCUMENTATION.md)
 - [F05 UI guide](docs/features/05-evidence-invoice-reporting/UI_DOCUMENTATION.md)
 - [F05 runbook](docs/features/05-evidence-invoice-reporting/RUNBOOK.md)
+- [F06 architecture](docs/features/06-historical-migration/ARCHITECTURE.md)
+- [F06 API/Swagger documentation](docs/features/06-historical-migration/API_DOCUMENTATION.md)
+- [F06 UI guide](docs/features/06-historical-migration/UI_DOCUMENTATION.md)
+- [F06 migration runbook](docs/features/06-historical-migration/RUNBOOK.md)
+- [F06 final independent review](docs/features/06-historical-migration/FINAL_REVIEW.md)
 
 Do not store salary, CTC, markup, employee billing rates or payroll calculations. Do not infer human approval from silence, delivery receipts, elapsed time or external ticket status.

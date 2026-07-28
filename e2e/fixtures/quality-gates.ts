@@ -44,7 +44,8 @@ test.beforeEach(async ({ page }) => {
   page.on("request", (request) => {
     if (
       !request.url().includes("/api/v1/certification/") &&
-      !request.url().includes("/api/v1/finance/")
+      !request.url().includes("/api/v1/finance/") &&
+      !request.url().includes("/api/v1/migrations/")
     ) return;
     const rendered = `${request.url()} ${request.postData() ?? ""}`;
     if (restrictedContent.test(rendered)) {
@@ -55,7 +56,8 @@ test.beforeEach(async ({ page }) => {
   page.on("response", (response) => {
     if (
       !response.url().includes("/api/v1/certification/") &&
-      !response.url().includes("/api/v1/finance/")
+      !response.url().includes("/api/v1/finance/") &&
+      !response.url().includes("/api/v1/migrations/")
     ) return;
     const scan = response
       .text()

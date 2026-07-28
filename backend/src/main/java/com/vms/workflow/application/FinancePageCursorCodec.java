@@ -85,6 +85,11 @@ public class FinancePageCursorCodec {
             }
             byte[] payloadBytes = DECODER.decode(token[0]);
             byte[] suppliedSignature = DECODER.decode(token[1]);
+            if (!ENCODER.encodeToString(payloadBytes).equals(token[0])
+                || !ENCODER.encodeToString(suppliedSignature)
+                    .equals(token[1])) {
+                throw invalid();
+            }
             if (!MessageDigest.isEqual(
                 sign(payloadBytes), suppliedSignature)) {
                 throw invalid();

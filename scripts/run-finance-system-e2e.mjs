@@ -28,13 +28,17 @@ import {
 } from "node:url";
 
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
+const systemSuite = process.env.VMS_E2E_SYSTEM_SUITE ?? "finance";
+const systemProject = systemSuite === "migration"
+  ? "f06-migration-system-chromium"
+  : "f05-finance-system-chromium";
 const backendPort = await availablePort();
 const frontendPort = await availablePort();
 const postgresName =
-  `vms-finance-system-${process.pid}-${Date.now().toString(36)}`;
+  `vms-${systemSuite}-system-${process.pid}-${Date.now().toString(36)}`;
 const postgresPassword = `system-e2e-${process.pid}`;
 const isolatedMavenTarget = mkdtempSync(
-  join(tmpdir(), "vms-finance-system-maven-"),
+  join(tmpdir(), `vms-${systemSuite}-system-maven-`),
 );
 const children = new Set();
 let stopped = false;
@@ -110,7 +114,12 @@ try {
   const migrationLocations = [
     "classpath:db/migration",
     `filesystem:${join(repositoryRoot, "backend/src/test/resources/db/testdata")}`,
-    `filesystem:${join(repositoryRoot, "e2e/system/db")}`,
+    `filesystem:${join(
+      repositoryRoot,
+      systemSuite === "migration"
+        ? "e2e/system/db/migration"
+        : "e2e/system/db",
+    )}`,
   ].join(",");
   start("mvn", [
     "-B", "-f", "backend/pom.xml", "spring-boot:run",
@@ -126,6 +135,7 @@ try {
     VMS_OIDC_ISSUER: issuer,
     VMS_OIDC_AUDIENCE: "vms-api",
     VMS_FINANCE_LOCAL_SCANNER_ENABLED: "true",
+    VMS_MIGRATION_LOCAL_SCANNER_ENABLED: "true",
     VMS_FINANCE_CURSOR_SIGNING_SECRET:
       "system-e2e-cursor-signing-secret-with-at-least-32-bytes",
     VMS_FINANCE_MUTATIONS_PER_MINUTE: "1000",
@@ -153,7 +163,7 @@ try {
     [
       "playwright", "test",
       "--config", "playwright.system.config.ts",
-      "--project", "f05-finance-system-chromium",
+      "--project", systemProject,
     ],
     {
       ...tokenEnvironment,
@@ -162,7 +172,7 @@ try {
   );
   if (result !== 0) {
     throw new Error(
-      `Finance system Playwright exited with ${result}.`,
+      `${systemSuite} system Playwright exited with ${result}.`,
     );
   }
 } finally {
@@ -263,7 +273,7 @@ function requireCommand(command, args) {
     stdio: "ignore",
   });
   if (result.status !== 0) {
-    throw new Error(`${command} is required for finance system E2E.`);
+    throw new Error(`${command} is required for ${systemSuite} system E2E.`);
   }
 }
 
