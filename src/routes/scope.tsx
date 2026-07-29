@@ -101,7 +101,11 @@ function ScopePage() {
                   <span className="text-sm font-medium">{p.engagement.name}</span>
                   <span className="text-[10px] text-muted-foreground">{p.utilizationPct}%</span>
                 </div>
-                <Progress value={p.utilizationPct} className="mt-2 h-1" />
+                <Progress
+                  value={p.utilizationPct}
+                  aria-label={`${p.engagement.name} utilization`}
+                  className="mt-2 h-1"
+                />
                 <div className="mt-1.5 flex items-center justify-between text-[11px] text-muted-foreground">
                   <span>{p.planned.length} planned</span>
                   <span>{p.carry.length} carry-fwd</span>

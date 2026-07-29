@@ -1,6 +1,7 @@
 package com.vms.workflow.security;
 
 import com.vms.workflow.infrastructure.CorrelationIdFilter;
+import com.vms.workflow.infrastructure.SensitiveDataRedactor;
 import com.vms.workflow.application.CertificationSecurityEventService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -31,7 +32,8 @@ public class SecurityProblemWriter {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatusCode.valueOf(status), detail);
         problem.setTitle(title);
         problem.setType(URI.create("https://vms.example/problems/" + status));
-        problem.setInstance(URI.create(request.getRequestURI()));
+        problem.setInstance(URI.create(
+            SensitiveDataRedactor.problemInstancePath(request.getRequestURI())));
         problem.setProperty(
             "correlationId", CorrelationIdFilter.from(request).toString());
         String securityEvent = switch (status) {
@@ -63,8 +65,6 @@ public class SecurityProblemWriter {
         if (value == null) {
             return "";
         }
-        return value.replaceAll(
-            "(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
-            "{id}");
+        return SensitiveDataRedactor.diagnostic(value);
     }
 }

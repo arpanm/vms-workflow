@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest(properties = {
     "spring.datasource.url="
-        + "jdbc:tc:postgresql:18-alpine:///vms_workflow_atomic",
+        + "jdbc:tc:vmspostgresql:18-alpine:///vms_workflow_atomic",
     "spring.datasource.driver-class-name="
         + "org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",

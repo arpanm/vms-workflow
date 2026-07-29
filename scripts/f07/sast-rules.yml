@@ -1,0 +1,21 @@
+rules:
+  - id: f07-java-runtime-exec
+    languages: [java]
+    message: Process execution needs a reviewed fixed-command boundary.
+    severity: ERROR
+    patterns:
+      - pattern-either:
+          - pattern: Runtime.getRuntime().exec(...)
+          - pattern: new ProcessBuilder(...)
+  - id: f07-js-dynamic-code
+    languages: [javascript, typescript]
+    message: Dynamic code execution is forbidden.
+    severity: ERROR
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: new Function(...)
+  - id: f07-js-unsafe-html
+    languages: [javascript, typescript]
+    message: Unreviewed raw HTML rendering is forbidden.
+    severity: ERROR
+    pattern: $X.dangerouslySetInnerHTML = ...

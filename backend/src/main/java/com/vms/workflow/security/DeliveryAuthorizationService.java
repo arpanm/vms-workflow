@@ -21,11 +21,16 @@ public class DeliveryAuthorizationService {
 
     private final AuthorizationStore authorization;
     private final JdbcTemplate jdbc;
-    private final Clock clock = Clock.systemUTC();
+    private final Clock clock;
 
-    public DeliveryAuthorizationService(AuthorizationStore authorization, JdbcTemplate jdbc) {
+    public DeliveryAuthorizationService(
+        AuthorizationStore authorization,
+        JdbcTemplate jdbc,
+        Clock clock
+    ) {
         this.authorization = authorization;
         this.jdbc = jdbc;
+        this.clock = clock;
     }
 
     public void requireMonth(String subject, UUID engagementMonthId, String permission) {

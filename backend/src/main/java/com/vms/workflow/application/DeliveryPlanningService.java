@@ -52,18 +52,20 @@ public class DeliveryPlanningService {
     private final ObjectMapper objectMapper;
     private final DeliveryAuthorizationService authorization;
     private final LinearIntegrationService linear;
-    private final Clock clock = Clock.systemUTC();
+    private final Clock clock;
 
     public DeliveryPlanningService(
         JdbcTemplate jdbc,
         ObjectMapper objectMapper,
         DeliveryAuthorizationService authorization,
-        LinearIntegrationService linear
+        LinearIntegrationService linear,
+        Clock clock
     ) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
         this.authorization = authorization;
         this.linear = linear;
+        this.clock = clock;
     }
 
     public List<PlanSummaryView> plans(String subject, UUID engagementMonthId) {

@@ -20,10 +20,14 @@ public class TenantAuthorizationService {
     private final AuthorizationStore authorization;
     private final Clock clock;
 
-    public TenantAuthorizationService(MembershipRepository memberships, AuthorizationStore authorization) {
+    public TenantAuthorizationService(
+        MembershipRepository memberships,
+        AuthorizationStore authorization,
+        Clock clock
+    ) {
         this.memberships = memberships;
         this.authorization = authorization;
-        this.clock = Clock.systemUTC();
+        this.clock = clock;
     }
 
     public List<Membership> sessionMemberships(String subject) {

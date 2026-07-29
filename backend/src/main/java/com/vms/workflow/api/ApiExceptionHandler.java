@@ -1,6 +1,8 @@
 package com.vms.workflow.api;
 
 import com.vms.workflow.infrastructure.CorrelationIdFilter;
+import com.vms.workflow.infrastructure.SensitiveDataRedactor;
+import com.vms.workflow.application.FinanceAccessDenialRecorder;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
@@ -14,8 +16,10 @@ import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,6 +29,11 @@ import java.net.URI;
 public class ApiExceptionHandler {
     private static final Logger LOGGER =
         LoggerFactory.getLogger(ApiExceptionHandler.class);
+    private final FinanceAccessDenialRecorder financeDenials;
+
+    public ApiExceptionHandler(FinanceAccessDenialRecorder financeDenials) {
+        this.financeDenials = financeDenials;
+    }
 
     @ExceptionHandler(EntityNotFoundException.class)
     ProblemDetail notFound(EntityNotFoundException exception, HttpServletRequest request) {
@@ -34,6 +43,13 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     ProblemDetail forbidden(AccessDeniedException exception, HttpServletRequest request) {
+        if (request.getRequestURI().startsWith("/api/v1/finance/")) {
+            financeDenials.ensureHttpDeniedBestEffort(
+                request.getUserPrincipal() == null
+                    ? null : request.getUserPrincipal().getName(),
+                "HTTP_FINANCE_ACCESS_DENIED",
+                "ACCESS_DENIED");
+        }
         return problem(
             HttpStatus.FORBIDDEN, "Forbidden",
             "The authenticated identity is not authorized for this resource.",
@@ -62,6 +78,7 @@ public class ApiExceptionHandler {
         MissingServletRequestParameterException.class,
         MissingRequestHeaderException.class,
         HttpMessageNotReadableException.class,
+        HandlerMethodValidationException.class,
         MethodArgumentTypeMismatchException.class
     })
     ProblemDetail badRequest(Exception exception, HttpServletRequest request) {
@@ -83,13 +100,24 @@ public class ApiExceptionHandler {
             request);
     }
 
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ProblemDetail payloadTooLarge(
+        MaxUploadSizeExceededException exception,
+        HttpServletRequest request
+    ) {
+        return problem(
+            HttpStatus.PAYLOAD_TOO_LARGE,
+            "Payload Too Large",
+            "The request body exceeds the permitted size.",
+            request);
+    }
+
     @ExceptionHandler(Exception.class)
     ProblemDetail unexpected(Exception exception, HttpServletRequest request) {
         LOGGER.error(
             "Unhandled API failure correlationId={} exceptionType={}",
             CorrelationIdFilter.from(request),
-            exception.getClass().getSimpleName(),
-            exception);
+            exception.getClass().getSimpleName());
         return problem(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "Internal Server Error",
@@ -101,7 +129,8 @@ public class ApiExceptionHandler {
         ProblemDetail value = ProblemDetail.forStatusAndDetail(status, detail == null ? title : detail);
         value.setTitle(title);
         value.setType(URI.create("https://vms.example/problems/" + status.value()));
-        value.setInstance(URI.create(request.getRequestURI()));
+        value.setInstance(URI.create(
+            SensitiveDataRedactor.problemInstancePath(request.getRequestURI())));
         value.setProperty(
             "correlationId", CorrelationIdFilter.from(request).toString());
         return value;
@@ -111,14 +140,6 @@ public class ApiExceptionHandler {
         if (value == null || value.isBlank()) {
             return "The request conflicts with current workflow state.";
         }
-        String redacted = value
-            .replaceAll(
-                "(?i)[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}",
-                "[redacted-email]")
-            .replaceAll(
-                "(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}",
-                "[redacted-id]")
-            .replaceAll("(?i)\\buser-[a-z0-9._-]+\\b", "[redacted-subject]");
-        return redacted.substring(0, Math.min(redacted.length(), 1_000));
+        return SensitiveDataRedactor.diagnostic(value);
     }
 }

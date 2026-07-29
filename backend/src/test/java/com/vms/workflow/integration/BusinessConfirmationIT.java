@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:tc:postgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",
@@ -89,6 +89,40 @@ class BusinessConfirmationIT {
     }
 
     @Test
+    void correctedRequestRetainsLatestSupersededPredecessorAfterReopen()
+        throws Exception {
+        F04TestSupport.CompletedCertification completed =
+            F04TestSupport.completedCertification(mvc, mapper, jdbc);
+        OffsetDateTime due = OffsetDateTime.now().plusDays(3).withNano(0);
+        JsonNode original = F04TestSupport.createConfirmationRequest(
+            mvc, mapper, completed.monthVersion(), due,
+            "pre-reopen-confirmation");
+        UUID originalId = UUID.fromString(original.path("id").asText());
+
+        jdbc.update("""
+            UPDATE business_confirmation_requests
+            SET status = 'SUPERSEDED',
+                optimistic_version = optimistic_version + 1
+            WHERE id = ?
+            """, originalId);
+        long reopenedMonthVersion = jdbc.queryForObject("""
+            SELECT certification_version
+            FROM engagement_months
+            WHERE id = ?::uuid
+            """, Long.class, MONTH);
+
+        JsonNode corrected = F04TestSupport.createConfirmationRequest(
+            mvc, mapper, reopenedMonthVersion, due,
+            "post-reopen-confirmation");
+        UUID correctedId = UUID.fromString(corrected.path("id").asText());
+        assertEquals(originalId, jdbc.queryForObject("""
+            SELECT supersedes_id
+            FROM business_confirmation_requests
+            WHERE id = ?
+            """, UUID.class, correctedId));
+    }
+
+    @Test
     void inAppConfirmationIsExplicitAuditedIdempotentAndTransportNeutral()
         throws Exception {
         F04TestSupport.DirectConfirmation fixture = directAnyOne(false);
@@ -122,6 +156,18 @@ class BusinessConfirmationIT {
         assertEquals(1, count("""
             SELECT COUNT(*) FROM business_confirmation_actions
             WHERE request_id = ?
+            """, fixture.requestId()));
+
+        action(
+            fixture.requestId(), "user-reliance", "confirm-terminal-replay",
+            body, 409);
+        assertEquals(1, count("""
+            SELECT COUNT(*) FROM certification_security_events
+            WHERE object_id = ?
+              AND event_type = 'CONFIRMATION_ACTION_REJECTED'
+              AND outcome = 'DENIED'
+              AND redacted_facts
+                  @> '{"reasonCode":"REQUEST_NOT_AWAITING_RESPONSE"}'::jsonb
             """, fixture.requestId()));
     }
 

@@ -1,0 +1,192 @@
+name: F07 release evidence
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      evaluate_release:
+        description: Run the fail-closed GO/NO-GO decision
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: f07-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  local-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    env:
+      EVIDENCE_DIR: .f07-evidence/${{ github.run_id }}-${{ github.run_attempt }}
+      F07_SEMGREP_IMAGE: semgrep/semgrep:1.135.0@sha256:62aaded52737fc401299d994f29fcd3d4049bd90bbb77407eca2e29e51ab0d98
+      RAW_EVIDENCE_DIR: ${{ runner.temp }}/f07-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - name: Check out exact source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Configure Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24.14.0
+          cache: npm
+
+      - name: Configure Java
+        uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: temurin
+          java-version: "25"
+          cache: maven
+
+      - name: Configure pinned Trivy
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514 # v0.2.6
+        with:
+          version: v0.70.0
+          cache: false
+
+      - name: Configure digest-pinned Semgrep runtime
+        run: |
+          docker pull "${F07_SEMGREP_IMAGE}"
+          test "$(docker image inspect "${F07_SEMGREP_IMAGE}" --format '{{index .RepoDigests 0}}')" = \
+            "semgrep/semgrep@sha256:62aaded52737fc401299d994f29fcd3d4049bd90bbb77407eca2e29e51ab0d98"
+
+      - name: Install locked frontend dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Install lockfile-matched Playwright engines
+        run: npx playwright install --with-deps chromium firefox webkit
+
+      - name: Prepare unique raw evidence directory
+        run: mkdir -p "${RAW_EVIDENCE_DIR}"
+
+      - name: Typecheck
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-TYPECHECK --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/typecheck.json" -- npm run typecheck
+
+      - name: Lint
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-LINT --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/lint.json" -- npm run lint
+
+      - name: Frontend unit tests
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-UNIT --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/unit.json" -- npx vitest run "--exclude=e2e/**" --reporter=json
+
+      - name: Frontend release build
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-BUILD --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/build.json" -- npm run build
+
+      - name: Maven verify
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-MAVEN-VERIFY --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/maven-verify.json" -- mvn -B -f backend/pom.xml verify
+
+      - name: Clean PostgreSQL migration-role bootstrap rehearsal
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-DB-BOOTSTRAP --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/database-bootstrap.json" -- mvn -B -f backend/pom.xml -Dit.test=F07MigrationBootstrapIT verify
+
+      - name: Execute the platform-admin bootstrap on clean PostgreSQL
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-DB-BOOTSTRAP-SQL --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/database-bootstrap-sql.json" -- node scripts/f07/bootstrap-rehearsal.mjs --execute
+
+      - name: Workforce Playwright evidence
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-E2E-WORKFORCE --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/playwright-workforce.json" -- npx playwright test e2e/workforce.spec.ts --reporter=json
+
+      - name: Delivery Playwright evidence
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-E2E-DELIVERY --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/playwright-delivery.json" -- npx playwright test e2e/delivery.spec.ts --reporter=json
+
+      - name: Certification Playwright evidence
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-E2E-CERTIFICATION --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/playwright-certification.json" -- npx playwright test e2e/certification.spec.ts --reporter=json
+
+      - name: Finance Playwright evidence
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-E2E-FINANCE --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/playwright-finance.json" -- npx playwright test e2e/finance.spec.ts --reporter=json
+
+      - name: Migration Playwright evidence
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-E2E-MIGRATION --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/playwright-migration.json" -- npx playwright test e2e/migration.spec.ts --reporter=json
+
+      - name: Accessibility and compatibility smoke evidence
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-E2E-ACCESSIBILITY --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/playwright-accessibility.json" -- npx playwright test e2e/f07-accessibility.spec.ts --reporter=json
+
+      - name: F05 real-system lane
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-FINANCE-SYSTEM --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/finance-system.json" -- npm run --silent e2e:finance:system
+
+      - name: F06 real-system lane
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-MIGRATION-SYSTEM --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/migration-system.json" -- npm run --silent e2e:migration:system
+
+      - name: F07 real-system regression lane
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-F07-SYSTEM --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/f07-system.json" -- npm run --silent e2e:f07:system
+
+      - name: Protected live Flyway source-history rehearsal
+        run: |
+          node scripts/f07/command-evidence.mjs run \
+            --id F07-CI-MIGRATION-LIVE --kind test --environment github-actions \
+            --output "${RAW_EVIDENCE_DIR}/migration-live.json" -- \
+            node scripts/f07/migration-live-rehearsal.mjs --execute \
+              --base-ref "$(jq -r .commit docs/features/07-hardening-go-live/migration-baseline.json)" \
+              --release-commit "${GITHUB_SHA}"
+
+      - name: F07 operations gates
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-OPS --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/f07-ops.json" -- node scripts/f07/release.mjs schema
+
+      - name: Documentation and runbook structural evidence
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-DOCUMENTATION --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/documentation.json" -- node scripts/f07/ops-verify.mjs
+
+      - name: Database-backed performance evidence
+        run: node scripts/f07/command-evidence.mjs run --id F07-CI-PERFORMANCE --kind test --environment github-actions --output "${RAW_EVIDENCE_DIR}/performance.json" -- mvn -B -f backend/pom.xml -Dit.test=F07CapacityPerformanceIT verify
+
+      - name: Aggregate post-deploy E2E audit outbox and rollback evidence
+        run: |
+          node scripts/f07/command-evidence.mjs run \
+            --id F07-CI-POST-DEPLOY --kind test --environment github-actions \
+            --output "${RAW_EVIDENCE_DIR}/post-deploy-regression.json" -- \
+            node scripts/f07/post-deploy-regression.mjs \
+              --evidence-dir "${RAW_EVIDENCE_DIR}"
+
+      - name: Create commit-bound provenance
+        run: |
+          node scripts/f07/provenance.mjs \
+            --expected-commit "${GITHUB_SHA}" \
+            --require-clean \
+            --input .github/workflows/f07-release-evidence.yml,package.json,package-lock.json,backend/pom.xml,backend/compose.yaml,scripts/f07,backend/src/main/resources/db/migration,docs/features/07-hardening-go-live,dist,backend/target/workflow-backend-0.1.0-SNAPSHOT.jar \
+            --output "${EVIDENCE_DIR}/provenance.json"
+
+      - name: Run secret, dependency, SAST, license, artifact and SBOM gates
+        run: |
+          node scripts/f07/command-evidence.mjs run \
+            --id F07-CI-SUPPLY --kind test --environment github-actions \
+            --output "${RAW_EVIDENCE_DIR}/f07-supply.json" -- \
+            node scripts/f07/supply-chain.mjs --run \
+              --artifact dist,backend/target/workflow-backend-0.1.0-SNAPSHOT.jar \
+              --report-dir "${EVIDENCE_DIR}/supply-chain"
+
+      - name: Bind mandatory suite outputs to provenance
+        run: |
+          node scripts/f07/command-evidence.mjs bind \
+            --raw "$(find "${RAW_EVIDENCE_DIR}" -type f -name '*.json' -print | sort | paste -sd, -)" \
+            --provenance "${EVIDENCE_DIR}/provenance.json" \
+            --output-dir "${EVIDENCE_DIR}/bound"
+
+      - name: Prepare current-commit candidate manifest
+        run: |
+          node scripts/f07/prepare-release-manifest.mjs \
+            --bundle "${EVIDENCE_DIR}/bound/ci-evidence-bundle.json" \
+            --run-id "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --output "${EVIDENCE_DIR}/candidate-release-evidence.json"
+
+      - name: Upload immutable local evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: f07-release-evidence-${{ github.sha }}
+          path: |
+            ${{ env.EVIDENCE_DIR }}/
+            ${{ env.RAW_EVIDENCE_DIR }}/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Evaluate release decision
+        if: github.event_name == 'workflow_dispatch' && inputs.evaluate_release
+        run: |
+          node scripts/f07/release.mjs release \
+            --manifest "${EVIDENCE_DIR}/candidate-release-evidence.json" \
+            --ci-bundle "${EVIDENCE_DIR}/bound/ci-evidence-bundle.json"

@@ -1,0 +1,42 @@
+{
+  "budget": {
+    "maximumErrorRate": 0,
+    "p95Ms": 1000
+  },
+  "concurrency": 100,
+  "id": "linear-webhook-duplicate-storm",
+  "iterations": 100000,
+  "requiredEnvironment": [
+    "F07_LINEAR_CONNECTION_ID",
+    "F07_CAPACITY_ENGAGEMENT_ID",
+    "F07_LINEAR_DELIVERY_ID",
+    "F07_LINEAR_SIGNATURE",
+    "F07_LINEAR_TIMESTAMP"
+  ],
+  "requestTimeoutMs": 5000,
+  "requests": [
+    {
+      "auth": "none",
+      "body": {
+        "action": "update",
+        "data": {
+          "id": "00000000-0000-0000-0000-000000000707",
+          "type": "Issue"
+        },
+        "type": "Issue"
+      },
+      "headers": {
+        "linear-delivery": "${F07_LINEAR_DELIVERY_ID}",
+        "linear-signature": "${F07_LINEAR_SIGNATURE}",
+        "linear-timestamp": "${F07_LINEAR_TIMESTAMP}"
+      },
+      "method": "POST",
+      "path": "/api/v1/integrations/linear/webhook/${F07_LINEAR_CONNECTION_ID}"
+    },
+    {
+      "auth": "shared",
+      "method": "GET",
+      "path": "/api/v1/integrations/linear/health?engagementId=${F07_CAPACITY_ENGAGEMENT_ID}"
+    }
+  ]
+}

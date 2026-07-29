@@ -227,7 +227,7 @@ const nav: Array<{
 ];
 
 export function AppSidebar() {
-  const { state } = useSidebar();
+  const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [role] = useRole();
@@ -270,8 +270,17 @@ export function AppSidebar() {
                     return (
                       <SidebarMenuItem key={item.url}>
                         <SidebarMenuButton asChild isActive={active}>
-                          <Link to={item.url} className="flex items-center gap-2">
-                            <item.icon className="h-4 w-4" />
+                          <Link
+                            to={item.url}
+                            className="flex items-center gap-2"
+                            aria-label={item.title}
+                            onClick={() => {
+                              if (isMobile) {
+                                setOpenMobile(false);
+                              }
+                            }}
+                          >
+                            <item.icon className="h-4 w-4" aria-hidden="true" />
                             {!collapsed && <span>{item.title}</span>}
                           </Link>
                         </SidebarMenuButton>

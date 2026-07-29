@@ -1,0 +1,20 @@
+{
+  "runbooks": [
+    {"detection": "SSO, invite or active-membership denial", "id": "RB-01", "owner": "identity-operations-owner", "section": "rb-01-user-access-sso-or-invite-failure"},
+    {"detection": "attendance punch write failure or latency alert", "id": "RB-02", "owner": "workforce-operations-owner", "section": "rb-02-employee-unable-to-check-in-or-out"},
+    {"detection": "attendance source or calculation discrepancy", "id": "RB-03", "owner": "workforce-data-owner", "section": "rb-03-attendance-calculation-or-source-conflict"},
+    {"detection": "leave accrual or reconciliation discrepancy", "id": "RB-04", "owner": "workforce-data-owner", "section": "rb-04-leave-accrual-or-reconciliation-failure"},
+    {"detection": "greytHR authentication, freshness or schema alert", "id": "RB-05", "owner": "integration-operations-owner", "section": "rb-05-greythr-auth-sync-or-schema-outage"},
+    {"detection": "Linear OAuth, webhook or reconciliation alert", "id": "RB-06", "owner": "delivery-integration-owner", "section": "rb-06-linear-oauth-webhook-or-reconciliation-outage"},
+    {"detection": "email send, bounce, reply or dead-letter alert", "id": "RB-07", "owner": "confirmation-operations-owner", "section": "rb-07-email-send-bounce-or-reply-ingestion-failure"},
+    {"detection": "spoofed or ambiguous confirmation reply", "id": "RB-08", "owner": "confirmation-governance-owner", "section": "rb-08-confirmation-spoof-or-ambiguity-review"},
+    {"detection": "import failure, stalled checkpoint or discrepancy", "id": "RB-09", "owner": "migration-operations-owner", "section": "rb-09-import-failure-resume-or-rollback"},
+    {"detection": "package failure or checksum mismatch", "id": "RB-10", "owner": "evidence-operations-owner", "section": "rb-10-package-generation-or-hash-mismatch"},
+    {"detection": "reopen invalidation or lineage discrepancy", "id": "RB-11", "owner": "governance-owner", "section": "rb-11-month-reopen-and-downstream-invalidation"},
+    {"detection": "invoice or Procurement change request", "id": "RB-12", "owner": "procurement-operations-owner", "section": "rb-12-invoice-or-procurement-change-request"},
+    {"detection": "backup, checksum, restore or regional failure", "id": "RB-13", "owner": "data-operations-owner", "section": "rb-13-backup-restore-and-disaster-recovery"},
+    {"detection": "security, privacy or evidence-integrity alert", "id": "RB-14", "owner": "security-incident-commander", "section": "rb-14-security-incident-and-evidence-preservation"},
+    {"detection": "authorized data correction or privacy request", "id": "RB-15", "owner": "privacy-records-owner", "section": "rb-15-data-correction-or-privacy-request"}
+  ],
+  "schemaVersion": 1
+}

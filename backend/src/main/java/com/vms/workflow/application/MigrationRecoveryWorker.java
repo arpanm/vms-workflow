@@ -6,6 +6,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.UUID;
 
@@ -20,6 +22,8 @@ import java.util.UUID;
     havingValue = "true")
 public final class MigrationRecoveryWorker {
     private static final int MAX_RETRIES = 10;
+    private static final Logger LOGGER =
+        LoggerFactory.getLogger(MigrationRecoveryWorker.class);
 
     private final JdbcTemplate jdbc;
     private final MigrationService migrations;
@@ -61,12 +65,13 @@ public final class MigrationRecoveryWorker {
                 return;
             }
             try {
-                migrations.retry(
-                    claim.requestedBy(), claim.id(), claim.version(),
-                    "Automated recovery of an expired migration lease.",
-                    "f06-worker:" + claim.id() + ":" + claim.version());
+                migrations.retryClaimed(
+                    claim.id(), claim.version(), workerId);
                 metrics.recordWorker("recovered");
             } catch (RuntimeException exception) {
+                LOGGER.warn(
+                    "Migration recovery failed for job {} at claimed version {}",
+                    claim.id(), claim.version(), exception);
                 transactions.executeWithoutResult(
                     ignored -> fail(claim));
                 metrics.recordWorker("failed");
@@ -108,17 +113,17 @@ public final class MigrationRecoveryWorker {
                 version = job.version + 1
             FROM candidate
             WHERE job.id = candidate.id
-            RETURNING job.id, job.requested_by_subject, job.version
+            RETURNING job.id, job.version
             """, rs -> rs.next()
                 ? new Claim(
                     rs.getObject(1, UUID.class),
-                    rs.getString(2), rs.getLong(3))
+                    rs.getLong(2))
                 : null,
             MAX_RETRIES, recoveryAgeSeconds, workerId, leaseSeconds);
     }
 
     private void fail(Claim claim) {
-        jdbc.update("""
+        int updated = jdbc.update("""
             UPDATE migration_jobs
             SET retry_count = LEAST(retry_count + 1, ?),
                 dead_lettered_at = CASE
@@ -130,11 +135,45 @@ public final class MigrationRecoveryWorker {
                 version = version + 1
             WHERE id = ? AND lease_owner = ?
             """, MAX_RETRIES, MAX_RETRIES, claim.id(), workerId);
+        if (updated != 1) {
+            LOGGER.warn(
+                "Migration recovery failure could not release job {} because "
+                    + "its lease changed",
+                claim.id());
+            return;
+        }
+        Integer retryCount = jdbc.queryForObject("""
+            SELECT retry_count FROM migration_jobs WHERE id = ?
+            """, Integer.class, claim.id());
+        if (retryCount == null || retryCount < MAX_RETRIES) {
+            return;
+        }
+        int decisionInserted = jdbc.update("""
+            INSERT INTO migration_decisions
+              (id, job_id, decision, reason, actor_subject, job_version,
+               idempotency_key)
+            VALUES (?, ?, 'REPLAY',
+                    'Automated recovery exhausted the bounded retry budget.',
+                    'SYSTEM:F06_RECOVERY', ?, ?)
+            ON CONFLICT (actor_subject, idempotency_key) DO NOTHING
+            """, UUID.randomUUID(), claim.id(), claim.version(),
+            "f06-worker-dead-letter:" + claim.id());
+        if (decisionInserted == 1) {
+            jdbc.update("""
+                INSERT INTO migration_audit_events
+                  (id, engagement_id, organization_id, job_id, event_type,
+                   actor_subject, metadata, correlation_id)
+                SELECT ?, engagement_id, organization_id, id,
+                       'MIGRATION_RETRY_DEAD_LETTERED',
+                       'SYSTEM:F06_RECOVERY',
+                       jsonb_build_object('retryCount', retry_count), ?
+                FROM migration_jobs WHERE id = ?
+                """, UUID.randomUUID(), UUID.randomUUID(), claim.id());
+        }
     }
 
     private record Claim(
         UUID id,
-        String requestedBy,
         long version
     ) {
     }

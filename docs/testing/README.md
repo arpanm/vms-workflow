@@ -3,13 +3,21 @@
 The repository uses three distinct verification lanes. Evidence from one lane
 must not be represented as evidence from another.
 
+Current cross-feature implementation gaps and test reruns are tracked in
+[PENDING_WORK.md](../PENDING_WORK.md); permanent regression cases and future
+extensions remain in
+[E2E_REGRESSION_CASES.md](E2E_REGRESSION_CASES.md).
+
 | Lane | What it verifies | Command | Current status |
 |---|---|---|---|
-| Frontend unit/contract | Pure TypeScript behavior and API-client contracts | `npm run test` | **90/90 passing** through F06 |
-| Backend HTTP/database integration | Spring HTTP/security behavior, Flyway and real ephemeral PostgreSQL | `mvn -B -f backend/pom.xml verify` | **172/172 passing** (14 unit + 158 integration) with Testcontainers after the final F06 review patch |
-| Browser contract E2E | Real Chromium UI with deterministic, intercepted `/api/v1` responses | `npm run e2e` | **74/74 passing** through F06; still not provider/deployment acceptance |
-| Isolated F05 system E2E | Browser through Vite, Spring Security/API, Flyway and an isolated PostgreSQL 18 database using local signed test JWTs/JWKS | `npm run e2e:finance:system` | **3/3 passing**; bounded local system evidence, not production BFF/OIDC/provider acceptance |
+| Frontend unit/contract | Pure TypeScript behavior and API-client contracts | `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build` | **PASS:** typecheck; lint 0 errors/6 non-blocking Fast Refresh warnings; Vitest 24 files/92 tests; build 3,006 modules with 586.90 kB largest-chunk advisory; diff-check |
+| Backend HTTP/database integration | Spring HTTP/security behavior, Flyway V1–V33 and real ephemeral PostgreSQL | `mvn -B -f backend/pom.xml verify` | **PASS:** definitive R3 73 unit + 217 integration (290/290), zero failures/errors/skips, 03:21 |
+| Browser contract E2E | Configured Chromium/Firefox/WebKit/mobile UI projects with deterministic intercepted `/api/v1` responses | `npm run e2e` | **274/274 passing** after preserved 268/274 and exact 7/7 reruns; still not provider/deployment acceptance |
+| Isolated F05 system E2E | Browser through Vite, Spring Security/API, Flyway and an isolated PostgreSQL 18 database using local signed test JWTs/JWKS | `npm run e2e:finance:system` | **4/4 passing**; bounded local system evidence, not production BFF/OIDC/provider acceptance |
 | Isolated F06 system E2E | Browser/API through Vite, Spring Security, Flyway V1–V20 and isolated PostgreSQL 18 using local signed test JWTs/JWKS | `npm run e2e:migration:system` | **6/6 passing**; scope/catalog, scan/validate/reconciliation, SoD/commit, audit/compensation, safe errors/reprocess and retro time |
+| F07 local-system E2E | Ordered browser/API workflows through Vite, Spring Security, Flyway V1–V33 and PostgreSQL | F07 system runner | **7/7 passing:** E2E-01/02/03/04/05/07/10 |
+| F07 accessibility matrix | Shared shell and critical routes across Chromium, Firefox, WebKit, Android and iOS projects with intercepted APIs | `npx playwright test e2e/f07-accessibility.spec.ts` | Final full browser matrix **274/274**; manual representative-user accessibility remains external |
+| F07 backend/operations | Java/PostgreSQL hardening plus release, supply-chain, migration, rollout and recovery harness | `mvn -B -f backend/pom.xml verify`, `npm run f07:self-test`, `npm run f07:ops:check` | Focused backend 73+45, capacity 73+2, harness/schema gates and complete Maven 290/290 pass |
 | Full-stack system E2E | Browser through a deployed BFF/OIDC provider, Java service and PostgreSQL | Not available yet | Blocked by provider/BFF/provisioning and a controlled E2E environment |
 
 `npm run regression` is the local regression gate. It executes frontend
@@ -20,6 +28,7 @@ Playwright browser-contract lane. It does **not** claim full-stack provider E2E.
 
 ```bash
 npx playwright install chromium
+npx playwright install firefox webkit
 npm run e2e
 npm run e2e:headed
 npm run e2e:report
@@ -35,7 +44,7 @@ establish an unauthenticated session.
 
 `e2e:finance:system` is deliberately separate from the intercepted suite. It
 starts an isolated F05 environment with local JWKS/test identities, Spring,
-Flyway and PostgreSQL, then runs the three `E2E-F05-SYS-*` cases. It does not
+Flyway and PostgreSQL, then runs the four current `E2E-F05-SYS-*` cases. It does not
 use a production identity provider, storage/scanner/renderer, AP/ERP adapter or
 deployment grants, so it cannot close those external acceptance gates.
 
@@ -43,6 +52,12 @@ deployment grants, so it cannot close those external acceptance gates.
 interception. It executes the six `E2E-F06-SYS-*` cases against the real
 controller/service/Flyway/PostgreSQL path. It does not claim production
 scanner/object-storage, production OIDC/BFF or data-owner rehearsal evidence.
+
+The F07 accessibility file adds stable journeys across desktop,
+Safari-equivalent WebKit and mobile projects. Its first combined run passed all
+cases on Chromium, WebKit, Android and iOS while Firefox timed out under shared
+worker contention; a serialized Firefox rerun passed 6/6. The final complete
+browser regression passes 274/274. All records remain in the history.
 
 ## Adding a regression case
 
@@ -52,7 +67,8 @@ scanner/object-storage, production OIDC/BFF or data-owner rehearsal evidence.
 3. Add or extend an `e2e/*.spec.ts` file and include the ID in the test title.
 4. Keep fixture responses tenant-safe and free of payroll/rate data.
 5. Run the case alone, then `npm run e2e`, then `npm run regression`. For an
-   F05 real-system case also run `npm run e2e:finance:system` where applicable.
+   F05 real-system case also run `npm run e2e:finance:system` where applicable;
+   for F07 run all browser projects plus the F05/F06 local-system lanes.
 6. Update [FEATURE_STATUS.md](../FEATURE_STATUS.md) with the result, command,
    date, commit, failures and open issues.
 

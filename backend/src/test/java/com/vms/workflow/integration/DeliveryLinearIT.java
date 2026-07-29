@@ -35,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:tc:postgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",
@@ -69,6 +69,208 @@ class DeliveryLinearIT {
 
     @Autowired
     private DeliveryPlanningService deliveryPlanningService;
+
+    @Test
+    void reconciliationCommandIsAuthorizedIdempotentAuditedAndTerminal()
+        throws Exception {
+        String unavailable = """
+            {
+              "outcome":"UNAVAILABLE",
+              "errorCode":"PROVIDER_UNAVAILABLE",
+              "reason":"Bounded provider reconciliation failed"
+            }
+            """;
+        JsonNode first = json(mvc.perform(post(
+                    "/api/v1/integrations/linear/connections/{id}/reconciliations",
+                    CONNECTION)
+                .header("Idempotency-Key", "linear-reconciliation-it")
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(unavailable))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.jobStatus").value("FAILED"))
+            .andExpect(jsonPath("$.connectionStatus").value("ACTION_REQUIRED"))
+            .andExpect(jsonPath("$.replay").value(false))
+            .andReturn().getResponse().getContentAsString());
+        JsonNode replay = json(mvc.perform(post(
+                    "/api/v1/integrations/linear/connections/{id}/reconciliations",
+                    CONNECTION)
+                .header("Idempotency-Key", "linear-reconciliation-it")
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(unavailable))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.replay").value(true))
+            .andReturn().getResponse().getContentAsString());
+        assertEquals(first.path("jobId").asText(), replay.path("jobId").asText());
+        assertEquals(
+            first.path("commandChecksum").asText(),
+            replay.path("commandChecksum").asText());
+        assertEquals(
+            first.path("correlationId").asText(),
+            replay.path("correlationId").asText());
+        assertEquals(
+            first.path("causationId").asText(),
+            replay.path("causationId").asText());
+        mvc.perform(get(
+                    "/api/v1/integrations/linear/health")
+                .queryParam("engagementId", ENGAGEMENT)
+                .with(token("user-arrow")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.status").value("ACTION_REQUIRED"))
+            .andExpect(jsonPath("$.lastError").value("PROVIDER_UNAVAILABLE"))
+            .andExpect(jsonPath("$.lastReconciledAt").isNotEmpty());
+
+        mvc.perform(post(
+                    "/api/v1/integrations/linear/connections/{id}/reconciliations",
+                    CONNECTION)
+                .header("Idempotency-Key", "linear-reconciliation-it")
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "outcome":"UNAVAILABLE",
+                      "errorCode":"PROVIDER_TIMEOUT",
+                      "reason":"Changed command"
+                    }
+                    """))
+            .andExpect(status().isConflict());
+        mvc.perform(post(
+                    "/api/v1/integrations/linear/connections/{id}/reconciliations",
+                    CONNECTION)
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(unavailable))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post(
+                    "/api/v1/integrations/linear/connections/{id}/reconciliations",
+                    CONNECTION)
+                .header("Idempotency-Key", "x".repeat(161))
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(unavailable))
+            .andExpect(status().isBadRequest());
+        mvc.perform(post(
+                    "/api/v1/integrations/linear/connections/{id}/reconciliations",
+                    CONNECTION)
+                .header("Idempotency-Key", "linear-reconciliation-unauthorized")
+                .with(token("user-employee"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(unavailable))
+            .andExpect(status().isNotFound());
+
+        JsonNode recovery = json(mvc.perform(post(
+                    "/api/v1/integrations/linear/connections/{id}/reconciliations",
+                    CONNECTION)
+                .header("Idempotency-Key", "linear-reconciliation-recovery-it")
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "outcome":"AVAILABLE",
+                      "errorCode":null,
+                      "reason":"Provider reconciliation recovered"
+                    }
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.jobStatus").value("SUCCEEDED"))
+            .andExpect(jsonPath("$.connectionStatus").value("CONNECTED"))
+            .andExpect(jsonPath("$.replay").value(false))
+            .andReturn().getResponse().getContentAsString());
+        JsonNode lateReplay = json(mvc.perform(post(
+                    "/api/v1/integrations/linear/connections/{id}/reconciliations",
+                    CONNECTION)
+                .header("Idempotency-Key", "linear-reconciliation-it")
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(unavailable))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.replay").value(true))
+            .andReturn().getResponse().getContentAsString());
+        for (String field : List.of(
+            "jobId", "connectionId", "jobStatus", "connectionStatus",
+            "staleIssueCount", "recordedAt", "errorCode", "commandChecksum",
+            "correlationId", "causationId"
+        )) {
+            assertEquals(first.get(field), lateReplay.get(field), field);
+        }
+        assertFalse(recovery.path("jobId").asText().equals(
+            lateReplay.path("jobId").asText()));
+        assertEquals(2, jdbc.queryForObject("""
+            SELECT COUNT(*) FROM linear_reconciliation_commands
+            WHERE connection_id = ?::uuid
+              AND actor_subject = 'user-arrow'
+              AND command_checksum ~ '^[0-9a-f]{64}$'
+              AND correlation_id IS NOT NULL
+              AND causation_id IS NOT NULL
+            """, Integer.class, CONNECTION));
+        assertEquals(2, jdbc.queryForObject("""
+            SELECT COUNT(*) FROM linear_sync_jobs
+            WHERE connection_id = ?::uuid
+              AND status IN ('FAILED', 'SUCCEEDED')
+              AND completed_at IS NOT NULL
+            """, Integer.class, CONNECTION));
+        assertSqlRejected("""
+            UPDATE linear_reconciliation_commands
+            SET reason = 'tampered'
+            WHERE connection_id = '%s'::uuid
+            """.formatted(CONNECTION));
+        assertSqlRejected("""
+            UPDATE linear_sync_jobs
+            SET status = 'RUNNING', completed_at = NULL
+            WHERE id = '%s'::uuid
+            """.formatted(first.path("jobId").asText()));
+        String invalidJob = UUID.randomUUID().toString();
+        jdbc.update("""
+            INSERT INTO linear_sync_jobs
+                (id, connection_id, job_type, status, attempt_count,
+                 last_error_code, completed_at)
+            VALUES (?::uuid, ?::uuid, 'NIGHTLY_RECONCILIATION',
+                    'FAILED', 1, 'PROVIDER_UNAVAILABLE', CURRENT_TIMESTAMP)
+            """, invalidJob, CONNECTION);
+        assertSqlRejected("""
+            INSERT INTO linear_reconciliation_commands
+                (id, connection_id, sync_job_id, idempotency_key,
+                 command_checksum, outcome, recorded_connection_status,
+                 recorded_stale_issue_count, reason, actor_subject,
+                 correlation_id, causation_id)
+            VALUES (
+                gen_random_uuid(), '%s'::uuid, '%s'::uuid,
+                'invalid-terminal-command', repeat('a', 64), 'AVAILABLE',
+                'CONNECTED', 0, 'Must fail terminal trigger', 'user-arrow',
+                gen_random_uuid(), gen_random_uuid())
+            """.formatted(CONNECTION, invalidJob));
+        assertEquals(1, jdbc.update("""
+            UPDATE linear_sync_jobs
+            SET status = 'DEAD_LETTER', completed_at = CURRENT_TIMESTAMP
+            WHERE id = ?::uuid
+            """, invalidJob));
+    }
+
+    @Test
+    void reconciliationOpenApiDeclaresBoundedHeaderAndFailureContracts()
+        throws Exception {
+        JsonNode operation = json(mvc.perform(get("/v3/api-docs")
+                .with(token("user-arrow")))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString())
+            .path("paths")
+            .path("/api/v1/integrations/linear/connections/{connectionId}/reconciliations")
+            .path("post");
+        JsonNode header = null;
+        for (JsonNode parameter : operation.path("parameters")) {
+            if ("Idempotency-Key".equals(parameter.path("name").asText())) {
+                header = parameter;
+                break;
+            }
+        }
+        assertTrue(header != null, "Idempotency-Key must be documented");
+        assertTrue(header.path("required").asBoolean());
+        assertEquals(160, header.path("schema").path("maxLength").asInt());
+        for (String response : List.of("201", "400", "404", "409")) {
+            assertTrue(operation.path("responses").has(response), response);
+        }
+    }
 
     @Test
     void completePlanSubmitsFreezesQueuesCommitmentAndRevisesByClone() throws Exception {
@@ -268,6 +470,19 @@ class DeliveryLinearIT {
                 .with(token("user-arrow")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("PROCESSED"));
+        for (int attempt = 0; attempt < 2; attempt++) {
+            mvc.perform(post(
+                        "/api/v1/integrations/linear/months/{monthId}/snapshots",
+                        JULY_MONTH)
+                    .with(token("user-arrow")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].snapshotType").value("MONTH_END"))
+                .andExpect(jsonPath("$[0].status").value("CAPTURED"))
+                .andExpect(jsonPath("$[0].normalizedState").value("COMPLETED"))
+                .andExpect(jsonPath("$[0].confidence")
+                    .value("CURRENT_STATE_ONLY"));
+        }
         mvc.perform(get("/api/v1/integrations/linear/links/{linkId}/current", linkId)
                 .with(token("user-reliance")))
             .andExpect(status().isOk())
@@ -288,6 +503,12 @@ class DeliveryLinearIT {
             FROM delivery_execution_projections
             WHERE deliverable_version_id = ?::uuid
             """, String.class, deliverableVersionId));
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*) FROM linear_issue_snapshots
+            WHERE issue_link_id = ?::uuid
+              AND plan_version_id = ?::uuid
+              AND snapshot_type = 'MONTH_END'
+            """, Integer.class, linkId, created.path("currentVersionId").asText()));
         assertTrue(jdbc.queryForObject("""
             SELECT COUNT(*) >= 2
             FROM delivery_execution_projection_events

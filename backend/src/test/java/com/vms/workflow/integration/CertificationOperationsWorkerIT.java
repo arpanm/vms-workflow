@@ -36,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.springframework.http.MediaType;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:tc:postgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",
@@ -45,6 +45,7 @@ import org.springframework.http.MediaType;
     "vms.security.issuer=https://issuer.example.test",
     "vms.security.audience=vms-api",
     "vms.certification.email-provider-status=CONFIGURED",
+    "vms.certification.worker-enabled=true",
     "vms.certification.token-handoff-key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
     "vms.certification.f05-handoff-status=CONFIGURED",
     "vms.certification.worker-initial-delay=PT1H"

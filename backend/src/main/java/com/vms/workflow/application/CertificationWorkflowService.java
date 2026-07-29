@@ -76,6 +76,7 @@ public class CertificationWorkflowService {
     private final CertificationEmailAdapter emailAdapter;
     private final CertificationConfiguration configuration;
     private final CertificationReviewService reviews;
+    private final CertificationHandoffService handoffs;
     private final Clock clock;
 
     public CertificationWorkflowService(
@@ -86,6 +87,7 @@ public class CertificationWorkflowService {
         CertificationEmailAdapter emailAdapter,
         CertificationConfiguration configuration,
         CertificationReviewService reviews,
+        CertificationHandoffService handoffs,
         Clock clock
     ) {
         this.jdbc = jdbc;
@@ -95,6 +97,7 @@ public class CertificationWorkflowService {
         this.emailAdapter = emailAdapter;
         this.configuration = configuration;
         this.reviews = reviews;
+        this.handoffs = handoffs;
         this.clock = clock;
     }
 
@@ -997,6 +1000,8 @@ public class CertificationWorkflowService {
             subject, "RESOLVE_INVALIDATION", invalidationId, idempotencyKey,
             requestHash, "certification_invalidation_resolution", resolutionId);
         bumpMonth(source.monthId(), null);
+        handoffs.publishConfirmedIfReady(
+            subject, source.monthId(), correlationId);
         return invalidationResolutionView(resolutionId);
     }
 

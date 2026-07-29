@@ -11,6 +11,39 @@ Every execution must record release version/commit, environment, command,
 result, duration, evidence path and unresolved issue/exception in the release
 evidence manifest.
 
+## Current execution status
+
+| Evidence group | Current result | Case disposition |
+|---|---|---|
+| Frontend/static | **PASS** | Typecheck; lint 0 errors/6 non-blocking Fast Refresh warnings; Vitest 24 files/92 tests; build 3,006 modules with largest chunk 586.90 kB advisory; diff-check. |
+| Focused backend pre-final | **PASS — 73 unit + 45 integration** | Supporting evidence for the hardening, tenant, worker, provider and lineage cases; it is not a substitute for the complete Maven gate. |
+| F07 local-system E2E | **PASS — 7/7** | E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-07 and E2E-10 pass through local Vite/Spring Security/Flyway V1–V33/PostgreSQL boundaries. |
+| F05 finance local-system E2E | **PASS — 4/4** | E2E-06 and E2E-09 are covered; production Procurement, identity and provider acceptance remain external. |
+| F06 migration local-system E2E | **PASS — 6/6** | E2E-08 is covered; production scanner/storage and source-owner rehearsal remain external. |
+| Capacity | **PASS — 73 unit + 2 capacity** | F07-PERF-001/002 local thresholds pass: dashboard 101ms, check-in p95 404ms, replay p95 69ms, 10k search p95 2ms and 300k report p95 9ms. This is not production-like headroom or the ≥24-hour soak case. |
+| Browser regression | **PASS — 274/274** | F07-A11Y-001/002/003 and the complete browser-contract regression pass across the configured Chromium, Firefox, WebKit, Android and iOS projects. |
+| Complete Maven verification | **PASS — 73 unit + 217 integration (290/290)** | Definitive R3: zero failures/errors/skips, BUILD SUCCESS in 03:21. |
+| Independent final review | **PASS / CLOSED** | Terra final review closed with no P0–P3 finding. |
+| External cases | **ACTION_REQUIRED / NO-GO** | Every `*-EXT-*`, provider/legal/identity/production/soak/DR/manual-accessibility/UAT/approval case remains open. |
+
+Failure history is preserved: the first complete browser matrix passed 268 and
+failed 6; the exact failed slice subsequently passed 7/7, and the complete
+rerun passed 274/274. The failures were an asynchronous migration upload race,
+four UTF-8 multipart instrumentation assertions and one non-reproducing
+Firefox page-creation error. No product/provider approval is inferred from the
+test-instrumentation fixes.
+
+The full Maven lane also preserved two approximately 16–17 minute
+thread-starvation/clock-leap pauses under Docker load. The corrected 3,600
+second watchdog allowed the suite to finish in 39:23; those host pauses remain
+part of the R2 history.
+
+That R2 result was 73 unit pass and 215/217 integration pass. Both
+`DeliveryCommitmentOperationsWorkerIT` failures counted provider effects from
+a non-dedicated test database. The worker IT now uses its own
+`vms_workflow_delivery_commitment_worker` Testcontainers database. Definitive
+R3 passes 290/290 in 03:21.
+
 ## A. Release evidence and configuration
 
 | ID | Layer and setup | Steps | Expected result | Automation/evidence | Traceability |

@@ -3,6 +3,9 @@ package com.vms.workflow.api;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -61,7 +64,7 @@ public final class AttendanceDtos {
         @NotBlank String reasonCode,
         @NotBlank String narrative,
         @NotBlank String requestedOutcome,
-        @NotBlank String idempotencyKey
+        @NotBlank @Size(max = 160) String idempotencyKey
     ) {
     }
 
@@ -75,6 +78,24 @@ public final class AttendanceDtos {
         String idempotencyKey,
         String status,
         OffsetDateTime createdAt
+    ) {
+    }
+
+    public record RegularizationDecisionRequest(
+        @NotBlank @Pattern(regexp = "APPROVE|REJECT") String decision,
+        @Min(0) Integer adjustedNetMinutes,
+        @NotBlank @Size(max = 10_000) String reasoning
+    ) {
+    }
+
+    public record RegularizationDecisionView(
+        UUID id,
+        UUID regularizationId,
+        String decision,
+        Integer adjustedNetMinutes,
+        String reasoning,
+        String decidedBySubject,
+        OffsetDateTime decidedAt
     ) {
     }
 

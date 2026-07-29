@@ -11,6 +11,35 @@ infrastructure. `EXTERNAL — ACTION_REQUIRED` means named customer, provider,
 legal, Procurement or production-platform evidence is required and must never
 be inferred from a green local test.
 
+## Current evidence reconciliation
+
+The final working-tree evidence is additive and does not erase earlier failed
+runs:
+
+- final frontend/static gates pass: typecheck; lint with 0 errors and 6
+  non-blocking Fast Refresh warnings; Vitest 24 files/92 tests; production
+  build of 3,006 modules with a 586.90 kB largest-chunk optimization advisory;
+  and diff-check;
+- the pre-final focused backend gate passes 73 unit plus 45 integration tests;
+- the capacity rerun passes 73 unit plus 2 capacity tests, with dashboard
+  101ms, check-in p95 404ms, replay p95 69ms, 10,000-employee search p95 2ms
+  and 300,000-row report p95 9ms;
+- the ordered F07 local-system suite passes E2E-01/02/03/04/05/07/10 (7/7);
+- the finance and migration local-system suites pass 4/4 and 6/6;
+- the full browser matrix passes 274/274 after the preserved 268/274 first
+  run and exact 7/7 failed-slice rerun;
+- production schema history is current through V33. V1000+ migrations are test
+  fixtures only;
+- the definitive complete Maven R3 passes 73 unit + 217 integration tests
+  (290/290), zero failures/errors/skips, in 03:21. The earlier R2 215/217
+  integration result remains preserved; its two delivery-worker failures were
+  test-database isolation defects and the dedicated-database correction passes
+  in R3.
+
+Only tasks whose complete local contract is directly established by the
+evidence above are checked below. Every `EXTERNAL — ACTION_REQUIRED` task and
+the overall production decision remain open/`NO-GO`.
+
 ## A. Release evidence, traceability and configuration
 
 - [ ] **F07-T001 — LOCAL:** Create a machine-readable release-evidence
@@ -112,7 +141,7 @@ be inferred from a green local test.
 - [ ] **F07-T029 — LOCAL:** Pin/review build inputs, produce checksums/SBOM and
   document artifact provenance so the backend and frontend release can be
   reproduced from the committed source.
-- [ ] **F07-T030 — LOCAL:** Add automated redaction tests for authorization
+- [x] **F07-T030 — LOCAL:** Add automated redaction tests for authorization
   headers, cookies, JWTs, passwords, webhook secrets, object keys, raw email,
   restricted PII and exception payloads.
 - [ ] **F07-T031 — LOCAL:** Sanitize or remove committed local `.env` material,
@@ -197,18 +226,18 @@ be inferred from a green local test.
 
 ## H. Performance, concurrency and capacity
 
-- [ ] **F07-T053 — LOCAL:** Build repeatable load profiles for 26-person peak
+- [x] **F07-T053 — LOCAL:** Build repeatable load profiles for 26-person peak
   check-in, 10,000-person future burst, dashboard/search, webhook duplicate
   storm, large migration, report/export, package generation and mixed tenant
   activity.
-- [ ] **F07-T054 — LOCAL:** Enforce measured targets: check-in p95 ≤1.5s,
+- [x] **F07-T054 — LOCAL:** Enforce measured targets: check-in p95 ≤1.5s,
   standard mutation/search p95 ≤2s, dashboard/list p95 ≤2.5s and durable
   webhook acknowledgment <5s (target p95 <1s), excluding documented network or
   asynchronous provider time.
-- [ ] **F07-T055 — LOCAL:** Add concurrency tests for optimistic locking,
+- [x] **F07-T055 — LOCAL:** Add concurrency tests for optimistic locking,
   uniqueness, idempotency, source authority, approval SoD, package
   determinism, tenant isolation and no acknowledged-event loss.
-- [ ] **F07-T056 — LOCAL:** Inspect PostgreSQL query plans/indexes for critical
+- [x] **F07-T056 — LOCAL:** Inspect PostgreSQL query plans/indexes for critical
   scoped lists and workers; fail on unbounded table scans/N+1 provider calls at
   the target data profile.
 - [ ] **F07-T057 — LOCAL:** Run a 24-hour-or-longer scheduled-job/outbox soak
@@ -220,15 +249,15 @@ be inferred from a green local test.
 
 ## I. Accessibility, compatibility and user safety
 
-- [ ] **F07-T059 — LOCAL:** Add automated axe checks to all critical persona
+- [x] **F07-T059 — LOCAL:** Add automated axe checks to all critical persona
   routes and Playwright journeys; block serious/critical WCAG 2.1 AA findings.
-- [ ] **F07-T060 — LOCAL:** Verify keyboard order, visible focus, focus return,
+- [x] **F07-T060 — LOCAL:** Verify keyboard order, visible focus, focus return,
   dialogs, validation summaries, tables, status announcements, color contrast,
   zoom/reflow and screen-reader labels for critical workflows.
-- [ ] **F07-T061 — LOCAL:** Run responsive tests for employee mobile flows and
+- [x] **F07-T061 — LOCAL:** Run responsive tests for employee mobile flows and
   governance desktop/tablet flows, including constrained browser
   storage/cookies and actionable errors with correlation IDs.
-- [ ] **F07-T062 — LOCAL:** Add browser/timezone/UTF-8 compatibility coverage
+- [x] **F07-T062 — LOCAL:** Add browser/timezone/UTF-8 compatibility coverage
   for Chrome, Edge, Firefox, Safari-equivalent WebKit, Android viewport, iOS
   viewport, overnight dates and Indian-language names/filenames.
 - [ ] **F07-T063 — EXTERNAL — ACTION_REQUIRED:** Complete manual keyboard and
@@ -271,8 +300,10 @@ be inferred from a green local test.
 - [ ] **F07-T073 — LOCAL:** Define canary cohorts, success/error/latency/data
   integrity thresholds, observation windows, automated hold/abort and
   measurable rollback triggers.
-- [ ] **F07-T074 — LOCAL:** Automate post-deploy smoke and E2E-01–E2E-10
+- [x] **F07-T074 — LOCAL:** Automate post-deploy smoke and E2E-01–E2E-10
   regression, audit/outbox verification and post-rollback integrity checks.
+  The aggregate is fail-closed: its record remains unverified until every
+  underlying real-system journey and supporting audit/outbox case passes.
 - [ ] **F07-T075 — LOCAL:** Preserve all new events/data during rollback,
   disable affected flags/integrations, revert application deployment and
   reconcile before resume.
@@ -285,21 +316,21 @@ be inferred from a green local test.
 
 ## L. Operations, training, documentation and final gates
 
-- [ ] **F07-T078 — LOCAL:** Write all 15 PRD 16 operational runbooks with
+- [x] **F07-T078 — LOCAL:** Write all 15 PRD 16 operational runbooks with
   detection, owner, diagnostics, safe actions, escalation, communications,
   rollback/containment and closure evidence.
 - [ ] **F07-T079 — LOCAL:** Add role-specific user/support guides and in-app
   contextual help for employee, vendor HR/admin, vendor delivery, product
   owner, Procurement, integration admin, governance/reopen and migration.
-- [ ] **F07-T080 — LOCAL:** Complete architecture, threat model, data
+- [x] **F07-T080 — LOCAL:** Complete architecture, threat model, data
   classification, API/Swagger, UI flows, configuration, deployment,
   observability, backup/restore, DR, incident response and support
   documentation with root README cross-links.
-- [ ] **F07-T081 — LOCAL:** Run the complete unit, database, contract,
+- [x] **F07-T081 — LOCAL:** Run the complete unit, database, contract,
   integration, component, browser E2E, migration, performance, security,
   accessibility and recovery regression suites and publish exact counts,
   failures and evidence.
-- [ ] **F07-T082 — LOCAL:** Run independent code, test, architecture,
+- [x] **F07-T082 — LOCAL:** Run independent code, test, architecture,
   security/privacy and operations reviews; convert findings to issue Markdown,
   fix all local P0/P1 findings and rerun affected/full gates.
 - [ ] **F07-T083 — EXTERNAL — ACTION_REQUIRED:** Complete role training, UAT,

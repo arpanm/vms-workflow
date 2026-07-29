@@ -26,10 +26,29 @@ spring:
           jwk-set-uri: ${VMS_OIDC_JWKS_URI}
 
 vms:
+  delivery:
+    commitment:
+      worker-enabled: ${VMS_DELIVERY_COMMITMENT_WORKER_ENABLED:false}
+      worker-delay: ${VMS_DELIVERY_COMMITMENT_WORKER_DELAY:PT5S}
+      worker-initial-delay: ${VMS_DELIVERY_COMMITMENT_WORKER_INITIAL_DELAY:PT5S}
+      retry-delay: ${VMS_DELIVERY_COMMITMENT_RETRY_DELAY:PT5S}
+      provider-status: ${VMS_DELIVERY_COMMITMENT_PROVIDER_STATUS:NOT_CONFIGURED}
   security:
     audience: ${VMS_OIDC_AUDIENCE}
     issuer: ${VMS_OIDC_ISSUER}
+    # Ordinary JSON/form bodies are buffered before parsing and therefore use
+    # a small pre-authentication bound. Governed files use the independent
+    # multipart limits above.
+    max-json-request-bytes: ${VMS_MAX_JSON_REQUEST_BYTES:1048576}
+    trusted-proxy-addresses: ${VMS_TRUSTED_PROXY_ADDRESSES:}
+    cors:
+      allowed-origins: ${VMS_CORS_ALLOWED_ORIGINS:}
+    rate-limit:
+      attendance-per-minute: ${VMS_ATTENDANCE_REQUESTS_PER_MINUTE:120}
+      migration-per-minute: ${VMS_MIGRATION_REQUESTS_PER_MINUTE:60}
+      webhook-per-minute: ${VMS_WEBHOOK_REQUESTS_PER_MINUTE:300}
   certification:
+    worker-enabled: ${VMS_CERTIFICATION_WORKER_ENABLED:false}
     token-ttl: ${VMS_CERTIFICATION_TOKEN_TTL:PT72H}
     default-confirmation-due: ${VMS_CERTIFICATION_CONFIRMATION_DUE:PT120H}
     token-work-factor: ${VMS_CERTIFICATION_TOKEN_WORK_FACTOR:120000}
@@ -46,6 +65,7 @@ vms:
     object-storage-provider-status: ${VMS_CERTIFICATION_OBJECT_STORAGE_STATUS:NOT_CONFIGURED}
     f05-handoff-status: ${VMS_CERTIFICATION_F05_HANDOFF_STATUS:NOT_CONFIGURED}
   finance:
+    worker-enabled: ${VMS_FINANCE_WORKER_ENABLED:false}
     local-scanner-enabled: ${VMS_FINANCE_LOCAL_SCANNER_ENABLED:false}
     cursor-signing-secret: ${VMS_FINANCE_CURSOR_SIGNING_SECRET:}
     cursor-ttl: ${VMS_FINANCE_CURSOR_TTL:PT30M}
@@ -62,12 +82,30 @@ vms:
     worker-batch-size: ${VMS_MIGRATION_WORKER_BATCH_SIZE:5}
     worker-lease-seconds: ${VMS_MIGRATION_WORKER_LEASE_SECONDS:120}
     worker-recovery-age-seconds: ${VMS_MIGRATION_WORKER_RECOVERY_AGE_SECONDS:300}
+  retention:
+    two-person-release: ${VMS_RETENTION_TWO_PERSON_RELEASE:true}
+    max-attempts: ${VMS_RETENTION_MAX_ATTEMPTS:3}
+    retry-delay: ${VMS_RETENTION_RETRY_DELAY:PT5M}
+    execution-lease-duration: ${VMS_RETENTION_EXECUTION_LEASE_DURATION:PT30M}
 
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db,workflowReadiness
+    info:
+      access: none
 
 springdoc:
   swagger-ui:

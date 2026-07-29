@@ -1,0 +1,122 @@
+# Reference production worker deployments. Replace the immutable image digest
+# and bind each named Secret to a distinct LOGIN that inherits only the
+# capability documented for that deployment.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vms-delivery-commitment-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vms-delivery-commitment-worker
+  template:
+    metadata:
+      labels:
+        app: vms-delivery-commitment-worker
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: worker
+          image: registry.example.invalid/vms-workflow@sha256:REPLACE_WITH_RELEASE_DIGEST
+          args:
+            - --spring.profiles.active=worker-delivery-commitment
+          envFrom:
+            - secretRef:
+                name: vms-delivery-commitment-worker-database
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vms-certification-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vms-certification-worker
+  template:
+    metadata:
+      labels:
+        app: vms-certification-worker
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: worker
+          image: registry.example.invalid/vms-workflow@sha256:REPLACE_WITH_RELEASE_DIGEST
+          args:
+            - --spring.profiles.active=worker-certification
+          envFrom:
+            - secretRef:
+                name: vms-certification-worker-database
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vms-finance-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vms-finance-worker
+  template:
+    metadata:
+      labels:
+        app: vms-finance-worker
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: worker
+          image: registry.example.invalid/vms-workflow@sha256:REPLACE_WITH_RELEASE_DIGEST
+          args:
+            - --spring.profiles.active=worker-finance
+          envFrom:
+            - secretRef:
+                name: vms-finance-worker-database
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vms-migration-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vms-migration-worker
+  template:
+    metadata:
+      labels:
+        app: vms-migration-worker
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: worker
+          image: registry.example.invalid/vms-workflow@sha256:REPLACE_WITH_RELEASE_DIGEST
+          args:
+            - --spring.profiles.active=worker-migration
+          envFrom:
+            - secretRef:
+                name: vms-migration-worker-database
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true

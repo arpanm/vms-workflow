@@ -91,7 +91,11 @@ function PlanList({ engagementMonthId }: { engagementMonthId: string }) {
                         {plan.approvedCount}/{plan.requiredApprovals}
                       </span>
                     </div>
-                    <Progress value={approvalPercent} className="mt-2 h-1.5" />
+                    <Progress
+                      value={approvalPercent}
+                      aria-label={`${plan.title} approval coverage`}
+                      className="mt-2 h-1.5"
+                    />
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <Metric

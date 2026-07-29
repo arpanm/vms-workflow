@@ -1,0 +1,75 @@
+{
+  "canary": {
+    "maximumErrorRate": 0.01,
+    "maximumIntegrityFailures": 0,
+    "maximumP95Ms": 2500,
+    "minimumObservationSeconds": 900
+  },
+  "flags": [
+    {
+      "defaultState": "DISABLED",
+      "dependencies": [],
+      "effectiveWindow": {
+        "from": null,
+        "until": null
+      },
+      "id": "workforce-governance",
+      "owner": "workforce-product-owner",
+      "scope": "tenant-and-cohort",
+      "serverAuthoritative": true
+    },
+    {
+      "defaultState": "DISABLED",
+      "dependencies": [
+        "workforce-governance"
+      ],
+      "effectiveWindow": {
+        "from": null,
+        "until": null
+      },
+      "id": "greythr-integration",
+      "owner": "integration-operations-owner",
+      "scope": "tenant-and-engagement",
+      "serverAuthoritative": true
+    },
+    {
+      "defaultState": "DISABLED",
+      "dependencies": [],
+      "effectiveWindow": {
+        "from": null,
+        "until": null
+      },
+      "id": "linear-integration",
+      "owner": "delivery-product-owner",
+      "scope": "tenant-and-project",
+      "serverAuthoritative": true
+    },
+    {
+      "defaultState": "DISABLED",
+      "dependencies": [],
+      "effectiveWindow": {
+        "from": null,
+        "until": null
+      },
+      "id": "email-reply-ingestion",
+      "owner": "confirmation-operations-owner",
+      "scope": "tenant-and-confirmation-policy",
+      "serverAuthoritative": true
+    }
+  ],
+  "rollback": {
+    "preserveNewEvents": true,
+    "requiredEvidence": [
+      "affectedFlagsDisabled",
+      "integrationsPaused",
+      "previousArtifactDigestVerified",
+      "schemaCompatibilityVerified",
+      "newEventsPreserved",
+      "postRollbackSmokePassed",
+      "auditOutboxReconciled",
+      "resumeApproved"
+    ],
+    "schemaStrategy": "forward-fix-or-verified-restore; never destructive down migration"
+  },
+  "schemaVersion": 1
+}

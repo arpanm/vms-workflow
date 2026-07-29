@@ -1,0 +1,99 @@
+{
+  "alerts": [
+    {
+      "deduplicationKey": "authz-denial-scope",
+      "id": "AUTHZ_DENIAL_BURST",
+      "owner": "security-operations-owner",
+      "runbook": "docs/operations/F07-RUNBOOKS.md#rb-14-security-incident-and-evidence-preservation",
+      "severity": "P1",
+      "threshold": "more than 20 denied cross-scope attempts in 5 minutes"
+    },
+    {
+      "deduplicationKey": "attendance-write-scope",
+      "id": "ATTENDANCE_WRITE_FAILURE",
+      "owner": "workforce-operations-owner",
+      "runbook": "docs/operations/F07-RUNBOOKS.md#rb-02-employee-unable-to-check-in-or-out",
+      "severity": "P1",
+      "threshold": "error rate above 1% for 5 minutes or any acknowledged write loss"
+    },
+    {
+      "deduplicationKey": "provider-workflow",
+      "id": "PROVIDER_STALE",
+      "owner": "integration-operations-owner",
+      "runbook": "docs/operations/F07-RUNBOOKS.md#rb-05-greythr-auth-sync-or-schema-outage",
+      "severity": "P2",
+      "threshold": "freshness exceeds workflow SLO or retry budget is exhausted"
+    },
+    {
+      "deduplicationKey": "outbox-worker",
+      "id": "OUTBOX_BACKLOG",
+      "owner": "application-operations-owner",
+      "runbook": "docs/operations/F07-RUNBOOKS.md#rb-07-email-send-bounce-or-reply-ingestion-failure",
+      "severity": "P2",
+      "threshold": "oldest ready item exceeds 10 minutes or dead-letter depth is non-zero"
+    },
+    {
+      "deduplicationKey": "package-version",
+      "id": "PACKAGE_HASH_MISMATCH",
+      "owner": "evidence-operations-owner",
+      "runbook": "docs/operations/F07-RUNBOOKS.md#rb-10-package-generation-or-hash-mismatch",
+      "severity": "P0",
+      "threshold": "any manifest, evidence or package checksum mismatch"
+    },
+    {
+      "deduplicationKey": "backup-job",
+      "id": "BACKUP_RESTORE_FAILURE",
+      "owner": "data-operations-owner",
+      "runbook": "docs/operations/F07-RUNBOOKS.md#rb-13-backup-restore-and-disaster-recovery",
+      "severity": "P1",
+      "threshold": "scheduled backup missed, checksum mismatch, or restore drill discrepancy"
+    }
+  ],
+  "healthContract": {
+    "mandatoryFailure": "readiness DOWN with a stable code and no dependency details",
+    "optionalProviderFailure": "readiness UP_DEGRADED with provider state and stale timestamp; never inferred fresh",
+    "publicHealthFields": [
+      "status",
+      "code",
+      "timestamp"
+    ]
+  },
+  "labelAllowlist": [
+    "route-template",
+    "http-method",
+    "status-class",
+    "workflow",
+    "provider",
+    "result-code",
+    "queue",
+    "artifact-type"
+  ],
+  "labelDenylist": [
+    "employee-id",
+    "email",
+    "name",
+    "organization-id",
+    "engagement-id",
+    "project-id",
+    "token",
+    "object-key",
+    "raw-error"
+  ],
+  "metrics": [
+    "http.server.duration",
+    "security.authorization.denials",
+    "attendance.punch.duplicates",
+    "month.close.unresolved",
+    "worker.queue.depth",
+    "worker.queue.oldest.age",
+    "worker.dead_letter.depth",
+    "provider.freshness.age",
+    "artifact.scan.duration",
+    "artifact.scan.failures",
+    "package.hash.failures",
+    "invoice.aging",
+    "retention.job.failures",
+    "backup.last_success.age"
+  ],
+  "schemaVersion": 1
+}

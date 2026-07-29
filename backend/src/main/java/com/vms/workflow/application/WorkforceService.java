@@ -9,6 +9,8 @@ import com.vms.workflow.api.WorkforceDtos.EmployeeView;
 import com.vms.workflow.api.WorkforceDtos.LeaveBalanceView;
 import com.vms.workflow.api.WorkforceDtos.LeaveRequest;
 import com.vms.workflow.api.WorkforceDtos.LeaveRequestView;
+import com.vms.workflow.api.WorkforceDtos.PolicyAssignmentRequest;
+import com.vms.workflow.api.WorkforceDtos.PolicyAssignmentView;
 import com.vms.workflow.security.WorkforceAuthorizationService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -61,6 +63,7 @@ public class WorkforceService {
             """, (rs, rowNum) -> employeeView(rs), organizationId);
     }
 
+    @Transactional(readOnly = true)
     public EmployeeView employee(String subject, UUID employeeId) {
         authorization.requireEmployeeRead(subject, employeeId);
         return findEmployee(employeeId);
@@ -96,6 +99,7 @@ public class WorkforceService {
             VALUES (?, ?, ?, ?, ?, ?)
             """, UUID.randomUUID(), employeeId, request.attendanceSourceMode(),
             authoritativeSource(request.attendanceSourceMode()), request.joinDate(), subject);
+        audit("EMPLOYEE", employeeId, employeeId, "EMPLOYEE_CREATED", subject);
         return findEmployee(employeeId);
     }
 
@@ -183,6 +187,117 @@ public class WorkforceService {
             .filter(value -> value.id().equals(id))
             .findFirst()
             .orElseThrow(this::notFound);
+    }
+
+    @Transactional
+    public PolicyAssignmentView assignPolicy(
+        String subject,
+        UUID employeeId,
+        PolicyAssignmentRequest request
+    ) {
+        authorization.requireEmployeeManage(subject, employeeId);
+        lockEmployee(employeeId);
+        List<PolicyAssignmentView> existing = policyAssignments(
+            employeeId, request.idempotencyKey());
+        if (!existing.isEmpty()) {
+            PolicyAssignmentView prior = existing.getFirst();
+            if (!prior.calendarVersionId().equals(request.calendarVersionId())
+                || !prior.leaveTypeId().equals(request.leaveTypeId())
+                || prior.openingUnits().compareTo(request.openingUnits()) != 0
+                || !prior.effectiveFrom().equals(request.effectiveFrom())
+                || !prior.reason().equals(request.reason())) {
+                throw new DomainConflictException(
+                    "Idempotency key was already used for another policy assignment.");
+            }
+            return prior;
+        }
+        Boolean validPolicy = jdbc.queryForObject("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM employees employee
+                JOIN working_calendar_versions calendar
+                  ON calendar.organization_id = employee.organization_id
+                JOIN leave_types leave_type
+                  ON leave_type.organization_id = employee.organization_id
+                WHERE employee.id = ?
+                  AND calendar.id = ?
+                  AND calendar.valid_from <= ?
+                  AND (calendar.valid_to IS NULL OR calendar.valid_to >= ?)
+                  AND leave_type.id = ?
+                  AND leave_type.status = 'ACTIVE'
+            )
+            """, Boolean.class, employeeId, request.calendarVersionId(),
+            request.effectiveFrom(), request.effectiveFrom(),
+            request.leaveTypeId());
+        if (!Boolean.TRUE.equals(validPolicy)) {
+            throw new IllegalArgumentException(
+                "Calendar and leave policy must be active in the employee organization.");
+        }
+        Boolean calendarOverlap = jdbc.queryForObject("""
+            SELECT EXISTS (
+                SELECT 1 FROM employee_calendar_assignments
+                WHERE employee_id = ?
+                  AND daterange(valid_from, COALESCE(valid_to + 1, 'infinity'::date), '[)')
+                      && daterange(?, 'infinity'::date, '[)')
+            )
+            """, Boolean.class, employeeId, request.effectiveFrom());
+        if (Boolean.TRUE.equals(calendarOverlap)) {
+            throw new DomainConflictException(
+                "The employee already has an overlapping calendar assignment.");
+        }
+        UUID commandId = UUID.randomUUID();
+        jdbc.update("""
+            INSERT INTO employee_policy_assignment_commands
+                (id, employee_id, calendar_version_id, leave_type_id,
+                 opening_units, effective_from, idempotency_key, reason,
+                 created_by_subject)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, commandId, employeeId, request.calendarVersionId(),
+            request.leaveTypeId(), request.openingUnits(), request.effectiveFrom(),
+            request.idempotencyKey(), request.reason(), subject);
+        jdbc.update("""
+            INSERT INTO employee_calendar_assignments
+                (id, employee_id, calendar_version_id, valid_from)
+            VALUES (?, ?, ?, ?)
+            """, UUID.randomUUID(), employeeId, request.calendarVersionId(),
+            request.effectiveFrom());
+        jdbc.update("""
+            INSERT INTO leave_balance_ledger
+                (id, employee_id, leave_type_id, entry_type, quantity,
+                 effective_date, idempotency_key, reference_type, reference_id,
+                 reason, recorded_by_subject)
+            VALUES (?, ?, ?, 'OPENING_BALANCE', ?, ?, ?, 'POLICY_ASSIGNMENT',
+                    ?, ?, ?)
+            """, UUID.randomUUID(), employeeId, request.leaveTypeId(),
+            request.openingUnits(), request.effectiveFrom(),
+            "policy:" + commandId, commandId, request.reason(),
+            subject);
+        audit("POLICY_ASSIGNMENT", commandId, employeeId,
+            "POLICY_ASSIGNED", subject);
+        return policyAssignments(employeeId, request.idempotencyKey()).getFirst();
+    }
+
+    private List<PolicyAssignmentView> policyAssignments(
+        UUID employeeId,
+        String idempotencyKey
+    ) {
+        return jdbc.query("""
+            SELECT id, employee_id, calendar_version_id, leave_type_id,
+                   opening_units, effective_from, idempotency_key, reason,
+                   created_at
+            FROM employee_policy_assignment_commands
+            WHERE employee_id = ? AND idempotency_key = ?
+            """, (result, row) -> new PolicyAssignmentView(
+                result.getObject("id", UUID.class),
+                result.getObject("employee_id", UUID.class),
+                result.getObject("calendar_version_id", UUID.class),
+                result.getObject("leave_type_id", UUID.class),
+                result.getBigDecimal("opening_units"),
+                result.getObject("effective_from", LocalDate.class),
+                result.getString("idempotency_key"),
+                result.getString("reason"),
+                result.getObject("created_at", OffsetDateTime.class)
+            ), employeeId, idempotencyKey);
     }
 
     public List<LeaveBalanceView> leaveBalances(String subject, UUID employeeId) {
@@ -477,6 +592,23 @@ public class WorkforceService {
 
     private EntityNotFoundException notFound() {
         return new EntityNotFoundException("Resource not found.");
+    }
+
+    private void audit(
+        String objectType,
+        UUID objectId,
+        UUID employeeId,
+        String action,
+        String subject
+    ) {
+        jdbc.update("""
+            INSERT INTO workforce_audit_events
+                (id, object_type, object_id, employee_id, action,
+                 actor_subject, facts)
+            VALUES (?, ?, ?, ?, ?, ?,
+                    jsonb_build_object('employeeId', ?::text))
+            """, UUID.randomUUID(), objectType, objectId, employeeId, action,
+            subject, employeeId.toString());
     }
 
     private record CurrentEmployeeVersion(

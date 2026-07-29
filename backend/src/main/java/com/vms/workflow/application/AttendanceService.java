@@ -7,6 +7,8 @@ import com.vms.workflow.api.AttendanceDtos.PunchRequest;
 import com.vms.workflow.api.AttendanceDtos.PunchView;
 import com.vms.workflow.api.AttendanceDtos.RegularizationRequest;
 import com.vms.workflow.api.AttendanceDtos.RegularizationView;
+import com.vms.workflow.api.AttendanceDtos.RegularizationDecisionRequest;
+import com.vms.workflow.api.AttendanceDtos.RegularizationDecisionView;
 import com.vms.workflow.api.AttendanceDtos.ReopenSnapshotRequest;
 import com.vms.workflow.api.DomainConflictException;
 import com.vms.workflow.security.WorkforceAuthorizationService;
@@ -37,11 +39,16 @@ public class AttendanceService {
 
     private final JdbcTemplate jdbc;
     private final WorkforceAuthorizationService authorization;
-    private final Clock clock = Clock.systemUTC();
+    private final Clock clock;
 
-    public AttendanceService(JdbcTemplate jdbc, WorkforceAuthorizationService authorization) {
+    public AttendanceService(
+        JdbcTemplate jdbc,
+        WorkforceAuthorizationService authorization,
+        Clock clock
+    ) {
         this.jdbc = jdbc;
         this.authorization = authorization;
+        this.clock = clock;
     }
 
     @Transactional
@@ -94,6 +101,8 @@ public class AttendanceService {
                 VALUES (?, ?, ?, ?, ?, 'OPEN')
                 """, UUID.randomUUID(), request.employeeId(), workDate, eventId, occurredAt);
             materializeDay(request.employeeId(), workDate);
+            audit("ATTENDANCE_EVENT", eventId, request.employeeId(),
+                "CHECK_IN", subject);
         } else {
             OpenSession session = jdbc.query("""
                 SELECT id, check_in_at, work_date
@@ -107,10 +116,9 @@ public class AttendanceService {
             if (session == null) {
                 throw new DomainConflictException("No open attendance session exists.");
             }
+            occurredAt = normalizeCheckoutInstant(
+                session.checkInAt(), occurredAt);
             int netMinutes = Math.toIntExact(Duration.between(session.checkInAt(), occurredAt).toMinutes());
-            if (netMinutes < 0) {
-                throw new DomainConflictException("Checkout cannot precede check-in.");
-            }
             workDate = session.workDate();
             jdbc.update("""
                 INSERT INTO attendance_events
@@ -125,8 +133,26 @@ public class AttendanceService {
                 WHERE id = ?
                 """, eventId, occurredAt, netMinutes, session.id());
             materializeDay(request.employeeId(), workDate);
+            audit("ATTENDANCE_EVENT", eventId, request.employeeId(),
+                "CHECK_OUT", subject);
         }
         return findPunch(request.employeeId(), request.idempotencyKey()).getFirst();
+    }
+
+    static OffsetDateTime normalizeCheckoutInstant(
+        OffsetDateTime checkInAt,
+        OffsetDateTime observedCheckoutAt
+    ) {
+        if (observedCheckoutAt.isBefore(checkInAt)) {
+            throw new DomainConflictException(
+                "Checkout cannot precede check-in.");
+        }
+        // PostgreSQL requires check_out_at > check_in_at. Equal instants can
+        // legitimately occur with a fixed clock or inside one clock tick.
+        // Keep calculated minutes at zero while persisting monotonic evidence.
+        return observedCheckoutAt.equals(checkInAt)
+            ? checkInAt.plusNanos(1_000_000)
+            : observedCheckoutAt;
     }
 
     @Transactional(readOnly = true)
@@ -177,10 +203,142 @@ public class AttendanceService {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """, id, request.employeeId(), request.workDate(), request.reasonCode(),
             request.narrative(), request.requestedOutcome(), request.idempotencyKey(), subject);
+        audit("ATTENDANCE_REGULARIZATION", id, request.employeeId(),
+            "REGULARIZATION_SUBMITTED", subject);
         return regularizations(subject, request.employeeId()).stream()
             .filter(value -> value.id().equals(id))
             .findFirst()
             .orElseThrow(this::notFound);
+    }
+
+    @Transactional
+    public RegularizationDecisionView decideRegularization(
+        String subject,
+        UUID regularizationId,
+        RegularizationDecisionRequest request
+    ) {
+        RegularizationTarget target = regularizationTarget(
+            regularizationId, false);
+        if (target == null) {
+            throw notFound();
+        }
+        authorization.requireEmployeeManage(subject, target.employeeId());
+        lockEmployee(target.employeeId());
+        RegularizationTarget locked = regularizationTarget(
+            regularizationId, true);
+        if (locked == null
+            || !locked.employeeId().equals(target.employeeId())
+            || !locked.workDate().equals(target.workDate())) {
+            throw notFound();
+        }
+        target = locked;
+        List<RegularizationDecisionView> existing =
+            regularizationDecisions(regularizationId);
+        if (!existing.isEmpty()) {
+            RegularizationDecisionView prior = existing.getFirst();
+            if (!prior.decision().equals(request.decision())
+                || !java.util.Objects.equals(
+                    prior.adjustedNetMinutes(), request.adjustedNetMinutes())
+                || !prior.reasoning().equals(request.reasoning())) {
+                throw new DomainConflictException(
+                    "The regularization already has a different terminal decision.");
+            }
+            return prior;
+        }
+        if (!"SUBMITTED".equals(target.status())
+            && !"UNDER_REVIEW".equals(target.status())) {
+            throw new DomainConflictException(
+                "Only a pending regularization can be decided.");
+        }
+        if ("APPROVE".equals(request.decision())
+            && request.adjustedNetMinutes() == null) {
+            throw new IllegalArgumentException(
+                "An approved regularization requires adjustedNetMinutes.");
+        }
+        if ("REJECT".equals(request.decision())
+            && request.adjustedNetMinutes() != null) {
+            throw new IllegalArgumentException(
+                "A rejected regularization cannot adjust attendance minutes.");
+        }
+        UUID decisionId = UUID.randomUUID();
+        jdbc.update("""
+            INSERT INTO attendance_regularization_decisions
+                (id, regularization_id, decision, adjusted_net_minutes,
+                 reasoning, decided_by_subject)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """, decisionId, regularizationId, request.decision(),
+            request.adjustedNetMinutes(), request.reasoning(), subject);
+        if ("APPROVE".equals(request.decision())) {
+            PriorAdjustment prior = jdbc.query("""
+                SELECT id, adjustment_version
+                FROM attendance_regularization_adjustments
+                WHERE employee_id = ? AND work_date = ?
+                ORDER BY adjustment_version DESC
+                LIMIT 1
+                FOR UPDATE
+                """, result -> result.next() ? new PriorAdjustment(
+                    result.getObject("id", UUID.class),
+                    result.getInt("adjustment_version")
+                ) : null, target.employeeId(), target.workDate());
+            int nextVersion = prior == null ? 1 : prior.version() + 1;
+            jdbc.update("""
+                INSERT INTO attendance_regularization_adjustments
+                    (id, regularization_id, employee_id, work_date,
+                     adjustment_version, supersedes_adjustment_id,
+                     supersedes_adjustment_version,
+                     adjusted_net_minutes, reason, recorded_by_subject)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, UUID.randomUUID(), regularizationId, target.employeeId(),
+                target.workDate(), nextVersion,
+                prior == null ? null : prior.id(),
+                prior == null ? null : prior.version(),
+                request.adjustedNetMinutes(), request.reasoning(), subject);
+        }
+        jdbc.update("""
+            UPDATE attendance_regularizations SET status = ?
+            WHERE id = ?
+            """, "APPROVE".equals(request.decision()) ? "APPROVED" : "REJECTED",
+            regularizationId);
+        materializeDay(target.employeeId(), target.workDate());
+        audit("REGULARIZATION_DECISION", decisionId, target.employeeId(),
+            "APPROVE".equals(request.decision())
+                ? "REGULARIZATION_APPROVED" : "REGULARIZATION_REJECTED",
+            subject);
+        return regularizationDecisions(regularizationId).getFirst();
+    }
+
+    private RegularizationTarget regularizationTarget(
+        UUID regularizationId,
+        boolean lock
+    ) {
+        return jdbc.query(("""
+            SELECT id, employee_id, work_date, status
+            FROM attendance_regularizations
+            WHERE id = ?
+            """ + (lock ? " FOR UPDATE" : "")), result ->
+            result.next() ? new RegularizationTarget(
+                result.getObject("id", UUID.class),
+                result.getObject("employee_id", UUID.class),
+                result.getObject("work_date", LocalDate.class),
+                result.getString("status")
+            ) : null, regularizationId);
+    }
+
+    private List<RegularizationDecisionView> regularizationDecisions(UUID id) {
+        return jdbc.query("""
+            SELECT id, regularization_id, decision, adjusted_net_minutes,
+                   reasoning, decided_by_subject, decided_at
+            FROM attendance_regularization_decisions
+            WHERE regularization_id = ?
+            """, (result, row) -> new RegularizationDecisionView(
+                result.getObject("id", UUID.class),
+                result.getObject("regularization_id", UUID.class),
+                result.getString("decision"),
+                result.getObject("adjusted_net_minutes", Integer.class),
+                result.getString("reasoning"),
+                result.getString("decided_by_subject"),
+                result.getObject("decided_at", OffsetDateTime.class)
+            ), id);
     }
 
     public List<AttendanceSnapshotView> snapshots(String subject, UUID engagementMonthId) {
@@ -236,6 +394,8 @@ public class AttendanceService {
             """, snapshotId, request.engagementMonthId(), version, supersedesId,
             checksum, days.size(), subject);
         insertSnapshotDays(snapshotId, days);
+        audit("ATTENDANCE_SNAPSHOT", snapshotId, null,
+            "SNAPSHOT_CLOSED", subject);
         return snapshot(snapshotId);
     }
 
@@ -363,6 +523,17 @@ public class AttendanceService {
             FROM attendance_sessions
             WHERE employee_id = ? AND work_date = ? AND status = 'CLOSED'
             """, Integer.class, employeeId, workDate);
+        Integer adjustedMinutes = jdbc.query("""
+            SELECT adjusted_net_minutes
+            FROM attendance_regularization_adjustments
+            WHERE employee_id = ? AND work_date = ?
+            ORDER BY adjustment_version DESC
+            LIMIT 1
+            """, result -> result.next() ? result.getInt(1) : null,
+            employeeId, workDate);
+        if (adjustedMinutes != null) {
+            netMinutes = adjustedMinutes;
+        }
         Boolean open = jdbc.queryForObject("""
             SELECT EXISTS (
                 SELECT 1 FROM attendance_sessions
@@ -770,6 +941,23 @@ public class AttendanceService {
         return new EntityNotFoundException("Resource not found.");
     }
 
+    private void audit(
+        String objectType,
+        UUID objectId,
+        UUID employeeId,
+        String action,
+        String subject
+    ) {
+        jdbc.update("""
+            INSERT INTO workforce_audit_events
+                (id, object_type, object_id, employee_id, action,
+                 actor_subject, facts)
+            VALUES (?, ?, ?, ?, ?, ?, jsonb_strip_nulls(jsonb_build_object(
+                'employeeId', ?::text)))
+            """, UUID.randomUUID(), objectType, objectId, employeeId, action,
+            subject, employeeId == null ? null : employeeId.toString());
+    }
+
     private record EmployeeAttendanceState(
         String employmentStatus,
         String activationStatus,
@@ -782,6 +970,17 @@ public class AttendanceService {
     }
 
     private record OpenSession(UUID id, OffsetDateTime checkInAt, LocalDate workDate) {
+    }
+
+    private record RegularizationTarget(
+        UUID id,
+        UUID employeeId,
+        LocalDate workDate,
+        String status
+    ) {
+    }
+
+    private record PriorAdjustment(UUID id, int version) {
     }
 
     private record CalendarExpectation(String classification, int expectedMinutes) {

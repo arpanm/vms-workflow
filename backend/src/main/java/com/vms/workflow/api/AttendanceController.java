@@ -7,6 +7,8 @@ import com.vms.workflow.api.AttendanceDtos.PunchRequest;
 import com.vms.workflow.api.AttendanceDtos.PunchView;
 import com.vms.workflow.api.AttendanceDtos.RegularizationRequest;
 import com.vms.workflow.api.AttendanceDtos.RegularizationView;
+import com.vms.workflow.api.AttendanceDtos.RegularizationDecisionRequest;
+import com.vms.workflow.api.AttendanceDtos.RegularizationDecisionView;
 import com.vms.workflow.api.AttendanceDtos.ReopenSnapshotRequest;
 import com.vms.workflow.application.AttendanceService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -66,6 +68,18 @@ public class AttendanceController {
     RegularizationView createRegularization(@AuthenticationPrincipal Jwt jwt,
                                             @Valid @RequestBody RegularizationRequest request) {
         return attendance.createRegularization(jwt.getSubject(), request);
+    }
+
+    @PostMapping("/regularizations/{id}/decisions")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary =
+        "Append an authorized regularization decision and optional minute adjustment")
+    RegularizationDecisionView decideRegularization(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID id,
+        @Valid @RequestBody RegularizationDecisionRequest request
+    ) {
+        return attendance.decideRegularization(jwt.getSubject(), id, request);
     }
 
     @GetMapping("/month-snapshots")

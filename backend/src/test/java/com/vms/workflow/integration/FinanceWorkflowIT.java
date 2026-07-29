@@ -50,7 +50,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         FinanceWorkflowIT.ClockTestConfiguration.class
     },
     properties = {
-    "spring.datasource.url=jdbc:tc:postgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",
@@ -108,6 +108,21 @@ class FinanceWorkflowIT {
                   'APPROVED_PLAN', 'LINEAR_SNAPSHOT',
                   'DELIVERY_CERTIFICATION', 'VERIFIED_CONFIRMATION',
                   'INVOICE_DOCUMENT')
+            """, fixture.packageId()));
+        assertEquals(1, count("""
+            SELECT count(*)
+            FROM evidence_package_items item
+            JOIN evidence_package_versions package
+              ON package.id = item.package_version_id
+            JOIN f05_certification_handoffs handoff
+              ON handoff.id = package.handoff_id
+            JOIN certification_readiness_results result
+              ON result.run_id = handoff.readiness_run_id
+             AND result.pillar = 'ATTENDANCE'
+            WHERE item.package_version_id = ?
+              AND item.item_type = 'ATTENDANCE'
+              AND item.source_object_id = result.source_object_id
+              AND item.source_object_id <> result.id
             """, fixture.packageId()));
         assertEquals(1, count("""
             SELECT count(*)

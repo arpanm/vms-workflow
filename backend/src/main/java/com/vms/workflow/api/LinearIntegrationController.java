@@ -4,13 +4,19 @@ import com.vms.workflow.api.LinearDtos.IssueCurrentView;
 import com.vms.workflow.api.LinearDtos.IssueLinkView;
 import com.vms.workflow.api.LinearDtos.IssueSnapshotView;
 import com.vms.workflow.api.LinearDtos.LinearHealthView;
+import com.vms.workflow.api.LinearDtos.LinearReconciliationRequest;
+import com.vms.workflow.api.LinearDtos.LinearReconciliationView;
 import com.vms.workflow.api.LinearDtos.LinkIssueRequest;
 import com.vms.workflow.api.LinearDtos.WebhookAcceptedView;
 import com.vms.workflow.api.LinearDtos.WebhookProcessView;
 import com.vms.workflow.application.LinearIntegrationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -57,11 +63,58 @@ public class LinearIntegrationController {
         return linear.snapshots(jwt.getSubject(), linkId);
     }
 
+    @PostMapping("/months/{monthId}/snapshots")
+    @Operation(
+        summary = "Capture an idempotent month-end snapshot for every linked issue",
+        description = "Captures the locally reconciled provider state or an explicit "
+            + "unavailable result against the current frozen plan. It never rewrites "
+            + "plan-time or earlier month-end evidence."
+    )
+    List<IssueSnapshotView> captureMonthEnd(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID monthId
+    ) {
+        return linear.captureMonthEnd(jwt.getSubject(), monthId);
+    }
+
     @GetMapping("/health")
     @Operation(summary = "Read secret-redacted Linear connection and durable queue health")
     LinearHealthView health(@AuthenticationPrincipal Jwt jwt,
                             @RequestParam UUID engagementId) {
         return linear.health(jwt.getSubject(), engagementId);
+    }
+
+    @PostMapping("/connections/{connectionId}/reconciliations")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(
+        summary = "Record an authorized terminal provider reconciliation result",
+        description = "Appends a terminal reconciliation job and marks retained "
+            + "issue truth stale on failure or freshly reconciled on success."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "201",
+            description = "Terminal result appended or exactly replayed"),
+        @ApiResponse(responseCode = "400",
+            description = "Missing or invalid header/body contract"),
+        @ApiResponse(responseCode = "404",
+            description = "Connection is absent or outside authorized scope"),
+        @ApiResponse(responseCode = "409",
+            description = "Conflicting replay or invalid connection state")
+    })
+    LinearReconciliationView reconcile(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID connectionId,
+        @Parameter(
+            description = "Caller-stable command key; exact replay only",
+            required = true,
+            schema = @Schema(maxLength = 160)
+        )
+        @Size(max = 160)
+        @RequestHeader("Idempotency-Key") String idempotencyKey,
+        @Valid @RequestBody LinearReconciliationRequest request
+    ) {
+        return linear.reconcile(
+            jwt.getSubject(), connectionId, idempotencyKey, request);
     }
 
     @PostMapping("/deliveries/{deliveryId}/process")

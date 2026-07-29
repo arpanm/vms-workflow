@@ -1,0 +1,23 @@
+{
+  "correlationId": "f07-e2e-10-provider-outage",
+  "detectedAt": "2026-07-29T10:00:00Z",
+  "diagnostics": [
+    "Inspect secret-redacted connection health and last-success timestamps",
+    "Confirm retained provider facts and immutable evidence counts"
+  ],
+  "safeActions": [
+    "Keep last-known truth explicitly stale",
+    "Retry through the recorded adapter without enabling internal dual truth"
+  ],
+  "escalation": [
+    "integration-operations-owner",
+    "delivery-integration-owner"
+  ],
+  "communications": [
+    "Provider unavailable; retained data is stale and no approval is inferred"
+  ],
+  "closureEvidence": [
+    "Successful provider reconciliation",
+    "Unchanged immutable evidence counts"
+  ]
+}

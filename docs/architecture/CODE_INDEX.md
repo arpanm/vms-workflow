@@ -1,6 +1,6 @@
 # Code Index and Migration Baseline
 
-**Inspected:** 25 July 2026
+**Inspected:** 28 July 2026
 **Target architecture:** [ADR-010](ADR-010-JAVA-POSTGRES.md) and [architecture override](../../requirements/22_JAVA_POSTGRES_ARCHITECTURE_OVERRIDE.md)
 
 ## Baseline identity
@@ -64,6 +64,11 @@ flowchart LR
 | Database | `backend/src/main/resources/db/migration` | Flyway schema, constraints, role/permission templates and required masters |
 | Integration tests | `backend/src/test` | Flyway/Testcontainers PostgreSQL HTTP security and constraint tests |
 | SDLC evidence | `sdlc/`, `scripts/sdlc-harness.mjs`, `docs/features/` | Model-separated task/test/codegen/review/fix/documentation gates |
+| F07 HTTP hardening | `backend/src/main/java/com/vms/workflow/{infrastructure,security}`, `ApiExceptionHandler.java`, `SecurityConfig.java` | Security headers, bounded request bodies, exact CORS, rate limits, URI policy, safe problems, metrics and readiness |
+| F07 governance API | `FeatureFlagController.java`, `RetentionPrivacyController.java`, corresponding DTO/application/authorization services | Server-authoritative flags plus retention, classification and legal-hold workflows |
+| F07 database | `V21__f07_database_least_privilege.sql` through `V24__f07_capacity_query_indexes.sql`, `scripts/f07/bootstrap-database-roles.sql` | Capability roles, retention/legal-hold/classification, feature flags/observability and capacity indexes |
+| F07 frontend/accessibility | `src/lib/safe-error.ts`, shared shell/sidebar/routes/styles, `e2e/f07-accessibility.spec.ts` | Safe error presentation, skip/focus/names/reflow/reduced motion and multi-project browser automation |
+| F07 release operations | `scripts/f07/`, `.github/workflows/f07-release-evidence.yml`, `docs/operations/F07-*.md`, `docs/features/07-hardening-go-live/` | Commit-bound evidence, migration/canary/rollback, supply chain, backup/restore, runbooks and fail-closed status |
 
 No current source or dependency manifest imports Lovable, Supabase, Cloudflare, or TanStack Start server packages. Historical references remain only in requirements, architecture/audit documentation and Git history.
 
@@ -74,3 +79,22 @@ The replacement `.env.example`, `src/lib/env.ts`, and `src/lib/feature-flags.ts`
 ## Migration boundary
 
 New Java work starts at `backend/` with `backend/pom.xml`, Spring Boot 4.1.0, Flyway, springdoc 3.0.3, and PostgreSQL. The standard Vite React/TanStack frontend remains at repository-root `src/`. Treat legacy records as a separately mapped source. Do not run destructive migration, rename `requirements` to `deliverables`, or import personal data until source export, mapping, reconciliation, and staging rehearsal are approved.
+
+## F07 hardening index
+
+F07 retains the same architecture and adds these boundaries:
+
+- V21 separates migration owner, application runtime, reporting, worker and
+  backup capabilities; application startup rejects migration-capable runtime
+  credentials.
+- V22 adds configured retention schedules, dry-run/execute/recovery facts,
+  proof hashes, classification and guarded dual-control legal holds.
+- V23 adds immutable scoped feature flags and operational metric support. Flag
+  evaluation explicitly cannot grant authorization.
+- V24 adds critical scoped-query indexes exercised by local capacity tests.
+- `scripts/f07` owns release evidence, provenance, supply chain, migrations,
+  rollout/rollback and backup/restore orchestration. These scripts never turn
+  missing external approval into a local pass.
+
+See [F07 architecture](../features/07-hardening-go-live/ARCHITECTURE.md) and
+[final review status](../features/07-hardening-go-live/FINAL_REVIEW.md).

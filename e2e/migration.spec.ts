@@ -61,10 +61,20 @@ test("[E2E-08A] upload records the immutable valid-rows-only commit policy", asy
   await page.getByLabel(/Use valid-rows-only commit policy/).check();
   await page.getByRole("button", { name: "Upload for dry run" }).click();
 
-  const upload = api.requests.find((request) =>
+  await expect.poll(() => api.requests.some((request) =>
     request.path.endsWith("/jobs") && request.method === "POST",
-  );
-  expect(String(upload?.body)).toContain('"partialCommit":true');
+  )).toBe(true);
+  await expect.poll(() => api.multipartMetadata()).toContainEqual({
+      templateCode: "01_employees",
+      organizationId: migrationIds.organization,
+      engagementId: migrationIds.engagement,
+      engagementMonthId: null,
+      templateVersion: "1",
+      mode: "DRY_RUN",
+      partialCommit: true,
+    });
+  await expect.poll(() => api.multipartFileNames())
+    .toContain("employees.csv");
 });
 
 test("[E2E-08B] creates a current-time retro request with explicit delegation evidence", async ({

@@ -73,6 +73,23 @@ public class FinanceArtifactGovernanceService {
                 "LEGAL_HOLD_UNCHANGED",
                 "The artifact already has the requested legal-hold state.");
         }
+        if (!enabled && Boolean.TRUE.equals(jdbc.queryForObject("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM f07_legal_holds hold
+                WHERE hold.artifact_id = ?
+                  AND NOT EXISTS (
+                      SELECT 1
+                      FROM f07_legal_hold_transitions transition
+                      WHERE transition.hold_id = hold.id
+                        AND transition.action = 'RELEASE_APPROVED'
+                  )
+            )
+            """, Boolean.class, artifactId))) {
+            throw new DomainConflictException(
+                "F07_LEGAL_HOLD_RELEASE_WORKFLOW_REQUIRED",
+                "This legal hold must be released through its governance workflow.");
+        }
 
         UUID transitionId = UUID.randomUUID();
         Map<String, Object> authority = authority(scope);

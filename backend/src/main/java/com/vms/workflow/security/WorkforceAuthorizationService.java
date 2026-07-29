@@ -22,11 +22,16 @@ public class WorkforceAuthorizationService {
 
     private final AuthorizationStore authorization;
     private final JdbcTemplate jdbc;
-    private final Clock clock = Clock.systemUTC();
+    private final Clock clock;
 
-    public WorkforceAuthorizationService(AuthorizationStore authorization, JdbcTemplate jdbc) {
+    public WorkforceAuthorizationService(
+        AuthorizationStore authorization,
+        JdbcTemplate jdbc,
+        Clock clock
+    ) {
         this.authorization = authorization;
         this.jdbc = jdbc;
+        this.clock = clock;
     }
 
     public void requireOrganizationRead(String subject, UUID organizationId) {
@@ -38,11 +43,9 @@ public class WorkforceAuthorizationService {
     }
 
     public void requireEmployeeRead(String subject, UUID employeeId) {
-        UUID organizationId = employeeOrganization(employeeId);
-        if (organizationId == null) {
-            throw notFound();
-        }
-        if (hasOrganizationPermission(subject, organizationId, WORKFORCE_READ)
+        LocalDate today = LocalDate.now(clock);
+        if (authorization.hasEmployeeOrganizationPermission(
+                subject, employeeId, WORKFORCE_READ, today)
             || isAuthorizedSelf(subject, employeeId)) {
             return;
         }

@@ -27,7 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:tc:postgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",
@@ -36,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     "vms.security.issuer=https://issuer.example.test",
     "vms.security.audience=vms-api",
     "vms.finance.local-scanner-enabled=true",
+    "vms.finance.worker-enabled=true",
     "vms.finance.worker-initial-delay=PT1H"
 })
 @AutoConfigureMockMvc
@@ -220,6 +221,7 @@ class FinanceExportAuthorizationIT {
         assertEquals(403, statusResult.getStatus(),
             subject + " must not read restricted " + sensitiveReportCode
                 + " export state");
+        assertCorrelatedDenial(statusResult.getHeader("X-Correlation-Id"));
         String statusBody = statusResult.getContentAsString();
         var downloadResult = mvc.perform(
                 post("/api/v1/finance/exports/{id}/download", exportId)
@@ -228,6 +230,7 @@ class FinanceExportAuthorizationIT {
         assertEquals(403, downloadResult.getStatus(),
             subject + " must not download restricted " + sensitiveReportCode
                 + " exports");
+        assertCorrelatedDenial(downloadResult.getHeader("X-Correlation-Id"));
         String downloadBody = downloadResult.getContentAsString();
         var replayResult = mvc.perform(
                 post("/api/v1/finance/exports/{id}/replay", exportId)
@@ -242,6 +245,7 @@ class FinanceExportAuthorizationIT {
         assertEquals(403, replayResult.getStatus(),
             subject + " must not replay restricted " + sensitiveReportCode
                 + " exports");
+        assertCorrelatedDenial(replayResult.getHeader("X-Correlation-Id"));
         String replayBody = replayResult.getContentAsString();
         for (String body : new String[]{
                 statusBody, downloadBody, replayBody}) {
@@ -249,6 +253,16 @@ class FinanceExportAuthorizationIT {
             assertFalse(body.contains("\"filters\""));
             assertFalse(body.contains("\"status\":\"READY\""));
         }
+    }
+
+    private void assertCorrelatedDenial(String correlationId) {
+        UUID parsed = UUID.fromString(correlationId);
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT count(*)::integer
+            FROM f05_security_events
+            WHERE correlation_id = ?
+              AND result = 'DENIED'
+            """, Integer.class, parsed));
     }
 
     private void assertStatusAndDownloadAllowed(

@@ -8,10 +8,13 @@ import com.vms.workflow.api.LinearDtos.IssueCurrentView;
 import com.vms.workflow.api.LinearDtos.IssueLinkView;
 import com.vms.workflow.api.LinearDtos.IssueSnapshotView;
 import com.vms.workflow.api.LinearDtos.LinearHealthView;
+import com.vms.workflow.api.LinearDtos.LinearReconciliationRequest;
+import com.vms.workflow.api.LinearDtos.LinearReconciliationView;
 import com.vms.workflow.api.LinearDtos.LinkIssueRequest;
 import com.vms.workflow.api.LinearDtos.WebhookAcceptedView;
 import com.vms.workflow.api.LinearDtos.WebhookProcessView;
 import com.vms.workflow.security.DeliveryAuthorizationService;
+import com.vms.workflow.security.OutboundUriPolicy;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -19,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -28,8 +30,10 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.List;
-import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -41,18 +45,20 @@ public class LinearIntegrationService {
     private final ObjectMapper objectMapper;
     private final DeliveryAuthorizationService authorization;
     private final WebhookSecretResolver secretResolver;
-    private final Clock clock = Clock.systemUTC();
+    private final Clock clock;
 
     public LinearIntegrationService(
         JdbcTemplate jdbc,
         ObjectMapper objectMapper,
         DeliveryAuthorizationService authorization,
-        WebhookSecretResolver secretResolver
+        WebhookSecretResolver secretResolver,
+        Clock clock
     ) {
         this.jdbc = jdbc;
         this.objectMapper = objectMapper;
         this.authorization = authorization;
         this.secretResolver = secretResolver;
+        this.clock = clock;
     }
 
     @Transactional
@@ -197,7 +203,13 @@ public class LinearIntegrationService {
                    fetched_at, payload_hash, confidence, failure_reason
             FROM linear_issue_snapshots
             WHERE issue_link_id = ?
-            ORDER BY created_at
+            ORDER BY created_at,
+                     CASE snapshot_type
+                       WHEN 'PLAN_TIME' THEN 0
+                       WHEN 'MONTH_END' THEN 1
+                       ELSE 2
+                     END,
+                     id
             """, (rs, rowNum) -> {
                 JsonNode provider = readJson(rs.getString("provider_state"));
                 return new IssueSnapshotView(
@@ -215,6 +227,118 @@ public class LinearIntegrationService {
                     rs.getString("failure_reason")
                 );
             }, linkId);
+    }
+
+    @Transactional
+    public List<IssueSnapshotView> captureMonthEnd(
+        String subject,
+        UUID monthId
+    ) {
+        authorization.requireMonth(
+            subject, monthId, DeliveryAuthorizationService.LINEAR_MANAGE);
+        FrozenPlan plan = jdbc.query("""
+            SELECT version.id, version.state
+            FROM delivery_plans plan
+            JOIN delivery_plan_versions version
+              ON version.id = plan.current_version_id
+            WHERE plan.engagement_month_id = ?
+            FOR UPDATE OF plan
+            """, rs -> rs.next()
+                ? new FrozenPlan(
+                    rs.getObject("id", UUID.class),
+                    rs.getString("state"))
+                : null, monthId);
+        if (plan == null) {
+            throw notFound();
+        }
+        if (!"FROZEN".equals(plan.state())) {
+            throw new DomainConflictException(
+                "Month-end Linear evidence requires the current frozen plan.");
+        }
+
+        List<MonthEndSource> sources = jdbc.query("""
+            SELECT link.id,
+                   current.provider_state_id, current.provider_state_name,
+                   current.provider_state_type, current.provider_state_category,
+                   current.normalized_state, current.fetched_at,
+                   current.payload_hash, current.stale, current.inaccessible
+            FROM delivery_deliverable_versions deliverable
+            JOIN linear_issue_links link
+              ON link.deliverable_version_id = deliverable.id
+            LEFT JOIN linear_issue_current current
+              ON current.connection_id = link.connection_id
+             AND current.linear_issue_uuid = link.linear_issue_uuid
+            WHERE deliverable.plan_version_id = ?
+            ORDER BY link.id
+            """, (rs, rowNum) -> new MonthEndSource(
+                rs.getObject("id", UUID.class),
+                rs.getString("provider_state_id"),
+                rs.getString("provider_state_name"),
+                rs.getString("provider_state_type"),
+                rs.getString("provider_state_category"),
+                rs.getString("normalized_state"),
+                rs.getObject("fetched_at", OffsetDateTime.class),
+                rs.getString("payload_hash"),
+                rs.getBoolean("stale"),
+                rs.getBoolean("inaccessible")),
+            plan.versionId());
+        if (sources.isEmpty()) {
+            throw new DomainConflictException(
+                "Month-end Linear evidence requires at least one linked issue.");
+        }
+
+        for (MonthEndSource source : sources) {
+            boolean captured = source.normalizedState() != null
+                && !source.stale() && !source.inaccessible();
+            jdbc.update("""
+                INSERT INTO linear_issue_snapshots
+                    (id, issue_link_id, plan_version_id, snapshot_type, status,
+                     provider_state, normalized_state, fetched_at, payload_hash,
+                     confidence, failure_reason)
+                VALUES (?, ?, ?, 'MONTH_END', ?, ?::jsonb, ?, ?, ?, ?, ?)
+                ON CONFLICT (issue_link_id, plan_version_id, snapshot_type)
+                DO NOTHING
+                """, UUID.randomUUID(), source.linkId(), plan.versionId(),
+                captured ? "CAPTURED" : "UNAVAILABLE",
+                captured ? json(Map.of(
+                    "id", nullToEmpty(source.stateId()),
+                    "name", nullToEmpty(source.stateName()),
+                    "type", nullToEmpty(source.stateType()),
+                    "category", nullToEmpty(source.stateCategory()))) : "{}",
+                captured ? source.normalizedState() : null,
+                captured ? source.fetchedAt() : null,
+                captured ? source.payloadHash() : null,
+                captured ? "CURRENT_STATE_ONLY" : "UNAVAILABLE",
+                captured ? null : "NO_CURRENT_RECONCILED_STATE");
+        }
+        return jdbc.query("""
+            SELECT snapshot.id, snapshot.snapshot_type, snapshot.status,
+                   snapshot.normalized_state, snapshot.provider_state,
+                   snapshot.fetched_at, snapshot.payload_hash,
+                   snapshot.confidence, snapshot.failure_reason
+            FROM linear_issue_snapshots snapshot
+            JOIN linear_issue_links link ON link.id = snapshot.issue_link_id
+            JOIN delivery_deliverable_versions deliverable
+              ON deliverable.id = link.deliverable_version_id
+            WHERE deliverable.plan_version_id = ?
+              AND snapshot.snapshot_type = 'MONTH_END'
+            ORDER BY link.id
+            """, (rs, rowNum) -> {
+                JsonNode provider = readJson(rs.getString("provider_state"));
+                return new IssueSnapshotView(
+                    rs.getObject("id", UUID.class),
+                    rs.getString("snapshot_type"),
+                    rs.getString("status"),
+                    rs.getString("normalized_state"),
+                    text(provider, "id"),
+                    text(provider, "name"),
+                    text(provider, "type"),
+                    text(provider, "category"),
+                    rs.getObject("fetched_at", OffsetDateTime.class),
+                    rs.getString("payload_hash"),
+                    rs.getString("confidence"),
+                    rs.getString("failure_reason"));
+            }, plan.versionId());
     }
 
     public LinearHealthView health(String subject, UUID engagementId) {
@@ -264,6 +388,149 @@ public class LinearIntegrationService {
                     rs.getString("last_error_code")
                 );
             }, engagementId);
+    }
+
+    @Transactional
+    public LinearReconciliationView reconcile(
+        String subject,
+        UUID connectionId,
+        String idempotencyKey,
+        LinearReconciliationRequest request
+    ) {
+        if (idempotencyKey == null || idempotencyKey.isBlank()
+            || idempotencyKey.length() > 160) {
+            throw new IllegalArgumentException(
+                "Idempotency-Key is required and must not exceed 160 characters.");
+        }
+        authorization.requireConnection(
+            subject, connectionId, DeliveryAuthorizationService.LINEAR_REPLAY);
+        boolean available = "AVAILABLE".equals(request.outcome());
+        if (available && request.errorCode() != null
+            && !request.errorCode().isBlank()) {
+            throw new IllegalArgumentException(
+                "An available reconciliation cannot include errorCode.");
+        }
+        if (!available && (request.errorCode() == null
+            || request.errorCode().isBlank())) {
+            throw new IllegalArgumentException(
+                "An unavailable reconciliation requires errorCode.");
+        }
+        Map<String, Object> targetFacts = new LinkedHashMap<>();
+        targetFacts.put("outcome", request.outcome());
+        targetFacts.put("errorCode", request.errorCode());
+        targetFacts.put("reason", request.reason());
+        String checksum = sha256(json(targetFacts));
+        ReconciliationConnection target = jdbc.query("""
+            SELECT status
+            FROM linear_connections
+            WHERE id = ?
+            FOR UPDATE
+            """, result -> result.next() ? new ReconciliationConnection(
+                result.getString("status")
+            ) : null, connectionId);
+        if (target == null) {
+            throw notFound();
+        }
+        ExistingReconciliation existing = jdbc.query("""
+            SELECT sync_job_id, command_checksum
+            FROM linear_reconciliation_commands
+            WHERE connection_id = ? AND idempotency_key = ?
+            """, result -> result.next() ? new ExistingReconciliation(
+                result.getObject("sync_job_id", UUID.class),
+                result.getString("command_checksum")
+            ) : null, connectionId, idempotencyKey);
+        if (existing != null) {
+            if (!existing.checksum().equals(checksum)) {
+                throw new DomainConflictException(
+                    "Idempotency-Key was already used for another reconciliation command.");
+            }
+            return reconciliationView(existing.jobId(), true);
+        }
+        if ("NOT_CONFIGURED".equals(target.status())) {
+            throw new DomainConflictException(
+                "A non-configured Linear connection cannot be reconciled.");
+        }
+        OffsetDateTime recordedAt = OffsetDateTime.now(clock);
+        UUID jobId = UUID.randomUUID();
+        UUID commandId = UUID.randomUUID();
+        UUID correlationId = UUID.randomUUID();
+        UUID causationId = UUID.nameUUIDFromBytes(
+            ("linear-reconciliation:" + connectionId + ":" + idempotencyKey)
+                .getBytes(StandardCharsets.UTF_8));
+        String jobStatus = available ? "SUCCEEDED" : "FAILED";
+        jdbc.update("""
+            INSERT INTO linear_sync_jobs
+                (id, connection_id, job_type, status, checkpoint,
+                 attempt_count, last_error_code, created_at, completed_at)
+            VALUES (?, ?, 'NIGHTLY_RECONCILIATION', ?, ?, 1, ?, ?, ?)
+            """, jobId, connectionId, jobStatus, request.reason(),
+            available ? null : request.errorCode(), recordedAt, recordedAt);
+        jdbc.update("""
+            UPDATE linear_connections
+            SET status = ?, last_error_code = ?,
+                last_reconciled_at = ?
+            WHERE id = ?
+            """, available ? "CONNECTED" : "ACTION_REQUIRED",
+            available ? null : request.errorCode(),
+            recordedAt, connectionId);
+        jdbc.update("""
+            UPDATE linear_issue_current
+            SET stale = ?, fetched_at = CASE WHEN ? THEN ? ELSE fetched_at END
+            WHERE connection_id = ?
+            """, !available, available, recordedAt, connectionId);
+        int recordedStaleIssueCount = jdbc.queryForObject("""
+            SELECT COUNT(*)
+            FROM linear_issue_current
+            WHERE connection_id = ?
+              AND (stale OR inaccessible)
+            """, Integer.class, connectionId);
+        jdbc.update("""
+            INSERT INTO linear_reconciliation_commands
+                (id, connection_id, sync_job_id, idempotency_key,
+                 command_checksum, outcome, error_code,
+                 recorded_connection_status, recorded_stale_issue_count, reason,
+                 actor_subject, correlation_id, causation_id, recorded_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, commandId, connectionId, jobId, idempotencyKey, checksum,
+            request.outcome(), available ? null : request.errorCode(),
+            available ? "CONNECTED" : "ACTION_REQUIRED",
+            recordedStaleIssueCount, request.reason(), subject,
+            correlationId, causationId, recordedAt);
+        return reconciliationView(jobId, false);
+    }
+
+    private LinearReconciliationView reconciliationView(
+        UUID jobId,
+        boolean replay
+    ) {
+        return jdbc.query("""
+            SELECT command.connection_id, job.status AS job_status,
+                   command.recorded_connection_status AS connection_status,
+                   command.recorded_at, command.error_code,
+                   command.command_checksum, command.correlation_id,
+                   command.causation_id,
+                   command.recorded_stale_issue_count AS stale_count
+            FROM linear_reconciliation_commands command
+            JOIN linear_sync_jobs job ON job.id = command.sync_job_id
+            WHERE command.sync_job_id = ?
+            """, result -> {
+                if (!result.next()) {
+                    throw new IllegalStateException(
+                        "Linear reconciliation command evidence is missing.");
+                }
+                return new LinearReconciliationView(
+                    jobId,
+                    result.getObject("connection_id", UUID.class),
+                    result.getString("job_status"),
+                    result.getString("connection_status"),
+                    result.getInt("stale_count"),
+                    result.getObject("recorded_at", OffsetDateTime.class),
+                    result.getString("error_code"),
+                    result.getString("command_checksum"),
+                    result.getObject("correlation_id", UUID.class),
+                    result.getObject("causation_id", UUID.class),
+                    replay);
+            }, jobId);
     }
 
     @Transactional
@@ -674,17 +941,7 @@ public class LinearIntegrationService {
         if (!identifier.matches("[A-Z][A-Z0-9_]*-[1-9][0-9]*")) {
             throw new IllegalArgumentException("Linear identifier is invalid.");
         }
-        URI uri;
-        try {
-            uri = URI.create(url);
-        } catch (RuntimeException exception) {
-            throw new IllegalArgumentException("Linear URL is invalid.", exception);
-        }
-        String host = uri.getHost();
-        if (!"linear.app".equalsIgnoreCase(host)
-            && (host == null || !host.toLowerCase(Locale.ROOT).endsWith(".linear.app"))) {
-            throw new IllegalArgumentException("Only Linear issue URLs are supported.");
-        }
+        OutboundUriPolicy.requireHttpsHost(url, Set.of("linear.app"));
     }
 
     private void verifySignature(
@@ -738,6 +995,15 @@ public class LinearIntegrationService {
             return objectMapper.readTree(json);
         } catch (JacksonException exception) {
             throw new IllegalStateException("Stored JSON is invalid.", exception);
+        }
+    }
+
+    private String json(Object value) {
+        try {
+            return objectMapper.writeValueAsString(value);
+        } catch (JacksonException exception) {
+            throw new IllegalStateException(
+                "Unable to serialize Linear snapshot evidence.", exception);
         }
     }
 
@@ -821,6 +1087,23 @@ public class LinearIntegrationService {
     ) {
     }
 
+    private record FrozenPlan(UUID versionId, String state) {
+    }
+
+    private record MonthEndSource(
+        UUID linkId,
+        String stateId,
+        String stateName,
+        String stateType,
+        String stateCategory,
+        String normalizedState,
+        OffsetDateTime fetchedAt,
+        String payloadHash,
+        boolean stale,
+        boolean inaccessible
+    ) {
+    }
+
     private record Connection(
         UUID engagementId,
         String providerOrganizationId,
@@ -828,6 +1111,12 @@ public class LinearIntegrationService {
         String status,
         String webhookSecretRef
     ) {
+    }
+
+    private record ReconciliationConnection(String status) {
+    }
+
+    private record ExistingReconciliation(UUID jobId, String checksum) {
     }
 
     private record RecordedIssue(

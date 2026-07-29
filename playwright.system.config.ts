@@ -5,7 +5,8 @@ const baseURL =
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: /(?:finance|migration)-system\.spec\.ts/,
+  testMatch:
+    /(?:finance|migration|f07-(?:workforce|greythr|delivery-confirmation|real))-system\.spec\.ts/,
   fullyParallel: false,
   forbidOnly: true,
   retries: 0,
@@ -38,6 +39,25 @@ export default defineConfig({
     {
       name: "f06-migration-system-chromium",
       testMatch: /migration-system\.spec\.ts/,
+    },
+    {
+      name: "f07-workforce-system-chromium",
+      testMatch: /f07-workforce-system\.spec\.ts/,
+    },
+    {
+      name: "f07-greythr-system-chromium",
+      testMatch: /f07-greythr-system\.spec\.ts/,
+      dependencies: ["f07-workforce-system-chromium"],
+    },
+    {
+      name: "f07-delivery-confirmation-system-chromium",
+      testMatch: /f07-delivery-confirmation-system\.spec\.ts/,
+      dependencies: ["f07-greythr-system-chromium"],
+    },
+    {
+      name: "f07-real-system-chromium",
+      testMatch: /f07-real-system\.spec\.ts/,
+      dependencies: ["f07-delivery-confirmation-system-chromium"],
     },
   ],
 });

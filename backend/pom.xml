@@ -112,6 +112,16 @@
                     <includes>
                         <include>**/*IT.java</include>
                     </includes>
+                    <!--
+                      Testcontainers and Docker Desktop can otherwise leave a
+                      fork blocked forever in a daemon socket call. The full
+                      integration/capacity lane exercises every feature and
+                      provisions multiple PostgreSQL containers, so it has a
+                      bounded one-hour budget; a timeout is a failed gate,
+                      never a silent skip.
+                    -->
+                    <forkedProcessTimeoutInSeconds>3600</forkedProcessTimeoutInSeconds>
+                    <forkedProcessExitTimeoutInSeconds>60</forkedProcessExitTimeoutInSeconds>
                 </configuration>
             </plugin>
         </plugins>

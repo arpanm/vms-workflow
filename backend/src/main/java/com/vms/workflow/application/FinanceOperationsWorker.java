@@ -1,6 +1,7 @@
 package com.vms.workflow.application;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -15,6 +16,9 @@ import java.util.UUID;
  * Durable F05 export and local outbox worker with leased claims and retries.
  */
 @Component
+@ConditionalOnProperty(
+    name = "vms.finance.worker-enabled",
+    havingValue = "true")
 public class FinanceOperationsWorker {
     private static final int MAX_ATTEMPTS = 5;
     private static final int LEASE_SECONDS = 120;

@@ -1,0 +1,23 @@
+spring:
+  main:
+    web-application-type: none
+  flyway:
+    enabled: false
+
+vms:
+  certification:
+    worker-enabled: false
+  finance:
+    worker-enabled: true
+  migration:
+    worker-enabled: false
+  database:
+    verify-runtime-least-privilege: true
+    expected-runtime-role: ${VMS_DATABASE_WORKER_LOGIN}
+    expected-capability-role: vms_job_worker
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false

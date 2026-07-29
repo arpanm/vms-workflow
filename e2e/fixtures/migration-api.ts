@@ -52,10 +52,38 @@ type Approval = {
 };
 
 function payloadBody(route: Route) {
+  const request = route.request();
+  const contentType = request.headers()["content-type"] ?? "";
+  if (contentType.startsWith("multipart/form-data")) {
+    const boundary = /boundary=(?:"([^"]+)"|([^;]+))/i.exec(contentType);
+    const raw = request.postDataBuffer()?.toString("utf8") ?? "";
+    const marker = 'name="metadata"';
+    const markerIndex = raw.indexOf(marker);
+    const contentStart = markerIndex < 0
+      ? -1
+      : raw.indexOf("\r\n\r\n", markerIndex);
+    const contentEnd = contentStart < 0 || !boundary
+      ? -1
+      : raw.indexOf(
+          `\r\n--${boundary[1] ?? boundary[2]}`,
+          contentStart + 4,
+        );
+    if (contentStart >= 0 && contentEnd > contentStart) {
+      try {
+        return JSON.parse(
+          raw.slice(contentStart + 4, contentEnd),
+        ) as Record<string, unknown>;
+      } catch {
+        // Preserve the raw body so the assertion fails with inspectable
+        // cross-browser evidence instead of silently inventing metadata.
+      }
+    }
+    return raw;
+  }
   try {
-    return route.request().postDataJSON() as Record<string, unknown>;
+    return request.postDataJSON() as Record<string, unknown>;
   } catch {
-    return route.request().postData() ?? {};
+    return request.postData() ?? {};
   }
 }
 
@@ -63,6 +91,33 @@ export async function mockMigrationApi(
   page: Page,
   options: { denied?: boolean; initialState?: string } = {},
 ) {
+  await page.addInitScript(() => {
+    const captured: Array<Record<string, unknown>> = [];
+    const capturedFileNames: string[] = [];
+    const testWindow = window as typeof window & {
+      __vmsMigrationMultipartMetadata?: Array<Record<string, unknown>>;
+      __vmsMigrationMultipartFileNames?: string[];
+    };
+    testWindow.__vmsMigrationMultipartMetadata = captured;
+    testWindow.__vmsMigrationMultipartFileNames = capturedFileNames;
+    const nativeFetch = window.fetch.bind(window);
+    window.fetch = async (input, init) => {
+      if (init?.body instanceof FormData) {
+        const file = init.body.get("file");
+        if (file instanceof File) {
+          capturedFileNames.push(file.name);
+        }
+        const metadata = init.body.get("metadata");
+        if (metadata instanceof Blob) {
+          const decoded = JSON.parse(
+            await metadata.text(),
+          ) as Record<string, unknown>;
+          captured.push(decoded);
+        }
+      }
+      return nativeFetch(input, init);
+    };
+  });
   const requests: Array<{ method: string; path: string; body: unknown; headers: Record<string, string> }> = [];
   const approvals: Approval[] = [];
   let approvalRole: "MIGRATION_LEAD" | "GOVERNANCE" = "MIGRATION_LEAD";
@@ -257,6 +312,18 @@ export async function mockMigrationApi(
   return {
     requests,
     job,
+    multipartMetadata: () => page.evaluate(() => {
+      const testWindow = window as typeof window & {
+        __vmsMigrationMultipartMetadata?: Array<Record<string, unknown>>;
+      };
+      return testWindow.__vmsMigrationMultipartMetadata ?? [];
+    }),
+    multipartFileNames: () => page.evaluate(() => {
+      const testWindow = window as typeof window & {
+        __vmsMigrationMultipartFileNames?: string[];
+      };
+      return testWindow.__vmsMigrationMultipartFileNames ?? [];
+    }),
     actAsGovernanceReviewer: () => {
       approvalRole = "GOVERNANCE";
     },

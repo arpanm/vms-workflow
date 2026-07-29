@@ -224,7 +224,7 @@ test("[E2E-F02-007] self-service attendance resolves only the authenticated empl
   for (const route of routes) {
     await page.goto(route.path);
     await expect(
-      page.getByRole("heading", { name: route.heading }),
+      page.getByRole("heading", { name: route.heading, exact: true }),
     ).toBeVisible();
     await expect(page.getByText("Ananya Rao")).toBeVisible();
     await expect(

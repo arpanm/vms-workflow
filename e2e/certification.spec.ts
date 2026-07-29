@@ -25,6 +25,28 @@ async function openGovernance(page: Page, options: CertificationApiOptions = {})
   return api;
 }
 
+async function browserTimeZone(page: Page) {
+  return page.evaluate(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+  );
+}
+
+function expectedForTimeZone(
+  timeZone: string,
+  expected: {
+    newYork: string;
+    kolkata: string;
+    utc: string;
+  },
+) {
+  if (timeZone === "America/New_York") return expected.newYork;
+  if (timeZone === "Asia/Kolkata" || timeZone === "Asia/Calcutta") {
+    return expected.kolkata;
+  }
+  if (timeZone === "UTC") return expected.utc;
+  throw new Error(`No exact regression expectation for timezone ${timeZone}.`);
+}
+
 async function openConfirmation(page: Page, options: CertificationApiOptions = {}) {
   const api = await mockCertificationApi(page, options);
   await page.goto(`/confirmation/requests/${ids.request}`);
@@ -391,8 +413,15 @@ test("[E2E-F04-BC-006] server offset is converted into the operator timezone bef
   page,
 }) => {
   await openGovernance(page, { monthScenario: "complete-draft" });
+  const timeZone = await browserTimeZone(page);
 
-  await expect(page.getByLabel("Due date and time")).toHaveValue("2026-08-31T09:00");
+  await expect(page.getByLabel("Due date and time")).toHaveValue(
+    expectedForTimeZone(timeZone, {
+      newYork: "2026-08-31T09:00",
+      kolkata: "2026-08-31T18:30",
+      utc: "2026-08-31T13:00",
+    }),
+  );
 });
 
 test("[E2E-F04-BC-031] due conversion respects the operator zone outside daylight-saving time", async ({
@@ -402,9 +431,16 @@ test("[E2E-F04-BC-031] due conversion respects the operator zone outside dayligh
     monthScenario: "complete-draft",
     defaultDueAt: "2027-01-15T18:30:00+05:30",
   });
+  const timeZone = await browserTimeZone(page);
 
-  await expect(page.getByLabel("Due date and time")).toHaveValue("2027-01-15T08:00");
-  await expect(page.getByText(/Displayed in America\/New_York/)).toBeVisible();
+  await expect(page.getByLabel("Due date and time")).toHaveValue(
+    expectedForTimeZone(timeZone, {
+      newYork: "2027-01-15T08:00",
+      kolkata: "2027-01-15T18:30",
+      utc: "2027-01-15T13:00",
+    }),
+  );
+  await expect(page.getByText(`Displayed in ${timeZone}`)).toBeVisible();
 });
 
 test("[E2E-F04-BC-007] governance queues the exact recipient/quorum/version request with concurrency headers", async ({
@@ -429,13 +465,18 @@ test("[E2E-F04-BC-007] governance queues the exact recipient/quorum/version requ
     new RegExp(`/confirmation/requests/${certificationFixture.ids.request}$`),
   );
   const call = mutations(api).find((request) => request.path.endsWith("/confirmation-requests"));
+  const timeZone = await browserTimeZone(page);
   expect(call).toMatchObject({
     headers: {
       "if-match": '"7"',
     },
     body: {
       expectedMonthVersion: 7,
-      dueAt: "2026-08-31T13:00:00.000Z",
+      dueAt: expectedForTimeZone(timeZone, {
+        newYork: "2026-08-31T13:00:00.000Z",
+        kolkata: "2026-08-31T03:30:00.000Z",
+        utc: "2026-08-31T09:00:00.000Z",
+      }),
     },
   });
   expect(call?.headers["idempotency-key"]).toMatch(/^[0-9a-f-]{36}$/i);

@@ -1,4 +1,5 @@
 import { expect, test, type APIRequestContext, type APIResponse } from "@playwright/test";
+import { execFileSync } from "node:child_process";
 
 import "./fixtures/quality-gates";
 
@@ -21,6 +22,8 @@ let packageId = "";
 let packageArtifactId = "";
 let invoiceReadinessRunId = "";
 let invoiceRuleId = "";
+let paymentExportId = "";
+let auditExportId = "";
 
 test.describe.configure({ mode: "serial" });
 
@@ -321,6 +324,7 @@ test("[E2E-F05-SYS-002] Procurement, AP and restricted reports enforce real auth
     }),
     200,
   );
+  paymentExportId = String(paymentExport.exportId);
   await expectDenied(
     request.get(`/api/v1/finance/exports/${paymentExport.exportId}`, {
       headers: authorization(tokens.vendor),
@@ -341,11 +345,93 @@ test("[E2E-F05-SYS-002] Procurement, AP and restricted reports enforce real auth
     }),
     200,
   );
+  auditExportId = String(auditExport.exportId);
   await expectDenied(
     request.get(`/api/v1/finance/exports/${auditExport.exportId}`, {
       headers: authorization(tokens.finance),
     }),
   );
+});
+
+test("[E2E-09] route, body, cursor, export and artifact attacks remain non-disclosing and correlated", async ({
+  request,
+}) => {
+  const container = requiredEnvironment("VMS_E2E_POSTGRES_CONTAINER");
+  const before = Number(queryDatabase(container, `
+    SELECT count(*) FROM f05_security_events
+  `));
+  const unknownInvoiceId = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+  const inaccessible = await request.get(
+    `/api/v1/finance/invoices/${invoiceId}`,
+    { headers: authorization(tokens.outsider) },
+  );
+  const unknown = await request.get(
+    `/api/v1/finance/invoices/${unknownInvoiceId}`,
+    { headers: authorization(tokens.outsider) },
+  );
+  expect(inaccessible.status()).toBe(unknown.status());
+  const inaccessibleProblem = await inaccessible.json();
+  const unknownProblem = await unknown.json();
+  for (const field of ["title", "detail", "status"]) {
+    expect(inaccessibleProblem[field]).toEqual(unknownProblem[field]);
+  }
+  expect(JSON.stringify(inaccessibleProblem)).not.toContain(invoiceId);
+  expect(JSON.stringify(unknownProblem)).not.toContain(unknownInvoiceId);
+
+  const forgedBody = await request.post("/api/v1/finance/invoices", {
+    headers: mutationHeaders(tokens.outsider, "system-adversarial-body"),
+    data: {
+      monthId,
+      documentKind: "PRIMARY",
+      representedMetadata: {
+        invoiceNumber: "ATTACKER",
+        invoiceDate: "2026-07-31",
+        billingPeriodStart: "2026-07-01",
+        billingPeriodEnd: "2026-07-31",
+        currency: "INR",
+        taxableValue: "1.00",
+        taxValue: "0.00",
+        totalValue: "1.00",
+      },
+    },
+  });
+  expect([403, 404]).toContain(forgedBody.status());
+
+  const cursorAttack = await request.get(
+    `/api/v1/finance/invoices?monthId=${monthId}&cursor=attacker-controlled`,
+    { headers: authorization(tokens.vendor) },
+  );
+  expect([400, 409]).toContain(cursorAttack.status());
+  expect(await cursorAttack.text()).not.toContain("signature");
+
+  for (const denied of [
+    request.get(`/api/v1/finance/exports/${paymentExportId}`, {
+      headers: authorization(tokens.outsider),
+    }),
+    request.get(`/api/v1/finance/exports/${auditExportId}`, {
+      headers: authorization(tokens.outsider),
+    }),
+    request.post(
+      `/api/v1/finance/packages/${packageId}/artifacts/${packageArtifactId}/download`,
+      { headers: authorization(tokens.outsider) },
+    ),
+  ]) {
+    const response = await denied;
+    expect([403, 404]).toContain(response.status());
+    const correlationId = response.headers()["x-correlation-id"];
+    expect(correlationId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    );
+    expect(Number(queryDatabase(container, `
+      SELECT count(*) FROM f05_security_events
+      WHERE correlation_id = '${correlationId}'::uuid
+        AND result = 'DENIED'
+    `))).toBe(1);
+  }
+  const after = Number(queryDatabase(container, `
+    SELECT count(*) FROM f05_security_events
+  `));
+  expect(after).toBeGreaterThan(before);
 });
 
 test("[E2E-F05-SYS-003] expired, revoked and cross-scope access fail closed", async ({
@@ -451,4 +537,16 @@ async function expectDenied(responsePromise: Promise<APIResponse>) {
   const body = await response.text();
   expect(body).not.toContain("\"filters\"");
   expect(body).not.toContain("\"objectKey\"");
+}
+
+function queryDatabase(container: string, sql: string) {
+  return execFileSync(
+    "docker",
+    [
+      "exec", container, "psql", "--no-psqlrc", "--tuples-only",
+      "--no-align", "--username", "vms", "--dbname", "vms_workflow",
+      "--command", sql,
+    ],
+    { encoding: "utf8", timeout: 10_000 },
+  ).trim();
 }

@@ -8,6 +8,7 @@ import com.vms.workflow.api.FinanceController.UploadDocumentMetadata;
 import com.vms.workflow.security.FinanceAuthorizationService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -430,10 +431,14 @@ public class FinanceInvoiceService {
     }
 
     public Map<String, Object> invoice(String subject, UUID invoiceId) {
+        try {
+            authorization.requireInvoice(
+                subject, invoiceId, "finance.read",
+                FinanceAuthorizationService.Party.ANY);
+        } catch (AccessDeniedException exception) {
+            throw new EntityNotFoundException("Invoice not found.");
+        }
         InvoiceRow row = invoiceRow(invoiceId, false);
-        authorization.requireMonth(
-            subject, row.monthId(), "finance.read",
-            FinanceAuthorizationService.Party.ANY);
         if (exceptionValidity.expireInvoice(invoiceId, subject)) {
             row = invoiceRow(invoiceId, false);
         }

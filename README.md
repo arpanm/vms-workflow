@@ -1,13 +1,19 @@
 # Cadence — Workforce and Delivery Evidence Governance
 
-Cadence is being rebuilt as a Java/PostgreSQL application with a standard Vite React frontend. The current working tree contains the foundation, the read-only identity/core vertical, a reviewed local workforce/attendance vertical, and a reviewed provider-neutral delivery/Linear demonstrator. Lovable, Supabase, Cloudflare and TanStack Start server dependencies have been removed.
+Cadence is a Java/PostgreSQL application with a Vite React frontend. The
+working tree contains the F00–F07 local product and hardening verticals.
+Lovable, Supabase, Cloudflare and TanStack Start server dependencies have been
+removed.
 
 ## Current status
 
 The detailed, continuously maintained ledger is
 [FEATURE_STATUS.md](docs/FEATURE_STATUS.md). The extensible browser/system
 regression catalog is
-[E2E_REGRESSION_CASES.md](docs/testing/E2E_REGRESSION_CASES.md).
+[E2E_REGRESSION_CASES.md](docs/testing/E2E_REGRESSION_CASES.md). The single
+cross-feature list of unfinished local work, pending verification, active
+issues and external-only gates is
+[PENDING_WORK.md](docs/PENDING_WORK.md).
 
 | Track | Status | Evidence |
 |---|---|---|
@@ -17,9 +23,9 @@ regression catalog is
 | F02 workforce/attendance local vertical | Implemented, independently reviewed and locally regressed; provider/admin/full-stack scope remains open | [F02 fixes](docs/features/02-workforce-attendance/FIXES.md), [API](docs/features/02-workforce-attendance/API_DOCUMENTATION.md), [UI guide](docs/features/02-workforce-attendance/UI_DOCUMENTATION.md) |
 | F03 Delivery and Linear | Reviewed provider-neutral local demonstrator; P0 resolved by V10, local P1 and live-provider/BFF gates remain open | [F03 evidence](docs/features/03-delivery-linear/CODEGEN.md), [API](docs/features/03-delivery-linear/API_DOCUMENTATION.md), [UI](docs/features/03-delivery-linear/UI_DOCUMENTATION.md) |
 | F04 Certification and confirmation | Local Java/PostgreSQL + React provider-neutral vertical verified: 111 backend, 64 frontend and 59 intercepted Playwright tests pass; provider/full-stack gates remain open | [F04 evidence](docs/features/04-certification-confirmation/CODEGEN.md), [API](docs/features/04-certification-confirmation/API_DOCUMENTATION.md), [UI](docs/features/04-certification-confirmation/UI_DOCUMENTATION.md) |
-| F05 evidence, invoice and reporting | Locally quality-gated: 154/154 backend, 88/88 Vitest, 69/69 combined Playwright and 3/3 isolated system E2E; performance/scale and external release gates remain ACTION_REQUIRED | [F05 status](docs/FEATURE_STATUS.md), [F05 E2E catalog](docs/testing/E2E_REGRESSION_CASES.md), [F05 closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md) |
+| F05 evidence, invoice and reporting | Locally quality-gated, including 4/4 isolated system cases and exact E2E-06/E2E-09 evidence; performance/scale and external release gates remain ACTION_REQUIRED | [F05 status](docs/FEATURE_STATUS.md), [F05 E2E catalog](docs/testing/E2E_REGRESSION_CASES.md), [F05 closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md) |
 | F06 historical migration | Locally quality-gated: 172/172 backend, 90/90 Vitest, 74/74 combined Playwright and 6/6 real local system journeys; production scanner/storage/capacity/rehearsal gates remain ACTION_REQUIRED | [F06 status](docs/FEATURE_STATUS.md), [tasks](docs/features/06-historical-migration/TASKS.md), [tests](docs/features/06-historical-migration/TEST_CASES.md), [review](docs/features/06-historical-migration/FINAL_REVIEW.md), [API](docs/features/06-historical-migration/API_DOCUMENTATION.md), [UI](docs/features/06-historical-migration/UI_DOCUMENTATION.md) |
-| F07 hardening/go-live | Detailed 85-task and 76-test catalogs complete; implementation is the active feature | [tasks](docs/features/07-hardening-go-live/TASKS.md), [tests](docs/features/07-hardening-go-live/TEST_CASES.md) |
+| F07 hardening/go-live | V1–V33 local lanes pass: frontend 92/92 + static/build, Maven 290/290, focused backend 73+45, capacity 73+2, systems 7/7 + 4/4 + 6/6 and browser 274/274; Terra review closed with no P0–P3. Commit-bound/external production gates remain NO-GO/ACTION_REQUIRED. | [status](docs/FEATURE_STATUS.md), [pending work](docs/PENDING_WORK.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md), [testing guide](docs/testing/README.md), [tasks](docs/features/07-hardening-go-live/TASKS.md), [tests](docs/features/07-hardening-go-live/TEST_CASES.md), [automation](docs/features/07-hardening-go-live/TEST_AUTOMATION.md), [review status](docs/features/07-hardening-go-live/FINAL_REVIEW.md), [open issues](docs/features/07-hardening-go-live/FINAL_ISSUES.md) |
 
 Production release remains blocked until the identity/BFF decision and staging
 tenant-isolation gate are complete. Local feature development uses explicit
@@ -56,6 +62,13 @@ npm install
 npm run dev
 ```
 
+The PostgreSQL 18 named volume is mounted at `/var/lib/postgresql`, matching
+the image's version-specific data layout. If this repository was previously
+started with the old `/var/lib/postgresql/data` mount, back up the old database
+before recreating the service; do not delete or reuse the old volume as an
+empty PG18 data root. Restore the backup into a fresh volume created by the
+current Compose file.
+
 The frontend proxies `/api` to `http://localhost:8080`. Demo mode is enabled only when explicitly configured and never grants backend permissions. See [.env.example](.env.example). The Java service validates bearer JWTs; production browser login remains disabled until a same-origin OIDC/BFF entry point is configured.
 
 ## Validate
@@ -71,11 +84,17 @@ npm run e2e
 npm run regression
 ```
 
-The Maven verification applies Flyway V1–V20 to ephemeral PostgreSQL and
-currently runs 14 unit plus 158 integration tests covering signed-JWT
-validation, lifecycle/scoped RBAC denial, tenant/object isolation, database
-constraints, workforce/attendance, delivery/Linear, certification/confirmation,
-finance, historical migration and OpenAPI security metadata.
+The production Flyway chain is V1–V33. F07 focused backend evidence passes 73
+unit plus 45 integration tests; its capacity lane passes 73 + 2, the
+F07/finance/migration system lanes pass 7/7, 4/4 and 6/6, and the complete
+browser matrix passes 274/274. Definitive complete Maven R3 passes 73 unit +
+217 integration (290/290), zero failures/errors/skips, in 03:21. The earlier
+R2 215/217 integration result and its Docker pauses remain preserved; assigning
+the delivery-worker IT its own database removed the cross-suite state.
+Final frontend checks pass typecheck, lint (0 errors/6 Fast Refresh warnings),
+Vitest (24 files/92 tests), production build (3,006 modules; 586.90 kB
+largest-chunk optimization advisory) and diff-check. Final Terra review closed
+with no P0–P3 finding.
 
 `npm run regression` combines frontend checks, Maven/Testcontainers
 PostgreSQL integration and Playwright Chromium browser-contract tests. The
@@ -103,7 +122,7 @@ OIDC provider or deployed full-stack environment. See the
 | F04 Certification and confirmation | [Tasks](docs/features/04-certification-confirmation/TASKS.md) | [Tests](docs/features/04-certification-confirmation/TEST_CASES.md) | [Codegen](docs/features/04-certification-confirmation/CODEGEN.md), [review](docs/features/04-certification-confirmation/CODE_REVIEW.md), [fixes](docs/features/04-certification-confirmation/FIXES.md), [API](docs/features/04-certification-confirmation/API_DOCUMENTATION.md), [UI](docs/features/04-certification-confirmation/UI_DOCUMENTATION.md) |
 | F05 Evidence, invoice and reporting | [Tasks](docs/features/05-evidence-invoice-reporting/TASKS.md) | [Tests](docs/features/05-evidence-invoice-reporting/TEST_CASES.md) | [Codegen](docs/features/05-evidence-invoice-reporting/CODEGEN.md), [reviews/issues](docs/features/05-evidence-invoice-reporting/FINAL_ISSUES.md), [closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md), [API](docs/features/05-evidence-invoice-reporting/API_DOCUMENTATION.md), [UI](docs/features/05-evidence-invoice-reporting/UI_DOCUMENTATION.md) |
 | F06 Historical migration | [Tasks](docs/features/06-historical-migration/TASKS.md) | [Tests](docs/features/06-historical-migration/TEST_CASES.md) | [Codegen](docs/features/06-historical-migration/CODEGEN.md), [reviews/issues](docs/features/06-historical-migration/FINAL_ISSUES.md), [API](docs/features/06-historical-migration/API_DOCUMENTATION.md), [UI](docs/features/06-historical-migration/UI_DOCUMENTATION.md), [runbook](docs/features/06-historical-migration/RUNBOOK.md) |
-| F07 Hardening and go-live | [Tasks](docs/features/07-hardening-go-live/TASKS.md) | [Tests](docs/features/07-hardening-go-live/TEST_CASES.md) | Implementation in progress |
+| F07 Hardening and go-live | [Tasks](docs/features/07-hardening-go-live/TASKS.md) | [Tests](docs/features/07-hardening-go-live/TEST_CASES.md) | [Codegen](docs/features/07-hardening-go-live/CODEGEN.md), [reviews/issues](docs/features/07-hardening-go-live/CODE_REVIEW.md), [fixes](docs/features/07-hardening-go-live/FIXES.md), [API](docs/features/07-hardening-go-live/API_DOCUMENTATION.md), [UI/operator guide](docs/features/07-hardening-go-live/UI_DOCUMENTATION.md), [architecture](docs/features/07-hardening-go-live/ARCHITECTURE.md), [final status](docs/features/07-hardening-go-live/FINAL_REVIEW.md) |
 
 ## SDLC harness
 
@@ -113,6 +132,7 @@ OIDC provider or deployed full-stack environment. See the
 
 - [Rollback and recovery](docs/operations/ROLLBACK.md)
 - [Detailed feature status and open issues](docs/FEATURE_STATUS.md)
+- [Consolidated pending work across every feature](docs/PENDING_WORK.md)
 - [End-to-end regression case catalog](docs/testing/E2E_REGRESSION_CASES.md)
 - [Testing and Playwright guide](docs/testing/README.md)
 - [F01 API documentation](docs/features/01-identity-core/API_DOCUMENTATION.md)
@@ -132,5 +152,23 @@ OIDC provider or deployed full-stack environment. See the
 - [F06 UI guide](docs/features/06-historical-migration/UI_DOCUMENTATION.md)
 - [F06 migration runbook](docs/features/06-historical-migration/RUNBOOK.md)
 - [F06 final independent review](docs/features/06-historical-migration/FINAL_REVIEW.md)
+- [F07 architecture](docs/features/07-hardening-go-live/ARCHITECTURE.md)
+- [F07 API/Swagger documentation](docs/features/07-hardening-go-live/API_DOCUMENTATION.md)
+- [F07 UI and operator guide](docs/features/07-hardening-go-live/UI_DOCUMENTATION.md)
+- [F07 runbook index](docs/features/07-hardening-go-live/RUNBOOK.md)
+- [F07 release, supply-chain and DR procedure](docs/operations/F07-RELEASE-AND-DR.md)
+- [F07 incident runbooks](docs/operations/F07-RUNBOOKS.md)
+- [F07 review status and open issues](docs/features/07-hardening-go-live/FINAL_REVIEW.md)
+- F07 SDLC evidence: [codegen](docs/features/07-hardening-go-live/CODEGEN.md),
+  [code review](docs/features/07-hardening-go-live/CODE_REVIEW.md),
+  [code issues](docs/features/07-hardening-go-live/CODE_ISSUES.md),
+  [test automation](docs/features/07-hardening-go-live/TEST_AUTOMATION.md),
+  [test review](docs/features/07-hardening-go-live/TEST_REVIEW.md),
+  [test issues](docs/features/07-hardening-go-live/TEST_ISSUES.md),
+  [code analysis](docs/features/07-hardening-go-live/CODE_ANALYSIS.md),
+  [security analysis](docs/features/07-hardening-go-live/SECURITY_ANALYSIS.md),
+  [fixes](docs/features/07-hardening-go-live/FIXES.md),
+  [changelog](docs/features/07-hardening-go-live/CHANGELOG.md) and
+  [final issues](docs/features/07-hardening-go-live/FINAL_ISSUES.md)
 
 Do not store salary, CTC, markup, employee billing rates or payroll calculations. Do not infer human approval from silence, delivery receipts, elapsed time or external ticket status.

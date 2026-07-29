@@ -1,0 +1,7 @@
+{
+  "errorRate": 0,
+  "integrityFailures": 0,
+  "observationSeconds": 899,
+  "p95Ms": 100,
+  "requestCount": 1000
+}

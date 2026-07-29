@@ -140,12 +140,17 @@ public class FinancePackageService {
             return summary(subject, existing);
         }
 
-        UUID prior = jdbc.query("""
-            SELECT id FROM evidence_package_versions
-            WHERE engagement_month_id = ? AND status = 'CURRENT'
+        PriorPackage priorPackage = jdbc.query("""
+            SELECT id, status FROM evidence_package_versions
+            WHERE engagement_month_id = ?
+            ORDER BY version DESC
+            LIMIT 1
             FOR UPDATE
-            """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null, monthId);
-        if (prior != null) {
+            """, rs -> rs.next() ? new PriorPackage(
+                rs.getObject("id", UUID.class), rs.getString("status")) : null,
+            monthId);
+        UUID prior = priorPackage == null ? null : priorPackage.id();
+        if (priorPackage != null && "CURRENT".equals(priorPackage.status())) {
             jdbc.update("""
                 UPDATE evidence_package_versions
                 SET status = 'SUPERSEDED',
@@ -1042,7 +1047,7 @@ public class FinancePackageService {
         hashInput.put("freshness", fact.freshness());
         hashInput.put("details", fact.details());
         target.add(manifestItem(
-            logicalType, "F04_PILLAR_" + logicalType, fact.id(),
+            logicalType, "F04_PILLAR_" + logicalType, fact.sourceId(),
             fact.sourceVersion() == null
                 ? source.readinessHash() : fact.sourceVersion(),
             canonical.sha256(hashInput), "F04_READINESS_RESULT",
@@ -1291,6 +1296,9 @@ public class FinancePackageService {
     }
 
     private record ItemKey(String logicalType, String sourceId, String version) {
+    }
+
+    private record PriorPackage(UUID id, String status) {
     }
 
     private record Output(

@@ -8,6 +8,8 @@ import com.vms.workflow.api.WorkforceDtos.EmployeeView;
 import com.vms.workflow.api.WorkforceDtos.LeaveBalanceView;
 import com.vms.workflow.api.WorkforceDtos.LeaveRequest;
 import com.vms.workflow.api.WorkforceDtos.LeaveRequestView;
+import com.vms.workflow.api.WorkforceDtos.PolicyAssignmentRequest;
+import com.vms.workflow.api.WorkforceDtos.PolicyAssignmentView;
 import com.vms.workflow.application.WorkforceService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -82,6 +84,18 @@ public class WorkforceController {
     AllocationView createAllocation(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                                     @Valid @RequestBody AllocationRequest request) {
         return workforce.createAllocation(jwt.getSubject(), id, request);
+    }
+
+    @PostMapping("/employees/{id}/policy-assignments")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary =
+        "Assign a tenant-valid working calendar and opening leave balance")
+    PolicyAssignmentView assignPolicy(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID id,
+        @Valid @RequestBody PolicyAssignmentRequest request
+    ) {
+        return workforce.assignPolicy(jwt.getSubject(), id, request);
     }
 
     @GetMapping("/employees/{id}/leave-balances")

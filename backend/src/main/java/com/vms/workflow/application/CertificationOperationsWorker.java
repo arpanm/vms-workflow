@@ -1,6 +1,7 @@
 package com.vms.workflow.application;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -12,6 +13,9 @@ import java.util.Locale;
 import java.util.UUID;
 
 @Component
+@ConditionalOnProperty(
+    name = "vms.certification.worker-enabled",
+    havingValue = "true")
 public class CertificationOperationsWorker {
     private static final int BATCH_SIZE = 25;
     private static final int MAX_ATTEMPTS = 5;

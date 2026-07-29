@@ -29,6 +29,12 @@ export default defineConfig({
         outputFolder: "node_modules/.cache/playwright-report",
       },
     ],
+    [
+      "json",
+      {
+        outputFile: "node_modules/.cache/playwright-results/results.json",
+      },
+    ],
   ],
   outputDir: "node_modules/.cache/playwright-results",
   expect: {
@@ -100,6 +106,38 @@ export default defineConfig({
       },
     },
     {
+      name: "auth-no-bff-firefox",
+      testMatch: /auth-disabled\.spec\.ts/,
+      use: {
+        ...devices["Desktop Firefox"],
+        baseURL: "http://127.0.0.1:4174",
+      },
+    },
+    {
+      name: "auth-bff-firefox",
+      testMatch: /redirect-safety\.spec\.ts/,
+      use: {
+        ...devices["Desktop Firefox"],
+        baseURL: "http://127.0.0.1:4175",
+      },
+    },
+    {
+      name: "auth-no-bff-webkit",
+      testMatch: /auth-disabled\.spec\.ts/,
+      use: {
+        ...devices["Desktop Safari"],
+        baseURL: "http://127.0.0.1:4174",
+      },
+    },
+    {
+      name: "auth-bff-webkit",
+      testMatch: /redirect-safety\.spec\.ts/,
+      use: {
+        ...devices["Desktop Safari"],
+        baseURL: "http://127.0.0.1:4175",
+      },
+    },
+    {
       name: "workforce-chromium",
       testMatch: /workforce\.spec\.ts/,
       use: {
@@ -138,6 +176,78 @@ export default defineConfig({
       testMatch: /migration\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
+        baseURL: "http://127.0.0.1:4173",
+        timezoneId: "Asia/Kolkata",
+      },
+    },
+    {
+      name: "f07-accessibility-chromium",
+      testMatch: /f07-accessibility\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: "http://127.0.0.1:4173",
+        timezoneId: "Asia/Kolkata",
+      },
+    },
+    {
+      name: "f07-accessibility-chromium-utc",
+      testMatch: /f07-accessibility\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: "http://127.0.0.1:4173",
+        timezoneId: "UTC",
+      },
+    },
+    {
+      name: "f07-compatibility-firefox",
+      fullyParallel: false,
+      timeout: 60_000,
+      testMatch: [
+        /f07-accessibility\.spec\.ts/,
+        /workforce\.spec\.ts/,
+        /delivery\.spec\.ts/,
+        /certification\.spec\.ts/,
+        /finance\.spec\.ts/,
+        /migration\.spec\.ts/,
+      ],
+      use: {
+        ...devices["Desktop Firefox"],
+        baseURL: "http://127.0.0.1:4173",
+        timezoneId: "Asia/Kolkata",
+      },
+    },
+    {
+      name: "f07-compatibility-webkit",
+      fullyParallel: false,
+      testMatch: [
+        /f07-accessibility\.spec\.ts/,
+        /workforce\.spec\.ts/,
+        /delivery\.spec\.ts/,
+        /certification\.spec\.ts/,
+        /finance\.spec\.ts/,
+        /migration\.spec\.ts/,
+      ],
+      use: {
+        ...devices["Desktop Safari"],
+        baseURL: "http://127.0.0.1:4173",
+        timezoneId: "Asia/Kolkata",
+      },
+    },
+    {
+      name: "f07-compatibility-android",
+      testMatch: /f07-accessibility\.spec\.ts/,
+      use: {
+        ...devices["Pixel 7"],
+        baseURL: "http://127.0.0.1:4173",
+        timezoneId: "Asia/Kolkata",
+      },
+    },
+    {
+      name: "f07-compatibility-ios",
+      fullyParallel: false,
+      testMatch: /f07-accessibility\.spec\.ts/,
+      use: {
+        ...devices["iPhone 13"],
         baseURL: "http://127.0.0.1:4173",
         timezoneId: "Asia/Kolkata",
       },

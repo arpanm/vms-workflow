@@ -5,6 +5,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -77,6 +78,29 @@ public final class WorkforceDtos {
         BigDecimal allocationPercent,
         String roleOnProject,
         String status
+    ) {
+    }
+
+    public record PolicyAssignmentRequest(
+        @NotNull UUID calendarVersionId,
+        @NotNull UUID leaveTypeId,
+        @NotNull @DecimalMin("0.01") BigDecimal openingUnits,
+        @NotNull LocalDate effectiveFrom,
+        @NotBlank @Size(max = 160) String idempotencyKey,
+        @NotBlank @Size(max = 4_000) String reason
+    ) {
+    }
+
+    public record PolicyAssignmentView(
+        UUID id,
+        UUID employeeId,
+        UUID calendarVersionId,
+        UUID leaveTypeId,
+        BigDecimal openingUnits,
+        LocalDate effectiveFrom,
+        String idempotencyKey,
+        String reason,
+        OffsetDateTime createdAt
     ) {
     }
 

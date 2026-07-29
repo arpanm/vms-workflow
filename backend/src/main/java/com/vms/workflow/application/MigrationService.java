@@ -388,6 +388,17 @@ public class MigrationService {
         String idempotencyKey
     ) {
         authorization.requireJob(subject, jobId, "migration.validate");
+        return validateInternal(
+            subject, jobId, expectedVersion, idempotencyKey, null);
+    }
+
+    private Map<String, Object> validateInternal(
+        String subject,
+        UUID jobId,
+        long expectedVersion,
+        String idempotencyKey,
+        String leaseOwner
+    ) {
         JobContext job = lockedJob(jobId);
         requireVersion(job, expectedVersion);
         String scanStatus = jdbc.queryForObject("""
@@ -403,7 +414,7 @@ public class MigrationService {
                 job.version());
         }
         if ("READY_TO_COMMIT".equals(job.state())) {
-            return job(subject, jobId);
+            return operationResult(subject, jobId, leaseOwner);
         }
         if (!Set.of("UPLOADED", "FAILED", "COMPLETED_WITH_ERRORS")
             .contains(job.state())) {
@@ -435,12 +446,17 @@ public class MigrationService {
                 expectedVersion);
         }
 
-        byte[] content = jdbc.queryForObject("""
-            SELECT blob.content
-            FROM migration_source_blobs blob
-            JOIN migration_jobs job ON job.source_file_id = blob.source_file_id
-            WHERE job.id = ?
-            """, byte[].class, jobId);
+        byte[] content = leaseOwner == null
+            ? jdbc.queryForObject("""
+                SELECT blob.content
+                FROM migration_source_blobs blob
+                JOIN migration_jobs job
+                  ON job.source_file_id = blob.source_file_id
+                WHERE job.id = ?
+                """, byte[].class, jobId)
+            : jdbc.queryForObject(
+                "SELECT f07_migration_leased_source(?, ?)",
+                byte[].class, jobId, leaseOwner);
         MigrationTemplateRegistry.Template template =
             templates.require(job.templateCode());
         List<MigrationCsvParser.Record> records = parse(content);
@@ -586,7 +602,7 @@ public class MigrationService {
         metrics.recordRows(
             "validate", job.templateCode(),
             invalid == 0 ? "completed" : "completed_with_errors", rowCount);
-        return job(subject, jobId);
+        return operationResult(subject, jobId, leaseOwner);
     }
 
     public Map<String, Object> rows(
@@ -1001,6 +1017,63 @@ public class MigrationService {
         String idempotencyKey
     ) {
         authorization.requireJob(subject, jobId, "migration.validate");
+        return retryInternal(
+            subject, jobId, expectedVersion, reason, idempotencyKey, null);
+    }
+
+    /**
+     * Worker-only recovery entry point. It is package-private, has no
+     * controller/JWT route, never calls the user authorization service and
+     * requires the unguessable live lease acquired by MigrationRecoveryWorker.
+     */
+    @Transactional
+    void retryClaimed(
+        UUID jobId,
+        long expectedVersion,
+        String leaseOwner
+    ) {
+        if (leaseOwner == null || leaseOwner.isBlank()) {
+            throw new IllegalArgumentException(
+                "A live migration worker lease is required.");
+        }
+        Boolean liveLease = jdbc.queryForObject("""
+            SELECT EXISTS (
+              SELECT 1
+              FROM migration_jobs
+              WHERE id = ? AND version = ?
+                AND lease_owner = ?
+                AND lease_until > CURRENT_TIMESTAMP
+            )
+            """, Boolean.class, jobId, expectedVersion, leaseOwner);
+        if (!Boolean.TRUE.equals(liveLease)) {
+            throw new IllegalStateException(
+                "Migration recovery lease is absent, stale or not owned.");
+        }
+        retryInternal(
+            "SYSTEM:F06_RECOVERY", jobId, expectedVersion,
+            "Automated recovery of an expired migration lease.",
+            "f06-worker:" + jobId + ":" + expectedVersion,
+            leaseOwner);
+        int released = jdbc.update("""
+            UPDATE migration_jobs
+            SET lease_owner = NULL, lease_until = NULL,
+                version = version + 1
+            WHERE id = ? AND lease_owner = ?
+            """, jobId, leaseOwner);
+        if (released != 1) {
+            throw new IllegalStateException(
+                "Migration recovery lease changed before completion.");
+        }
+    }
+
+    private Map<String, Object> retryInternal(
+        String subject,
+        UUID jobId,
+        long expectedVersion,
+        String reason,
+        String idempotencyKey,
+        String leaseOwner
+    ) {
         UUID priorReplay = jdbc.query("""
             SELECT job_id FROM migration_decisions
             WHERE actor_subject = ? AND idempotency_key = ?
@@ -1010,16 +1083,20 @@ public class MigrationService {
             subject, idempotencyKey);
         if (priorReplay != null) {
             metrics.recordRetry("idempotent_replay");
-            return job(subject, priorReplay);
+            return operationResult(subject, priorReplay, leaseOwner);
         }
 
         JobContext prior = lockedJob(jobId);
         requireVersion(prior, expectedVersion);
         if ("CANCELLED".equals(prior.state())) {
-            UUID replayId = cancelledReplay(
-                prior, subject, reason, idempotencyKey);
+            if (leaseOwner != null) {
+                throw conflict("JOB_RETRY_NOT_ALLOWED", prior);
+            }
+            UUID replayId = appendOnlyReplay(
+                prior, subject, reason, idempotencyKey,
+                "MIGRATION_CANCELLED_JOB_REPLAY_CREATED");
             metrics.recordRetry("cancelled_replay_created");
-            return job(subject, replayId);
+            return operationResult(subject, replayId, null);
         }
         if (!Set.of("UPLOADED", "FAILED").contains(prior.state())) {
             throw conflict("JOB_RETRY_NOT_ALLOWED", prior);
@@ -1034,9 +1111,20 @@ public class MigrationService {
                 prior.version());
         }
 
-        int retryCount = jdbc.queryForObject("""
-            SELECT retry_count FROM migration_jobs WHERE id = ?
-            """, Integer.class, jobId);
+        RetryState retryState = jdbc.queryForObject("""
+            SELECT retry_count, dead_lettered_at IS NOT NULL
+            FROM migration_jobs WHERE id = ?
+            """, (rs, ignored) -> new RetryState(
+                rs.getInt(1), rs.getBoolean(2)), jobId);
+        int retryCount = retryState.count();
+        if (retryCount >= 10 && retryState.deadLettered()
+            && leaseOwner == null) {
+            UUID replayId = appendOnlyReplay(
+                prior, subject, reason, idempotencyKey,
+                "MIGRATION_DEAD_LETTER_REPLAY_CREATED");
+            metrics.recordRetry("dead_letter_replay_created");
+            return operationResult(subject, replayId, null);
+        }
         if (retryCount >= 10) {
             throw new DomainConflictException(
                 "MIGRATION_RETRY_EXHAUSTED",
@@ -1045,15 +1133,26 @@ public class MigrationService {
                 prior.version());
         }
         boolean exhausted = retryCount + 1 >= 10;
-        int changed = jdbc.update("""
-            UPDATE migration_jobs
-            SET retry_count = retry_count + 1,
-                dead_lettered_at = CASE WHEN retry_count + 1 >= 10
-                    THEN CURRENT_TIMESTAMP ELSE dead_lettered_at END,
-                lease_owner = NULL, lease_until = NULL,
-                version = version + 1
-            WHERE id = ? AND version = ? AND retry_count < 10
-            """, jobId, prior.version());
+        int changed = leaseOwner == null
+            ? jdbc.update("""
+                UPDATE migration_jobs
+                SET retry_count = retry_count + 1,
+                    dead_lettered_at = CASE WHEN retry_count + 1 >= 10
+                        THEN CURRENT_TIMESTAMP ELSE dead_lettered_at END,
+                    lease_owner = NULL, lease_until = NULL,
+                    version = version + 1
+                WHERE id = ? AND version = ? AND retry_count < 10
+                """, jobId, prior.version())
+            : jdbc.update("""
+                UPDATE migration_jobs
+                SET retry_count = retry_count + 1,
+                    dead_lettered_at = CASE WHEN retry_count + 1 >= 10
+                        THEN CURRENT_TIMESTAMP ELSE dead_lettered_at END,
+                    version = version + 1
+                WHERE id = ? AND version = ? AND retry_count < 10
+                  AND lease_owner = ?
+                  AND lease_until > CURRENT_TIMESTAMP
+                """, jobId, prior.version(), leaseOwner);
         if (changed != 1) {
             throw new DomainConflictException(
                 "ETAG_MISMATCH", "The migration job version is stale.",
@@ -1073,10 +1172,10 @@ public class MigrationService {
                 Map.of("retryCount", retryCount + 1,
                     "idempotencyHash", sha256(idempotencyKey)));
             metrics.recordRetry("dead_lettered");
-            return job(subject, jobId);
+            return operationResult(subject, jobId, leaseOwner);
         }
 
-        SourceScan source = sourceScan(jobId);
+        SourceScan source = sourceScan(jobId, leaseOwner);
         if ("PENDING".equals(source.status())) {
             MigrationMalwareScanner.Verdict verdict =
                 scanner.inspect(source.content(), source.sha256());
@@ -1103,16 +1202,16 @@ public class MigrationService {
                 + ":" + (retryCount + 1)));
         if ("PENDING".equals(source.status())) {
             metrics.recordRetry("scan_pending");
-            return job(subject, jobId);
+            return operationResult(subject, jobId, leaseOwner);
         }
         if (!"PASSED".equals(source.status())) {
             metrics.recordRetry("scan_rejected");
-            return job(subject, jobId);
+            return operationResult(subject, jobId, leaseOwner);
         }
         metrics.recordRetry("validation_started");
-        return validate(
+        return validateInternal(
             subject, jobId, retryVersion,
-            idempotencyKey + ":validation");
+            idempotencyKey + ":validation", leaseOwner);
     }
 
     @Transactional
@@ -1157,11 +1256,12 @@ public class MigrationService {
         return job(subject, newId);
     }
 
-    private UUID cancelledReplay(
+    private UUID appendOnlyReplay(
         JobContext prior,
         String subject,
         String reason,
-        String idempotencyKey
+        String idempotencyKey,
+        String auditEvent
     ) {
         UUID replayId = jdbc.query("""
             SELECT id FROM migration_jobs
@@ -1185,7 +1285,7 @@ public class MigrationService {
                 FROM migration_jobs WHERE id = ?
                 """, replayId, subject, prior.id());
             audit(prior.engagementId(), prior.organizationId(), replayId,
-                "MIGRATION_CANCELLED_JOB_REPLAY_CREATED", subject,
+                auditEvent, subject,
                 Map.of("priorJobId", prior.id(),
                     "reasonHash", sha256(reason)));
         }
@@ -1199,18 +1299,51 @@ public class MigrationService {
         return replayId;
     }
 
-    private SourceScan sourceScan(UUID jobId) {
+    private SourceScan sourceScan(UUID jobId, String leaseOwner) {
+        if (leaseOwner == null) {
+            return jdbc.queryForObject("""
+                SELECT source.id, source.scan_status, source.sha256,
+                       blob.content
+                FROM migration_jobs job
+                JOIN migration_source_files source
+                  ON source.id = job.source_file_id
+                JOIN migration_source_blobs blob
+                  ON blob.source_file_id = source.id
+                WHERE job.id = ?
+                """, (rs, ignored) -> new SourceScan(
+                    rs.getObject(1, UUID.class), rs.getString(2),
+                    rs.getString(3), rs.getBytes(4)), jobId);
+        }
         return jdbc.queryForObject("""
-            SELECT source.id, source.scan_status, source.sha256, blob.content
+            SELECT source.id, source.scan_status, source.sha256,
+                   f07_migration_leased_source(job.id, ?)
             FROM migration_jobs job
             JOIN migration_source_files source
               ON source.id = job.source_file_id
-            JOIN migration_source_blobs blob
-              ON blob.source_file_id = source.id
             WHERE job.id = ?
             """, (rs, ignored) -> new SourceScan(
                 rs.getObject(1, UUID.class), rs.getString(2),
-                rs.getString(3), rs.getBytes(4)), jobId);
+                rs.getString(3), rs.getBytes(4)), leaseOwner, jobId);
+    }
+
+    private Map<String, Object> operationResult(
+        String subject,
+        UUID jobId,
+        String leaseOwner
+    ) {
+        if (leaseOwner == null) {
+            return job(subject, jobId);
+        }
+        return jdbc.queryForObject("""
+            SELECT id, state, version
+            FROM migration_jobs
+            WHERE id = ? AND lease_owner = ?
+              AND lease_until > CURRENT_TIMESTAMP
+            """, (rs, ignored) -> Map.of(
+                "id", rs.getObject(1, UUID.class),
+                "state", rs.getString(2),
+                "version", rs.getLong(3)),
+            jobId, leaseOwner);
     }
 
     @Transactional
@@ -2821,6 +2954,12 @@ public class MigrationService {
         String status,
         String sha256,
         byte[] content
+    ) {
+    }
+
+    private record RetryState(
+        int count,
+        boolean deadLettered
     ) {
     }
 

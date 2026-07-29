@@ -1,0 +1,19 @@
+{
+  "budget": {
+    "maximumErrorRate": 0,
+    "p95Ms": 2500
+  },
+  "concurrency": 4,
+  "durationSeconds": 86400,
+  "externalApproval": "ACTION_REQUIRED",
+  "id": "scheduled-jobs-outbox-24h-soak",
+  "requestTimeoutMs": 5000,
+  "requests": [
+    {
+      "auth": "none",
+      "method": "GET",
+      "path": "/actuator/health"
+    }
+  ],
+  "segmentSeconds": 3600
+}

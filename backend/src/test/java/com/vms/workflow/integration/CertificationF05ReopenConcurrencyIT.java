@@ -34,7 +34,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:tc:postgresql:18-alpine:///vms_workflow_f04_f05_reopen",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow_f04_f05_reopen",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",
@@ -43,6 +43,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     "vms.security.issuer=https://issuer.example.test",
     "vms.security.audience=vms-api",
     "vms.certification.email-provider-status=NOT_CONFIGURED",
+    "vms.certification.worker-enabled=true",
     "vms.certification.f05-handoff-status=CONFIGURED",
     "vms.certification.worker-initial-delay=PT1H"
 })

@@ -36,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:tc:postgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",
@@ -605,6 +605,12 @@ class MigrationWorkflowIT {
     @Test
     void jobListUsesActorBoundOpaqueCursorAndExactTotalCount()
         throws Exception {
+        int preexistingJobs = count("""
+            SELECT count(*) FROM migration_jobs
+            WHERE engagement_id = ?
+            """, ENGAGEMENT);
+        int pageLimit = preexistingJobs + 2;
+        assertTrue(pageLimit <= 100);
         uploadEmployee("AF-MIG-CURSOR-1", null);
         uploadEmployee("AF-MIG-CURSOR-2", null);
         uploadEmployee("AF-MIG-CURSOR-3", null);
@@ -613,11 +619,11 @@ class MigrationWorkflowIT {
                     "/api/v1/migrations/jobs")
                 .with(token("user-arrow"))
                 .queryParam("engagementId", ENGAGEMENT.toString())
-                .queryParam("limit", "2"))
+                .queryParam("limit", Integer.toString(pageLimit)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.items.length()").value(2))
+            .andExpect(jsonPath("$.items.length()").value(pageLimit))
             .andExpect(jsonPath("$.hasMore").value(true))
-            .andExpect(jsonPath("$.totalCount").value(3))
+            .andExpect(jsonPath("$.totalCount").value(preexistingJobs + 3))
             .andReturn().getResponse().getContentAsString());
         String cursor = first.path("nextCursor").asText();
         assertTrue(cursor.contains("."));
@@ -625,12 +631,12 @@ class MigrationWorkflowIT {
         mvc.perform(get("/api/v1/migrations/jobs")
                 .with(token("user-arrow"))
                 .queryParam("engagementId", ENGAGEMENT.toString())
-                .queryParam("limit", "2")
+                .queryParam("limit", Integer.toString(pageLimit))
                 .queryParam("cursor", cursor))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.items.length()").value(1))
             .andExpect(jsonPath("$.hasMore").value(false))
-            .andExpect(jsonPath("$.totalCount").value(3));
+            .andExpect(jsonPath("$.totalCount").value(preexistingJobs + 3));
 
         mvc.perform(get("/api/v1/migrations/jobs")
                 .with(token("user-arrow"))

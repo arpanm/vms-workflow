@@ -1,0 +1,33 @@
+{
+  "budget": {
+    "maximumErrorRate": 0,
+    "p95Ms": 2000
+  },
+  "concurrency": 20,
+  "id": "migration-export-mixed",
+  "iterations": 1000,
+  "requiredEnvironment": [
+    "F07_CAPACITY_EMPLOYEE_ID",
+    "F07_CAPACITY_ENGAGEMENT_ID",
+    "F07_CAPACITY_FROM",
+    "F07_CAPACITY_TO"
+  ],
+  "requestTimeoutMs": 5000,
+  "requests": [
+    {
+      "auth": "shared",
+      "method": "GET",
+      "path": "/api/v1/migrations/jobs?engagementId=${F07_CAPACITY_ENGAGEMENT_ID}&limit=25"
+    },
+    {
+      "auth": "shared",
+      "method": "GET",
+      "path": "/api/v1/finance/reports"
+    },
+    {
+      "auth": "shared",
+      "method": "GET",
+      "path": "/api/v1/attendance/days?employeeId=${F07_CAPACITY_EMPLOYEE_ID}&from=${F07_CAPACITY_FROM}&to=${F07_CAPACITY_TO}"
+    }
+  ]
+}

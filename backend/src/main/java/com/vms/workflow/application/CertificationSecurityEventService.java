@@ -1,6 +1,7 @@
 package com.vms.workflow.application;
 
 import com.vms.workflow.infrastructure.CorrelationIdFilter;
+import com.vms.workflow.infrastructure.SensitiveDataRedactor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -59,7 +60,7 @@ public class CertificationSecurityEventService {
                 actorSubject == null || actorSubject.isBlank()
                     ? null : hasher.sha256(actorSubject),
                 safeCode(objectType), objectId, safeCode(outcome),
-                hasher.hash(facts).canonicalJson(),
+                hasher.hash(SensitiveDataRedactor.structuredFacts(facts)).canonicalJson(),
                 CorrelationIdFilter.currentOrNew());
         } catch (RuntimeException exception) {
             LOGGER.error(

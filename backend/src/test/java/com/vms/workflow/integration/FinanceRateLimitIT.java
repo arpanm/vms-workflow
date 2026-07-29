@@ -1,5 +1,6 @@
 package com.vms.workflow.integration;
 
+import com.vms.workflow.application.CanonicalEvidenceHasher;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -16,7 +17,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:tc:postgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",
@@ -34,6 +35,9 @@ class FinanceRateLimitIT {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Autowired
+    private CanonicalEvidenceHasher canonical;
 
     @Test
     void mutationLimitIsScopedPersistedAuditedAndFailsClosed()
@@ -62,11 +66,15 @@ class FinanceRateLimitIT {
             .andExpect(header().string("Retry-After", "60"))
             .andExpect(jsonPath("$.status").value(429));
 
+        String actorHash = canonical.sha256("user-arrow");
+        String clientHash = canonical.sha256("198.51.100.44");
         Integer requestCount = jdbc.queryForObject("""
             SELECT request_count
             FROM f05_rate_limit_buckets
             WHERE operation = 'FINANCE_MUTATION'
-            """, Integer.class);
+              AND actor_subject_hash = ?
+              AND client_address_hash = ?
+            """, Integer.class, actorHash, clientHash);
         assertEquals(3, requestCount);
         assertEquals(1, jdbc.queryForObject("""
             SELECT count(*)
@@ -74,6 +82,7 @@ class FinanceRateLimitIT {
             WHERE event_type = 'F05_RATE_LIMIT_EXCEEDED'
               AND result = 'DENIED'
               AND reason_code = 'RATE_LIMIT_EXCEEDED'
-            """, Integer.class));
+              AND actor_subject_hash = ?
+            """, Integer.class, actorHash));
     }
 }

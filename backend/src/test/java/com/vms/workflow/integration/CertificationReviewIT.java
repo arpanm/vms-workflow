@@ -34,7 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:tc:postgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",
@@ -250,11 +250,13 @@ class CertificationReviewIT {
             INSERT INTO inbound_confirmation_messages
                 (id, engagement_month_id, request_id,
                  provider_message_fingerprint, provider_message_id,
-                 sender_address_hash, raw_reference, raw_sha256,
+                 provider_thread_id, sender_address_hash,
+                 raw_reference, raw_sha256, in_reply_to_hash, references_hash,
                  authentication_evidence, classified_intent, status,
                  provider_received_at, correlation_id)
-            VALUES (?, ?::uuid, ?, ?, 'provider-secret-id',
+            VALUES (?, ?::uuid, ?, ?, 'provider-secret-id', 'captured-thread',
                     ?, 'restricted/raw/message.eml', repeat('e',64),
+                    repeat('1',64), repeat('2',64),
                     '{"spf":"pass","dkim":"pass","dmarc":"pass",
                       "verified":true}'::jsonb,
                     'EXPLICIT_CONFIRM', 'MANUAL_REVIEW_REQUIRED',

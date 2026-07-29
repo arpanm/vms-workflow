@@ -1,0 +1,23 @@
+{
+  "budget": {
+    "maximumErrorRate": 0,
+    "p95Ms": 1500
+  },
+  "concurrency": 26,
+  "id": "attendance-26-peak",
+  "iterations": 26,
+  "requestTimeoutMs": 5000,
+  "requiresActors": 26,
+  "requests": [
+    {
+      "auth": "actor",
+      "body": {
+        "employeeId": "${actorId}",
+        "eventType": "CHECK_IN",
+        "idempotencyKey": "${idempotencyKey}"
+      },
+      "method": "POST",
+      "path": "/api/v1/attendance/punches"
+    }
+  ]
+}

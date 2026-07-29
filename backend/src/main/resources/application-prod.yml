@@ -1,0 +1,27 @@
+server:
+  # Do not let the container apply a second, implicit trusted-proxy policy.
+  # SecurityHeadersFilter is the single exact-address boundary for forwarded
+  # protocol data; direct TLS still arrives with request.isSecure() = true.
+  forward-headers-strategy: none
+
+spring:
+  flyway:
+    user: ${VMS_DATABASE_MIGRATION_USERNAME}
+    password: ${VMS_DATABASE_MIGRATION_PASSWORD}
+
+vms:
+  delivery:
+    commitment:
+      # Interactive API processes never claim commitment work. A separately
+      # authenticated worker profile owns this queue.
+      worker-enabled: false
+  database:
+    verify-runtime-least-privilege: true
+    expected-runtime-role: ${VMS_DATABASE_RUNTIME_ROLE}
+    expected-capability-role: vms_app_runtime
+
+springdoc:
+  api-docs:
+    enabled: ${VMS_PRODUCTION_API_DOCS_ENABLED:false}
+  swagger-ui:
+    enabled: ${VMS_PRODUCTION_SWAGGER_UI_ENABLED:false}

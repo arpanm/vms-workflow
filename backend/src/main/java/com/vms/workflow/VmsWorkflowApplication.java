@@ -11,6 +11,7 @@ import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springdoc.core.customizers.GlobalOpenApiCustomizer;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.validation.autoconfigure.ValidationConfigurationCustomizer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -41,8 +42,8 @@ public class VmsWorkflowApplication {
     }
 
     @Bean
-    Clock applicationClock() {
-        return Clock.systemUTC();
+    ValidationConfigurationCustomizer validationClockProvider(Clock clock) {
+        return configuration -> configuration.clockProvider(() -> clock);
     }
 
     @Bean

@@ -1,0 +1,115 @@
+{
+  "entries": [
+    {
+      "affectedWorkflow": "all authenticated workflows",
+      "effectiveFrom": null,
+      "effectiveUntil": null,
+      "evidenceReference": null,
+      "external": true,
+      "id": "oidc-issuer-audience-jwks",
+      "mandatory": true,
+      "owningRole": "security-platform-owner",
+      "state": "NOT_CONFIGURED"
+    },
+    {
+      "affectedWorkflow": "database migrations and runtime persistence",
+      "effectiveFrom": null,
+      "effectiveUntil": null,
+      "evidenceReference": null,
+      "external": true,
+      "id": "postgresql-production-roles",
+      "mandatory": true,
+      "owningRole": "data-platform-owner",
+      "state": "NOT_CONFIGURED"
+    },
+    {
+      "affectedWorkflow": "confirmation, finance cursors, inbound messages and webhook verification",
+      "effectiveFrom": null,
+      "effectiveUntil": null,
+      "evidenceReference": null,
+      "external": true,
+      "id": "signing-and-webhook-key-references",
+      "mandatory": true,
+      "owningRole": "security-platform-owner",
+      "state": "NOT_CONFIGURED"
+    },
+    {
+      "affectedWorkflow": "migration, evidence, invoice and inbound attachment handling",
+      "effectiveFrom": null,
+      "effectiveUntil": null,
+      "evidenceReference": null,
+      "external": true,
+      "id": "malware-scanner-capability",
+      "mandatory": true,
+      "owningRole": "security-operations-owner",
+      "state": "NOT_CONFIGURED"
+    },
+    {
+      "affectedWorkflow": "private evidence, package, invoice, export and backup objects",
+      "effectiveFrom": null,
+      "effectiveUntil": null,
+      "evidenceReference": null,
+      "external": true,
+      "id": "object-storage-capability",
+      "mandatory": true,
+      "owningRole": "platform-operations-owner",
+      "state": "NOT_CONFIGURED"
+    },
+    {
+      "affectedWorkflow": "confirmation notification, bounce and reply ingestion",
+      "effectiveFrom": null,
+      "effectiveUntil": null,
+      "evidenceReference": null,
+      "external": true,
+      "id": "email-provider-capability",
+      "mandatory": true,
+      "owningRole": "integration-operations-owner",
+      "state": "NOT_CONFIGURED"
+    },
+    {
+      "affectedWorkflow": "retention, legal hold, close, reopen and Procurement exception",
+      "effectiveFrom": null,
+      "effectiveUntil": null,
+      "evidenceReference": null,
+      "external": true,
+      "id": "approved-records-and-workflow-policy",
+      "mandatory": true,
+      "owningRole": "legal-procurement-owner",
+      "state": "NOT_CONFIGURED"
+    },
+    {
+      "affectedWorkflow": "paging, incident response and provider degradation",
+      "effectiveFrom": null,
+      "effectiveUntil": null,
+      "evidenceReference": null,
+      "external": true,
+      "id": "production-observability-and-on-call",
+      "mandatory": true,
+      "owningRole": "operations-owner",
+      "state": "NOT_CONFIGURED"
+    },
+    {
+      "affectedWorkflow": "backup, point-in-time recovery and disaster recovery",
+      "effectiveFrom": null,
+      "effectiveUntil": null,
+      "evidenceReference": null,
+      "external": true,
+      "id": "production-backup-pitr-dr",
+      "mandatory": true,
+      "owningRole": "data-operations-owner",
+      "state": "NOT_CONFIGURED"
+    },
+    {
+      "affectedWorkflow": "release evidence and repository security scanning",
+      "effectiveFrom": "2026-07-28T00:00:00Z",
+      "effectiveUntil": null,
+      "evidenceReference": "scripts/f07/supply-chain.mjs",
+      "external": false,
+      "id": "release-scanner-tooling",
+      "mandatory": true,
+      "owningRole": "release-security-owner",
+      "state": "CONFIGURED_UNVERIFIED"
+    }
+  ],
+  "schemaVersion": 1
+}

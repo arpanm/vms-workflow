@@ -291,6 +291,10 @@ public class CertificationReviewService {
                 && Set.of(
                     "EXPLICIT_CONFIRM", "EXPLICIT_CORRECTION",
                     "EXPLICIT_REJECT").contains(row.classifiedIntent())
+                && row.providerThreadId() != null
+                && !row.providerThreadId().isBlank()
+                && (row.inReplyToHash() != null
+                    || row.referencesHash() != null)
                 && "VERIFIED".equals(authenticationConfidence(
                     row.authenticationEvidence()))
                 && "ELIGIBLE".equals(senderEligibility(
@@ -441,6 +445,8 @@ public class CertificationReviewService {
         String sql = """
             SELECT message.id, message.engagement_month_id, message.request_id,
                    message.sender_address_hash,
+                   message.provider_thread_id, message.in_reply_to_hash,
+                   message.references_hash,
                    message.authentication_evidence::text AS authentication_evidence,
                    message.classified_intent, message.status,
                    message.provider_received_at, message.recorded_at,
@@ -474,6 +480,9 @@ public class CertificationReviewService {
                 rs.getObject("engagement_month_id", UUID.class),
                 rs.getObject("request_id", UUID.class),
                 rs.getString("sender_address_hash"),
+                rs.getString("provider_thread_id"),
+                rs.getString("in_reply_to_hash"),
+                rs.getString("references_hash"),
                 rs.getString("authentication_evidence"),
                 rs.getString("classified_intent"),
                 rs.getString("status"),
@@ -926,6 +935,9 @@ public class CertificationReviewService {
         UUID monthId,
         UUID requestId,
         String senderAddressHash,
+        String providerThreadId,
+        String inReplyToHash,
+        String referencesHash,
         String authenticationEvidence,
         String classifiedIntent,
         String status,

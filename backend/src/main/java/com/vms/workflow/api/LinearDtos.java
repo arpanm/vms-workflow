@@ -3,6 +3,7 @@ package com.vms.workflow.api;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 import java.time.OffsetDateTime;
@@ -102,6 +103,32 @@ public final class LinearDtos {
         int attemptCount,
         OffsetDateTime processedAt,
         boolean duplicate
+    ) {
+    }
+
+    public record LinearReconciliationRequest(
+        @NotBlank @Pattern(regexp = "AVAILABLE|UNAVAILABLE") String outcome,
+        @Pattern(
+            regexp = "PROVIDER_UNAVAILABLE|AUTHENTICATION_FAILED|"
+                + "RATE_LIMITED|SCHEMA_INVALID|PROVIDER_TIMEOUT"
+        )
+        String errorCode,
+        @NotBlank @Size(max = 4_000) String reason
+    ) {
+    }
+
+    public record LinearReconciliationView(
+        UUID jobId,
+        UUID connectionId,
+        String jobStatus,
+        String connectionStatus,
+        int staleIssueCount,
+        OffsetDateTime recordedAt,
+        String errorCode,
+        String commandChecksum,
+        UUID correlationId,
+        UUID causationId,
+        boolean replay
     ) {
     }
 

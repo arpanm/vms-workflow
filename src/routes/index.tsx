@@ -217,7 +217,11 @@ function LegacyDashboard() {
                     <span className="font-medium">{e.name}</span>
                     <span className="text-muted-foreground">{e.pct}%</span>
                   </div>
-                  <Progress value={e.pct} className="mt-1.5 h-1.5" />
+                  <Progress
+                    value={e.pct}
+                    aria-label={`${e.name} utilization`}
+                    className="mt-1.5 h-1.5"
+                  />
                   <p className="mt-1 text-[11px] text-muted-foreground">
                     {e.used} / {e.capacity} hrs
                   </p>

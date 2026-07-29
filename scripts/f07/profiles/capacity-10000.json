@@ -1,0 +1,28 @@
+{
+  "budget": {
+    "maximumErrorRate": 0,
+    "p95Ms": 2000
+  },
+  "concurrency": 100,
+  "id": "synthetic-capacity-10000",
+  "iterations": 10000,
+  "requiredEnvironment": [
+    "F07_CAPACITY_FROM",
+    "F07_CAPACITY_ORGANIZATION_ID",
+    "F07_CAPACITY_TO"
+  ],
+  "requestTimeoutMs": 5000,
+  "requiresActors": 26,
+  "requests": [
+    {
+      "auth": "shared",
+      "method": "GET",
+      "path": "/api/v1/workforce/employees?organizationId=${F07_CAPACITY_ORGANIZATION_ID}"
+    },
+    {
+      "auth": "actor",
+      "method": "GET",
+      "path": "/api/v1/attendance/days?employeeId=${actorId}&from=${F07_CAPACITY_FROM}&to=${F07_CAPACITY_TO}"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "budget": {
+    "maximumErrorRate": 0,
+    "p95Ms": 2000
+  },
+  "concurrency": 20,
+  "id": "package-determinism-concurrency",
+  "iterations": 200,
+  "requiredEnvironment": [
+    "F07_CAPACITY_MONTH_ID",
+    "F07_CAPACITY_MONTH_VERSION",
+    "F07_CAPACITY_READINESS_RUN_ID"
+  ],
+  "requestTimeoutMs": 5000,
+  "requests": [
+    {
+      "auth": "shared",
+      "body": {
+        "expectedMonthVersion": "${int:F07_CAPACITY_MONTH_VERSION}",
+        "readinessRunId": "${F07_CAPACITY_READINESS_RUN_ID}",
+        "reason": "Synthetic F07 package concurrency verification"
+      },
+      "headers": {
+        "if-match": "${F07_CAPACITY_MONTH_VERSION}",
+        "idempotency-key": "f07-package-determinism"
+      },
+      "method": "POST",
+      "path": "/api/v1/finance/months/${F07_CAPACITY_MONTH_ID}/packages"
+    }
+  ]
+}

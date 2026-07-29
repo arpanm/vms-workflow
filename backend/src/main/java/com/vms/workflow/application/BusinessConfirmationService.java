@@ -53,6 +53,7 @@ public class BusinessConfirmationService {
     private final CertificationConfiguration configuration;
     private final CertificationEmailAdapter emailAdapter;
     private final F05CertificationReadinessPublisher f05Publisher;
+    private final CertificationHandoffService handoffs;
     private final Clock clock;
 
     public BusinessConfirmationService(
@@ -68,6 +69,7 @@ public class BusinessConfirmationService {
         CertificationConfiguration configuration,
         CertificationEmailAdapter emailAdapter,
         F05CertificationReadinessPublisher f05Publisher,
+        CertificationHandoffService handoffs,
         Clock clock
     ) {
         this.jdbc = jdbc;
@@ -82,6 +84,7 @@ public class BusinessConfirmationService {
         this.configuration = configuration;
         this.emailAdapter = emailAdapter;
         this.f05Publisher = f05Publisher;
+        this.handoffs = handoffs;
         this.clock = clock;
     }
 
@@ -130,6 +133,8 @@ public class BusinessConfirmationService {
                 "Confirmation due time exceeds the captured policy window.");
         }
         ConfirmationRequestRow current = currentRequest(monthId, true);
+        ConfirmationRequestRow predecessor = current == null
+            ? latestRequest(monthId) : current;
         if (current != null && !Set.of(
                 "CONFIRMED", "CHANGES_REQUESTED", "REJECTED")
             .contains(current.status())) {
@@ -175,7 +180,8 @@ public class BusinessConfirmationService {
             """, requestId, monthId, sources.attendanceSnapshotId(),
             sources.planVersionId(), sources.baselineId(), sources.summaryId(),
             sources.policyVersionId(), version,
-            providerTransportStatus(), current == null ? null : current.id(),
+            providerTransportStatus(),
+            predecessor == null ? null : predecessor.id(),
             policy.quorumMode(), quorumRequired, json(recipients),
             json(eligibilityManifest), scopeHash.canonicalJson(),
             scopeHash.checksum(), requestedAt, input.dueAt(),
@@ -287,6 +293,13 @@ public class BusinessConfirmationService {
                 "The confirmation request version is stale.", request.version());
         }
         if (!"AWAITING_RESPONSE".equals(request.status())) {
+            securityEvents.recordBestEffort(
+                request.monthId(), "CONFIRMATION_ACTION_REJECTED",
+                subject, "BUSINESS_CONFIRMATION_REQUEST", requestId,
+                "DENIED", "REQUEST_NOT_AWAITING_RESPONSE",
+                Map.of(
+                    "requestVersion", request.version(),
+                    "requestState", request.status()));
             throw conflict("CONFIRMATION_NOT_AWAITING_RESPONSE",
                 "The confirmation request no longer accepts actions.",
                 request.version());
@@ -458,11 +471,8 @@ public class BusinessConfirmationService {
         bumpMonth(request.monthId(),
             "CONFIRMED".equals(resultingState) ? "CONFIRMED" : null);
         if ("CONFIRMED".equals(resultingState)) {
-            ReadinessView ready = readiness.evaluateAuthorized(
-                subject, request.monthId());
-            UUID runId = readinessRunId(request.monthId(), ready);
-            persistAndPublishF05Handoff(
-                subject, request, ready, runId, correlationId);
+            handoffs.publishConfirmedIfReady(
+                subject, request.monthId(), correlationId);
         }
         return requestView(subject, requestId);
     }
@@ -663,12 +673,8 @@ public class BusinessConfirmationService {
             request.monthId(),
             "CONFIRMED".equals(resultingState) ? "CONFIRMED" : null);
         if ("CONFIRMED".equals(resultingState)) {
-            ReadinessView ready = readiness.evaluateAuthorized(
-                represented.actorSubject(), request.monthId());
-            UUID runId = readinessRunId(request.monthId(), ready);
-            persistAndPublishF05Handoff(
-                represented.actorSubject(), request, ready, runId,
-                correlationId);
+            handoffs.publishConfirmedIfReady(
+                represented.actorSubject(), request.monthId(), correlationId);
         }
         return actionId;
     }
@@ -808,12 +814,8 @@ public class BusinessConfirmationService {
             "CONFIRMED".equals(resultingState)
                 ? "CONFIRMED" : "DELIVERY_REVIEW");
         if ("CONFIRMED".equals(resultingState)) {
-            ReadinessView ready = readiness.evaluateAuthorized(
-                subject, request.monthId());
-            persistAndPublishF05Handoff(
-                subject, request, ready,
-                readinessRunId(request.monthId(), ready),
-                correlationId);
+            handoffs.publishConfirmedIfReady(
+                subject, request.monthId(), correlationId);
         }
         return governanceDecisionView(decisionId);
     }
@@ -1319,6 +1321,24 @@ public class BusinessConfirmationService {
             rs.getObject("due_at", OffsetDateTime.class)) : null, monthId);
     }
 
+    private ConfirmationRequestRow latestRequest(UUID monthId) {
+        return jdbc.query("""
+            SELECT id, engagement_month_id, version, status, scope_checksum,
+                   quorum_mode, quorum_required, policy_version_id, due_at
+            FROM business_confirmation_requests
+            WHERE engagement_month_id = ?
+            ORDER BY version DESC
+            LIMIT 1
+            """, rs -> rs.next() ? new ConfirmationRequestRow(
+                rs.getObject("id", UUID.class),
+                rs.getObject("engagement_month_id", UUID.class),
+                rs.getInt("version"), rs.getString("status"),
+                rs.getString("scope_checksum"), rs.getString("quorum_mode"),
+                rs.getInt("quorum_required"),
+                rs.getObject("policy_version_id", UUID.class),
+                rs.getObject("due_at", OffsetDateTime.class)) : null, monthId);
+    }
+
     private ConfirmationRequestRow requestRow(UUID requestId) {
         ConfirmationRequestRow value = jdbc.query("""
             SELECT id, engagement_month_id, version, status, scope_checksum,
@@ -1416,6 +1436,11 @@ public class BusinessConfirmationService {
                 WHERE message.id = ?
                   AND message.request_id IS NOT NULL
                   AND message.status = 'MANUAL_REVIEW_REQUIRED'
+                  AND NULLIF(BTRIM(message.provider_thread_id), '') IS NOT NULL
+                  AND (
+                      message.in_reply_to_hash IS NOT NULL
+                      OR message.references_hash IS NOT NULL
+                  )
                   AND message.authentication_evidence
                       @> '{"verified":true}'::jsonb
                   AND message.classified_intent IN (
@@ -1772,45 +1797,6 @@ public class BusinessConfirmationService {
             """, requestId);
     }
 
-    private void persistAndPublishF05Handoff(
-        String subject,
-        ConfirmationRequestRow request,
-        ReadinessView ready,
-        UUID runId,
-        UUID correlationId
-    ) {
-        Map<String, Object> manifest = new LinkedHashMap<>();
-        manifest.put("schema", "f04-f05-handoff-v1");
-        manifest.put("engagementMonthId", request.monthId().toString());
-        manifest.put("confirmationRequestId", request.id().toString());
-        manifest.put("confirmationRequestVersion", request.version());
-        manifest.put("confirmationScopeHash", request.scopeChecksum());
-        manifest.put("readinessRunId", runId.toString());
-        manifest.put("readinessInputVersion", ready.inputManifestVersion());
-        HashResult packageHash = hasher.hash(manifest);
-        UUID handoffId = UUID.randomUUID();
-        jdbc.update("""
-            INSERT INTO f05_certification_handoffs
-                (id, engagement_month_id, confirmation_request_id,
-                 readiness_run_id, package_manifest, package_hash,
-                 status, created_by_subject, correlation_id)
-            VALUES (?, ?, ?, ?, ?::jsonb, ?, 'READY_LOCAL', ?, ?)
-            ON CONFLICT (confirmation_request_id, package_hash) DO NOTHING
-            """, handoffId, request.monthId(), request.id(), runId,
-            packageHash.canonicalJson(), packageHash.checksum(), subject,
-            correlationId);
-        jdbc.update("""
-            INSERT INTO f05_handoff_publish_jobs
-                (id, handoff_id, status, next_attempt_at)
-            SELECT gen_random_uuid(), handoff.id, 'PENDING',
-                   CURRENT_TIMESTAMP
-            FROM f05_certification_handoffs handoff
-            WHERE handoff.confirmation_request_id = ?
-              AND handoff.package_hash = ?
-            ON CONFLICT (handoff_id) DO NOTHING
-            """, request.id(), packageHash.checksum());
-    }
-
     private OffsetDateTime earlier(
         OffsetDateTime first,
         OffsetDateTime second
@@ -1853,17 +1839,6 @@ public class BusinessConfirmationService {
     private String roleReason(String storedJson) {
         Object value = map(storedJson).get("roleReason");
         return value == null ? "CAPTURED_ELIGIBLE_AUTHORITY" : String.valueOf(value);
-    }
-
-    private UUID readinessRunId(UUID monthId, ReadinessView ready) {
-        String version = ready.inputManifestVersion();
-        String hash = version != null && version.startsWith("f04-readiness-v1:")
-            ? version.substring("f04-readiness-v1:".length()) : null;
-        return jdbc.query("""
-            SELECT id FROM certification_readiness_runs
-            WHERE engagement_month_id = ? AND input_hash = ?
-            """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null,
-            monthId, hash);
     }
 
     private UUID priorResult(

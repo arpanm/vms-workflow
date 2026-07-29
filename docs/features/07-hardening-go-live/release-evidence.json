@@ -1,0 +1,103 @@
+{
+  "ciEvidenceBundle": null,
+  "configurationRegistry": "docs/features/07-hardening-go-live/configuration-registry.json",
+  "mandatoryRequirements": [
+    "RQ-033",
+    "RQ-034",
+    "RQ-035"
+  ],
+  "overrides": {},
+  "recordTemplates": {
+    "external": {
+      "approvalEvidence": null,
+      "command": "external acceptance procedure; repository automation cannot execute it",
+      "durationMs": 0,
+      "environment": "production-like-or-production",
+      "evidence": null,
+      "exception": null,
+      "mandatory": true,
+      "owner": "ACTION_REQUIRED-named-external-owner",
+      "priority": "P0",
+      "requirementIds": [
+        "RQ-033",
+        "RQ-034",
+        "RQ-035"
+      ],
+      "result": "ACTION_REQUIRED",
+      "unresolvedIssue": "Named approval and production-like evidence have not been supplied"
+    },
+    "local": {
+      "command": "node scripts/f07/release.mjs schema",
+      "durationMs": 0,
+      "environment": "local-or-ci",
+      "evidence": null,
+      "exception": null,
+      "mandatory": true,
+      "owner": "local-engineering-owner",
+      "priority": "P0",
+      "requirementIds": [
+        "RQ-033",
+        "RQ-034",
+        "RQ-035"
+      ],
+      "result": "NOT_RUN",
+      "unresolvedIssue": "Required local test evidence has not been attached"
+    }
+  },
+  "release": {
+    "architecture": "Java 25 / Spring Boot 4.1.0 / Maven / PostgreSQL / Vite React",
+    "commit": "cc5049e8e9534d7dc0f5a631a12f63d0bd6dbf64",
+    "version": "F07-NO-GO-2026-07-28"
+  },
+  "requiredInventory": "docs/features/07-hardening-go-live/required-evidence-inventory.json",
+  "schemaVersion": 1,
+  "taskRecords": {
+    "external": [
+      "F07-T007", "F07-T008", "F07-T017", "F07-T032", "F07-T038",
+      "F07-T039", "F07-T045", "F07-T052", "F07-T058", "F07-T063",
+      "F07-T068", "F07-T069", "F07-T076", "F07-T077", "F07-T083",
+      "F07-T084", "F07-T085"
+    ],
+    "local": [
+      "F07-T001", "F07-T002", "F07-T003", "F07-T004", "F07-T005",
+      "F07-T006", "F07-T009", "F07-T010", "F07-T011", "F07-T012",
+      "F07-T013", "F07-T014", "F07-T015", "F07-T016", "F07-T018",
+      "F07-T019", "F07-T020", "F07-T021", "F07-T022", "F07-T023",
+      "F07-T024", "F07-T025", "F07-T026", "F07-T027", "F07-T028",
+      "F07-T029", "F07-T030", "F07-T031", "F07-T033", "F07-T034",
+      "F07-T035", "F07-T036", "F07-T037", "F07-T040", "F07-T041",
+      "F07-T042", "F07-T043", "F07-T044", "F07-T046", "F07-T047",
+      "F07-T048", "F07-T049", "F07-T050", "F07-T051", "F07-T053",
+      "F07-T054", "F07-T055", "F07-T056", "F07-T057", "F07-T059",
+      "F07-T060", "F07-T061", "F07-T062", "F07-T064", "F07-T065",
+      "F07-T066", "F07-T067", "F07-T070", "F07-T071", "F07-T072",
+      "F07-T073", "F07-T074", "F07-T075", "F07-T078", "F07-T079",
+      "F07-T080", "F07-T081", "F07-T082"
+    ]
+  },
+  "testRecords": {
+    "external": [
+      "F07-A11Y-EXT-001", "F07-DR-EXT-001", "F07-EXT-001",
+      "F07-EXT-002", "F07-EXT-003", "F07-EXT-004", "F07-EXT-005",
+      "F07-FILE-EXT-001", "F07-IAM-EXT-001", "F07-OPS-EXT-001",
+      "F07-PERF-EXT-001", "F07-PRV-EXT-001", "F07-SUP-EXT-001"
+    ],
+    "local": [
+      "E2E-01", "E2E-02", "E2E-03", "E2E-04", "E2E-05", "E2E-06",
+      "E2E-07", "E2E-08", "E2E-09", "E2E-10", "F07-A11Y-001",
+      "F07-A11Y-002", "F07-A11Y-003", "F07-AUD-001", "F07-AUD-002",
+      "F07-DOC-001", "F07-DR-002", "F07-DR-003", "F07-FILE-001",
+      "F07-FILE-002", "F07-GO-001", "F07-IAM-001", "F07-IAM-002",
+      "F07-IAM-003", "F07-IAM-004", "F07-IAM-005", "F07-IAM-006",
+      "F07-IAM-007", "F07-OPS-001", "F07-OPS-002", "F07-OPS-003",
+      "F07-OPS-004", "F07-OPS-005", "F07-OPS-006", "F07-PERF-001",
+      "F07-PERF-002", "F07-PERF-003", "F07-PERF-004", "F07-PERF-005",
+      "F07-PERF-006", "F07-PRV-001", "F07-REL-001", "F07-REL-002",
+      "F07-REL-003", "F07-REL-004", "F07-RET-001", "F07-RET-002",
+      "F07-REV-001", "F07-ROL-001", "F07-ROL-002", "F07-SEC-001",
+      "F07-SEC-002", "F07-SEC-003", "F07-SEC-004", "F07-SEC-005",
+      "F07-SEC-006", "F07-SEC-007", "F07-SEC-008", "F07-SEC-009",
+      "F07-SUP-001", "F07-SUP-002", "F07-SUP-003", "T-DR-001"
+    ]
+  }
+}

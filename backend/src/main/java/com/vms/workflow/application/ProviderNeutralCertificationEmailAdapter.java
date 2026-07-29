@@ -1,8 +1,10 @@
 package com.vms.workflow.application;
 
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.Profile;
 
 @Component
+@Profile("!system-e2e")
 public class ProviderNeutralCertificationEmailAdapter
     implements CertificationEmailAdapter {
     private final CertificationConfiguration configuration;

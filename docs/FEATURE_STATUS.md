@@ -4,17 +4,25 @@ This file is the single detailed delivery ledger. Update it after every
 codegen, review, fix and regression run. Task/test documents remain the detailed
 specifications; this ledger records what is actually complete now.
 
-**Last updated:** 2026-07-28 (F06 local closure)
-**Repository commit under test:** `8b19e79` plus reviewed F06 worktree
-**Working-tree context:** F05 is locally committed. F06 now has the governed
-Java/PostgreSQL migration backend, all 14 domain adapters, transactional
-compensation and rejected-only reprocessing, immutable commit policy, the React
-Migration Center, intercepted browser automation and a six-case real
-Vite/Spring/Flyway/PostgreSQL system lane. The definitive local gates pass:
-172/172 backend, 90/90 Vitest, 74/74 combined browser-contract and 6/6 real
-local F06 system journeys. Independent review found no remaining local P0/P1
-after V20 and the final regression.
-Live providers, production BFF/identity and controlled-environment acceptance
+The one-page queue of all unfinished local subfeatures, active findings,
+pending tests and external gates is
+[PENDING_WORK.md](PENDING_WORK.md).
+
+**Last updated:** 2026-07-29 (F07 final local evidence reconciliation)
+**Repository commit under test:** `cc5049e` plus active reviewed F07 worktree
+**Working-tree context:** F05 and F06 are locally committed. F07 now includes
+the Java/PostgreSQL V21–V33 hardening chain. The focused backend gate passes 73
+unit + 45 integration tests; capacity passes 73 + 2 with all measured local
+targets; F07/F05/F06 system lanes pass 7/7, 4/4 and 6/6; and the final browser
+matrix passes 274/274 after preserved 268/274 and exact 7/7 reruns. Final
+frontend passes typecheck, lint (0 errors/6 non-blocking Fast Refresh warnings),
+Vitest (24 files/92 tests), build (3,006 modules; 586.90 kB largest-chunk
+advisory) and diff-check. F07 harness/schema gates pass. Complete Maven passed
+73 unit + 217 integration tests (290/290), with zero failures/errors/skips.
+The earlier R2 215/217 integration result remains preserved; its worker counts
+were isolated by assigning that IT a dedicated database. Live providers,
+production BFF/identity,
+legal/privacy decisions, production-like soak/DR/deployment and human approval
 remain open and must not be represented as local completion or release
 acceptance.
 
@@ -27,9 +35,9 @@ acceptance.
 | F02 Workforce/attendance | Reviewed local vertical accepted; broader feature partial | Effective employee/lifecycle reads, allocations, self-only employee discovery and commands, attendance projection/punches, missing-checkout handling, immutable per-working-date leave allocation/ledger, regularization submission, complete allocated-month snapshot/reopen lineage, effective capability fail-closed checks, API/UI docs and SDLC review artifacts | greytHR discovery/sync/reconciliation/cutover; calendar/policy admin UI; leave approval/cancellation; regularization review/dual-control correction; breaks/overnight shifts; CSV imports; real BFF/provider/browser-to-Java/PostgreSQL staging E2E | 7 F02 cases passing as part of the 26-case browser run; prior integrated frontend/Java/PostgreSQL suite recorded green | None in latest local lanes; external full-stack lane unavailable |
 | F03 Delivery/Linear | Provider-neutral local vertical reviewed; broader feature partial | PostgreSQL/Flyway delivery schema, plan/create/submit/approval/freeze/revision services, exact checksum/baseline evidence, recorded Linear link/current/snapshot and signed-webhook processing, tenant/security/OpenAPI checks, delivery UI/integration-health states and final documentation; V10 resolves reviewed local P0 integrity findings | Local P1 queue/retry/dead-letter/replay, reconciliation, exhaustive quorum/cycle/allocation/perimeter and Swagger/least-privilege coverage; live Linear OAuth/PKCE/GraphQL/webhook/mail; real BFF-to-Java-to-PostgreSQL and tenant-authorized provider acceptance | 47 frontend tests, 49 Spring/Testcontainers tests, and 26/26 intercepted Playwright cases (8 F03/cross-feature) passing | No unresolved local P0; local P1 and external/full-stack gates remain open |
 | F04 Certification/confirmation | Local provider-neutral vertical complete; release acceptance blocked | Java/PostgreSQL/Flyway V11–V13 vertical, secured APIs/OpenAPI, immutable lineage, local workers/F05 handoff, React vendor/review/governance/in-app flows, final V13 P1 fixes and consolidated harness documentation | Pre-V13 data audit/remediation, live sender/mailbox/storage, deployment grants/platform controls, SSO/OTP/step-up, F05 consumer acceptance, and non-intercepted browser/BFF/Java/PostgreSQL acceptance | **Root verified:** 111 backend (109 integration + 2 unit), 64 frontend, 59 intercepted Playwright (33 F04 + 26 prior) | Final independent GO: no remaining local P0/P1 in new-write paths; external/deployment/data/system gates remain open |
-| F05 Evidence/invoice/reporting | Implemented and locally quality-gated; release acceptance blocked | Flyway V14–V16 finance schema, scoped APIs/OpenAPI, immutable exact invoice/package lineage, private storage/scan/render adapters, package/invoice/Procurement/payment/report/export workflows, React finance workspaces, SDLC/API/UI/runbook docs, independent review fixes, full local quality gate | Performance/large-fixture/load evidence; production provider/deployment/Procurement acceptance | **Full backend:** 154/154 (11 unit + 143 integration); **frontend:** typecheck, build and 88/88 Vitest; **browser:** 69/69 combined Playwright; **system:** 3/3 isolated Spring/Flyway/PostgreSQL | No failing local quality-gate test; performance/scale and G4 are ACTION_REQUIRED |
+| F05 Evidence/invoice/reporting | Implemented and locally quality-gated; release acceptance blocked | Flyway V14–V16 finance schema, scoped APIs/OpenAPI, immutable exact invoice/package lineage, private storage/scan/render adapters, package/invoice/Procurement/payment/report/export workflows, React finance workspaces, SDLC/API/UI/runbook docs, independent review fixes, full local quality gate | Production provider/deployment/Procurement acceptance and production-like scale approval | **Full backend:** 154/154 (11 unit + 143 integration); **frontend:** typecheck, build and 88/88 Vitest; **browser:** 69/69 combined Playwright; **current system:** 4/4 isolated Spring/Flyway/PostgreSQL | No failing local quality-gate test; external performance/scale and G4 are ACTION_REQUIRED |
 | F06 Historical migration | Implemented and locally quality-gated; production cutover blocked | Flyway V17–V20, 14 templates and authoritative domain adapters, secure staged upload/scan/parse/validate, dependency/duplicate controls, exact reconciliation, server-derived dual SoD, immutable partial policy, atomic commit/provenance/compensation, rejected-only reprocess, retro workflow, signed pagination, recovery metrics/worker, Migration Center and complete SDLC/API/UI/runbook artifacts | Approved production scanner/storage, controlled 100k-row capacity evidence, source-owner mapping/sign-off, backup/restore checkpoint and masked rehearsal | **Backend:** 172/172 (14 unit + 158 integration); **frontend:** typecheck/build and 90/90 Vitest; **browser:** 74/74 intercepted; **system:** 6/6 real local journeys | None in final local gates; external cutover prerequisites remain |
-| F07 Hardening/go-live | Detailed planning complete; implementation next | 85-task local/external catalog and 76-case test catalog with explicit release boundaries | Security/least-privilege, observability, supply chain, performance, accessibility, recovery, rollout, documentation, full regression and external sign-offs | Task/test catalogs pass diff validation | Codegen not started |
+| F07 Hardening/go-live | Local engineering/review green; commit-bound/external release evidence pending; production blocked | 85-task/76-case catalogs; production Flyway V1–V33; DB/worker least privilege; retention/legal hold; feature flags; HTTP/security and telemetry controls; provider authority/lineage; capacity/accessibility; bounded release/DR/supply-chain harness; complete SDLC documentation | Local commit and commit-bound compatibility/supply-chain/restore/rollback evidence; all external gates | Frontend **92/92** plus static/build; focused backend **73+45**; capacity **73+2**; systems **7/7, 4/4, 6/6**; browser **274/274**; Maven R3 **290/290**; Terra review no P0–P3 | No failing current local regression/review lane. Production provider/legal/identity/deployment/soak/DR/manual/UAT approval remains `ACTION_REQUIRED / NO-GO`. |
 
 ## Open issues and blockers
 
@@ -58,6 +66,10 @@ acceptance.
 | STATUS-BLOCK-021 | F05 | Release blocker; external | Product/security/operations/Procurement | Production object storage/scanner/renderer, production OIDC/BFF and database grants, retention/legal-hold approval, backup/restore infrastructure, Procurement package sign-off and AP/ERP acceptance are `ACTION_REQUIRED`. Local adapters and signed synthetic-JWT E2E do not close these gates. |
 | STATUS-ISSUE-022 | F06 | Resolved local quality gate | Engineering/QA | Independent review corrections are closed by V19/V20 and service/DTO fixes. Focused 14-unit + 15-integration, full 172/172 backend, 90/90 frontend, 74/74 combined browser and 6/6 real local system lanes pass. |
 | STATUS-BLOCK-023 | F06 | Release blocker; external | Security/operations/data owners | Select/configure the approved production scanner and object storage, approve real template mappings, and execute the masked controlled-environment rehearsal. The local fail-closed scanner and synthetic system lane do not close this gate. |
+| STATUS-ISSUE-024 | F07 | Resolved locally/review closed | Engineering/QA | `PEND-F07-001` through `PEND-F07-011` are implemented. Maven R3 passes 290/290 and final Terra review closed with no P0–P3 finding; commit-bound/external evidence remains. |
+| STATUS-ISSUE-025 | F07 | Resolved infrastructure cause | Engineering/QA | Prior PostgreSQL/Docker contention caused long waits. Runners use one serialized digest-pinned PostgreSQL 18 container, tmpfs storage, host TCP readiness and bounded service/overall deadlines; subsequent focused/system lanes complete. |
+| STATUS-BLOCK-026 | F07 | Release blocker; external | Product/security/legal/operations/provider owners | Production OIDC, secrets, provider services, legal/privacy/retention approval, production-like capacity/soak, backup/restore, observability/on-call and named release approvals require external evidence. Local synthetic evidence cannot convert these gates to `PASS`. |
+| STATUS-ISSUE-027 | F07 | Resolved in focused verification | Backend/database/operations | Worker isolation is implemented and covered by the green focused gate: API schedulers default off; non-web Flyway-off profiles enable one scheduler; certification/finance and migration use distinct NOLOGIN capabilities; migration source bytes require a live random lease; startup verifies the exact login/capability. |
 
 Detailed F01 review dispositions are in
 [F01 FIXES.md](features/01-identity-core/FIXES.md).
@@ -118,6 +130,21 @@ platform-hardening, and full-stack acceptance gates in
 | 2026-07-28 | Final reviewed F06 worktree | `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build` | **Passed** | Typecheck/build pass; lint has 0 errors and 6 inherited Fast Refresh warnings; Vitest is 90/90. |
 | 2026-07-28 | Final reviewed F06 worktree | `npm run e2e` | **Passed: 74/74** | Complete F00–F06 intercepted Chromium regression, including five F06 Migration Center flows. |
 | 2026-07-28 | Final reviewed F06 worktree | `npm run e2e:migration:system` | **Passed: 6/6** | Real local Vite/Spring Security/Flyway V1–V20/PostgreSQL/JWKS journeys; not production scanner/storage/OIDC/source-owner acceptance. |
+| 2026-07-28 | Active F07 worktree | `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`, `node scripts/f07/load-harness-self-test.mjs` | **Passed:** typecheck/build; 92/92 Vitest; 2/2 harness tests | ESLint has 0 errors and 6 inherited Fast Refresh warnings. |
+| 2026-07-28 | Active F07 worktree, pre-readiness remediation | Focused F07 retention/capacity/bootstrap PostgreSQL runs | **Infrastructure failure/hang preserved** | PostgreSQL 18 became ready after Testcontainers' fixed log timeout; a later host-port check and Docker `exec` blocked indefinitely. No product assertion executed. Digest-pinned bounded log readiness and child-process timeouts are the corrective actions. |
+| 2026-07-29 | F07 pre-final focused worktree | Focused backend unit/integration gate | **Passed: 73 unit + 45 integration** | Zero failures/errors/skips; exact failed-case rerun also passed 73 + 3. Production Flyway chain is V1–V33. |
+| 2026-07-29 | F07 capacity first run | Capacity gate | **Failed target: dashboard 3,202ms > 2,500ms** | Preserved performance failure; query/index remediation followed. |
+| 2026-07-29 | F07 final capacity worktree | Capacity gate | **Passed: 73 unit + 2 capacity** | Dashboard 101ms; check-in p95 404ms; replay p95 69ms; 10k search p95 2ms; 300k report p95 9ms. Local synthetic evidence only. |
+| 2026-07-29 | F07 system first complete debugging cycle | Ordered F07 system suite | **Failures preserved** | Exposed authority, timestamp/header fixture gaps plus finance source lineage, confirmation predecessor, invalidation handoff and Linear attempt-observability product defects; all mapped in F07 fixes. |
+| 2026-07-29 | F07 final system worktree | Ordered F07 system suite | **Passed: 7/7** | E2E-01/02/03/04/05/07/10 pass through local Vite/Spring Security/Flyway V1–V33/PostgreSQL. |
+| 2026-07-29 | F07 cross-feature system worktree | `npm run e2e:finance:system` and `npm run e2e:migration:system` | **Passed: 4/4 and 6/6** | Covers E2E-06/E2E-09 and E2E-08 locally; no production provider/identity/source-owner acceptance. |
+| 2026-07-29 | F07 first complete browser matrix | `npm run e2e` | **268 passed, 6 failed** | Migration upload race, four UTF-8 multipart instrumentation assertions and one Firefox `_page` creation error preserved. |
+| 2026-07-29 | F07 exact browser failure slice | Playwright exact failed slice | **Passed: 7/7** | Bounded migration polling and exact `FormData File.name` capture verified; Firefox error did not reproduce. |
+| 2026-07-29 | F07 final complete browser worktree | `npm run e2e` | **Passed: 274/274** | Zero failed/skipped/flaky across all configured desktop, auth, feature, Firefox, WebKit, Android and iOS projects. |
+| 2026-07-29 | F07 final worktree | Complete Maven verification | **73 unit pass; 215/217 integration pass (2 failed)** | Both failures are in `DeliveryCommitmentOperationsWorkerIT`: configured replay-safe and retry cases observed two provider effects instead of exactly one. Run finished in 39:23 under the corrected 3,600s watchdog; two ~16–17m host thread-starvation/clock-leap pauses are preserved. |
+| 2026-07-29 15:49:59 IST | F07 dedicated-worker-database worktree | Complete Maven verification R3 | **Passed: 73 unit + 217 integration (290/290)** | Zero failures/errors/skips; BUILD SUCCESS in 03:21. The dedicated `vms_workflow_delivery_commitment_worker` test database removes R2 cross-suite state. |
+| 2026-07-29 | F07 final frontend worktree | `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build`, `git diff --check` | **Passed: 24 files/92 Vitest tests** | Typecheck/build/diff pass; lint 0 errors/6 non-blocking Fast Refresh warnings; build transformed 3,006 modules and reported a non-blocking 586.90 kB largest-chunk optimization advisory. |
+| 2026-07-29 | F07 final independent review | Terra code/test/architecture/security review | **Closed: no P0–P3 finding** | Local engineering review gate closed; production and commit-bound evidence gates remain. |
 | 2026-07-26 (baseline commit) | `221a7c9` | `mvn -B -f backend/pom.xml verify` | 14 passed, 0 failed | None; Spring HTTP/JWT/Testcontainers PostgreSQL lane |
 | 2026-07-26 (baseline commit) | `221a7c9` | `npm run test` | 15 passed, 0 failed | None; frontend unit/contract lane |
 

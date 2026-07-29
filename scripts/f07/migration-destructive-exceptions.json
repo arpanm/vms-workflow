@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "approvedAt": "2026-07-28T00:00:00Z",
+      "expiresAt": "2099-01-01T00:00:00Z",
+      "migration": "V16__finance_share_validity_windows.sql",
+      "operations": [
+        "DROP_OBJECT"
+      ],
+      "owner": "finance-schema-owner",
+      "reason": "Historical append-only migration replaces the prior uniqueness index immediately with effective-dated validity constraints.",
+      "reviewedBy": "independent-database-reviewer",
+      "sha256": "df0fbf81be53e8e6f0190449365a45d7d9d2735bc9ea431e57e6d4bb500174bb"
+    }
+  ],
+  "schemaVersion": 1
+}
