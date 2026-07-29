@@ -25,7 +25,7 @@ issues and external-only gates is
 | F04 Certification and confirmation | Local Java/PostgreSQL + React provider-neutral vertical verified: 111 backend, 64 frontend and 59 intercepted Playwright tests pass; provider/full-stack gates remain open | [F04 evidence](docs/features/04-certification-confirmation/CODEGEN.md), [API](docs/features/04-certification-confirmation/API_DOCUMENTATION.md), [UI](docs/features/04-certification-confirmation/UI_DOCUMENTATION.md) |
 | F05 evidence, invoice and reporting | Locally quality-gated, including 4/4 isolated system cases and exact E2E-06/E2E-09 evidence; performance/scale and external release gates remain ACTION_REQUIRED | [F05 status](docs/FEATURE_STATUS.md), [F05 E2E catalog](docs/testing/E2E_REGRESSION_CASES.md), [F05 closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md) |
 | F06 historical migration | Locally quality-gated: 172/172 backend, 90/90 Vitest, 74/74 combined Playwright and 6/6 real local system journeys; production scanner/storage/capacity/rehearsal gates remain ACTION_REQUIRED | [F06 status](docs/FEATURE_STATUS.md), [tasks](docs/features/06-historical-migration/TASKS.md), [tests](docs/features/06-historical-migration/TEST_CASES.md), [review](docs/features/06-historical-migration/FINAL_REVIEW.md), [API](docs/features/06-historical-migration/API_DOCUMENTATION.md), [UI](docs/features/06-historical-migration/UI_DOCUMENTATION.md) |
-| F07 hardening/go-live | V1–V33 local lanes pass: frontend 92/92 + static/build, Maven 290/290, focused backend 73+45, capacity 73+2, systems 7/7 + 4/4 + 6/6 and browser 274/274; Terra review closed with no P0–P3. Commit-bound/external production gates remain NO-GO/ACTION_REQUIRED. | [status](docs/FEATURE_STATUS.md), [pending work](docs/PENDING_WORK.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md), [testing guide](docs/testing/README.md), [tasks](docs/features/07-hardening-go-live/TASKS.md), [tests](docs/features/07-hardening-go-live/TEST_CASES.md), [automation](docs/features/07-hardening-go-live/TEST_AUTOMATION.md), [review status](docs/features/07-hardening-go-live/FINAL_REVIEW.md), [open issues](docs/features/07-hardening-go-live/FINAL_ISSUES.md) |
+| F07 hardening/go-live | V1–V33 local lanes pass: frontend 92/92 + static/build, Maven R3/R4 290/290, focused backend 73+45, capacity 73+2, systems 7/7 + 4/4 + 6/6, browser 274/274 and exact supply-chain zero findings; Terra reviews closed with no P0–P3. Commit-bound/external production gates remain NO-GO/ACTION_REQUIRED. | [status](docs/FEATURE_STATUS.md), [pending work](docs/PENDING_WORK.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md), [testing guide](docs/testing/README.md), [tasks](docs/features/07-hardening-go-live/TASKS.md), [tests](docs/features/07-hardening-go-live/TEST_CASES.md), [automation](docs/features/07-hardening-go-live/TEST_AUTOMATION.md), [review status](docs/features/07-hardening-go-live/FINAL_REVIEW.md), [open issues](docs/features/07-hardening-go-live/FINAL_ISSUES.md) |
 
 Production release remains blocked until the identity/BFF decision and staging
 tenant-isolation gate are complete. Local feature development uses explicit
@@ -91,10 +91,13 @@ browser matrix passes 274/274. Definitive complete Maven R3 passes 73 unit +
 217 integration (290/290), zero failures/errors/skips, in 03:21. The earlier
 R2 215/217 integration result and its Docker pauses remain preserved; assigning
 the delivery-worker IT its own database removed the cross-suite state.
+Maven R4 repeats 290/290 in 02:48 on digest-pinned Chainguard PostgreSQL 18.4,
+and the exact remediated supply-chain gate passes every report, both release
+artifacts and the database image with zero findings.
 Final frontend checks pass typecheck, lint (0 errors/6 Fast Refresh warnings),
 Vitest (24 files/92 tests), production build (3,006 modules; 586.90 kB
-largest-chunk optimization advisory) and diff-check. Final Terra review closed
-with no P0–P3 finding.
+largest-chunk optimization advisory) and diff-check. Final Terra product and
+supply-remediation reviews closed with no open P0–P3 finding.
 
 `npm run regression` combines frontend checks, Maven/Testcontainers
 PostgreSQL integration and Playwright Chromium browser-contract tests. The

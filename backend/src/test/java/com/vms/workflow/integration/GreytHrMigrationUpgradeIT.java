@@ -487,13 +487,14 @@ class GreytHrMigrationUpgradeIT {
     private PostgreSQLContainer<?> postgres(String databaseName) {
         return new PostgreSQLContainer<>(
             DockerImageName.parse(
-                "postgres:18-alpine@sha256:"
-                    + "9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595"
-                    + "148e674e0a3181de15")
+                "cgr.dev/chainguard/postgres@sha256:"
+                    + "dc2f04037c1044a22af76cee4de70b9111885b17c561b93"
+                    + "9d7ed70103d100759")
                 .asCompatibleSubstituteFor("postgres"))
             .withDatabaseName(databaseName)
             .withUsername("upgrade_admin")
             .withPassword("upgrade-password")
+            .withCommand("-c", "fsync=off")
             .withTmpFs(Map.of(
                 VmsPostgreSqlContainerProvider.POSTGRES_DATA_DIRECTORY,
                 VmsPostgreSqlContainerProvider.POSTGRES_TMPFS_OPTIONS))

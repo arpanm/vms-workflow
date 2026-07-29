@@ -47,6 +47,8 @@ import {
 } from "./backup-drill.mjs";
 import {
   applyMediumRiskDispositions,
+  createLicenseInventory,
+  evaluateLicenseExpression,
   parseNpmAuditExecution,
   supplyChainPlan,
   validateImageReference,
@@ -1498,11 +1500,105 @@ async function executeSelfTests(temporary) {
     "supply-chain plan must include real SAST and built-artifact scanning",
   );
   validateImageReference(
-    "postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15",
+    "cgr.dev/chainguard/postgres@sha256:dc2f04037c1044a22af76cee4de70b9111885b17c561b939d7ed70103d100759",
   );
   await expectReject(
     async () => validateImageReference("postgres:18-alpine"),
     "mutable image tags must never enter supply-chain scanning",
+  );
+  await expectReject(
+    async () =>
+      validateImageReference(
+        "gcr.io/INVALID/vms@sha256:"
+          + "0".repeat(64),
+      ),
+    "OCI repository names must be lower case",
+  );
+  const workerDeployment = await readFile(
+    repoPath("backend/deploy/f07-workers.yaml"),
+    "utf8",
+  );
+  const workerImages = [...workerDeployment.matchAll(
+    /^\s+image:\s+(\S+)\s*$/gm,
+  )].map((match) => match[1]);
+  assert(
+    workerImages.length === 4,
+    "every F07 worker deployment must declare one immutable image",
+  );
+  for (const workerImage of workerImages) {
+    validateImageReference(workerImage);
+  }
+  const licensePolicy = {
+    allowed: [
+      "Apache-2.0",
+      "GPL-2.0-only WITH classpath-exception",
+      "ISC",
+      "MIT",
+    ],
+    denied: ["AGPL-3.0-only", "GPL-2.0-only", "GPL-3.0-only"],
+    missingLicenseAction: "FAIL",
+    schemaVersion: 1,
+  };
+  for (const expression of [
+    "MIT",
+    "MIT AND ISC",
+    "MIT OR GPL-3.0-only",
+    "GPL-2.0-only WITH classpath-exception",
+  ]) {
+    assert(
+      evaluateLicenseExpression(expression, licensePolicy).approved,
+      `approved SPDX expression must pass: ${expression}`,
+    );
+  }
+  for (const expression of [
+    "AGPL-3.0-only",
+    "MIT AND LicenseRef-Unknown",
+    "GPL-2.0-only WITH unknown-exception",
+    "MIT AND",
+  ]) {
+    assert(
+      !evaluateLicenseExpression(expression, licensePolicy).approved,
+      `forbidden, unknown or malformed SPDX expression must fail: ${expression}`,
+    );
+  }
+  const syntheticManifestInventory = createLicenseInventory(
+    {
+      components: [
+        { name: "backend/pom.xml", type: "application" },
+        {
+          licenses: [{ expression: "MIT AND ISC" }],
+          name: "runtime-library",
+          purl: "pkg:npm/runtime-library@1.0.0",
+          type: "library",
+          version: "1.0.0",
+        },
+      ],
+    },
+    licensePolicy,
+  );
+  assert(
+    syntheticManifestInventory.result === "PASS" &&
+      syntheticManifestInventory.components.length === 1,
+    "license inventory must exclude scanner-input manifests and evaluate SPDX expressions",
+  );
+  const prohibitedApplicationInventory = createLicenseInventory(
+    {
+      components: [
+        {
+          licenses: [{ expression: "AGPL-3.0-only" }],
+          name: "third-party-server",
+          purl: "pkg:generic/third-party-server@1.0.0",
+          type: "application",
+          version: "1.0.0",
+        },
+      ],
+    },
+    licensePolicy,
+  );
+  assert(
+    prohibitedApplicationInventory.result === "FAIL" &&
+      prohibitedApplicationInventory.components.length === 1,
+    "third-party application components must never bypass license policy",
   );
   const undisposedMedium = applyMediumRiskDispositions(
     {
@@ -1582,7 +1678,7 @@ async function executeSelfTests(temporary) {
     images: [
       {
         image:
-          "postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15",
+          "cgr.dev/chainguard/postgres@sha256:dc2f04037c1044a22af76cee4de70b9111885b17c561b939d7ed70103d100759",
         result: "PASS",
       },
     ],

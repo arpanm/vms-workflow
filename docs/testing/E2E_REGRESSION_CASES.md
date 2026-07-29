@@ -196,6 +196,10 @@ lane.
 | 2026-07-29 15:49:59 IST | F07 complete Maven R3 | `mvn -B -f backend/pom.xml verify` | **Passed: 73 unit + 217 integration (290/290)** | Zero failures/errors/skips; BUILD SUCCESS in 03:21. Dedicated delivery-worker test database isolates provider-effect counts from prior suites. |
 | 2026-07-29 | F07 final frontend/static lane | `npm run typecheck`; `npm run lint`; `npm run test`; `npm run build`; `git diff --check` | **Passed: 24 files/92 Vitest tests** | Typecheck/build/diff pass; lint 0 errors/6 non-blocking Fast Refresh warnings; 3,006 modules transformed; 586.90 kB largest-chunk optimization advisory. |
 | 2026-07-29 | F07 final independent review | Terra code/test/architecture/security review | **Closed: no P0–P3 finding** | Commit-bound and external production evidence remain open. |
+| 2026-07-29 | F07 first exact supply-chain execution | `npm run f07:supply-chain:run` | **Failed closed** | Found vulnerable JDBC/Jackson versions, findings in the prior PostgreSQL image, worker deployment-policy gaps and license-inventory defects; none were waived or hidden. |
+| 2026-07-29 | F07 remediated supply-chain execution | `npm run f07:supply-chain:run` | **Passed: zero findings** | Secret, dependency, SAST, license, misconfiguration, artifact, image and CycloneDX gates pass for both release artifacts and digest-pinned Chainguard PostgreSQL 18.4. Clean-commit binding remains. |
+| 2026-07-29 | F07 PostgreSQL 18.4 Maven R4 | `mvn -B -f backend/pom.xml verify` | **Passed: 73 unit + 217 integration (290/290)** | Zero failures/errors/skips; BUILD SUCCESS in 02:48 on the remediated database image contract. |
+| 2026-07-29 | F07 supply-remediation independent review | Terra code/security/test/docs review | **Closed: no open P0–P3 finding** | Verified fail-closed third-party application license handling, lowercase immutable worker image references, adversarial self-tests and reconciled evidence documentation. |
 
 Append a row for every feature-completion regression run. Never overwrite a
 failure: record the later passing run as a new row and link the issue/fix in

@@ -38,14 +38,15 @@ identity and authorization from JWT plus PostgreSQL assignments. PostgreSQL is
 the only application database. No Lovable, Supabase, Cloudflare or direct
 browser-to-database dependency was introduced.
 
-## Verification state
+## Verification state at initial code-generation handoff
 
-Focused unit/integration and browser accessibility runs were observed during
-development. The latest consolidated Maven, frontend, full Playwright,
-real-system, operations and supply-chain reruns are still pending and must be
-recorded rather than inferred. Production OIDC, secret manager, scanner,
-storage, observability/on-call, backup/PITR, capacity/soak, legal/privacy and
-named approvals remain `ACTION_REQUIRED`.
+At this historical handoff, focused unit/integration and browser accessibility
+runs had been observed, while the consolidated lanes were still pending.
+Those later results—including the exact post-remediation supply-chain pass and
+Maven R4 290/290—are recorded in [TEST_AUTOMATION.md](TEST_AUTOMATION.md),
+[CHANGELOG.md](CHANGELOG.md) and [FINAL_REVIEW.md](FINAL_REVIEW.md).
+Production OIDC, secret manager, scanner, storage, observability/on-call,
+backup/PITR, capacity/soak, legal/privacy and named approvals remain
+`ACTION_REQUIRED`.
 
-See [TEST_AUTOMATION.md](TEST_AUTOMATION.md), [FIXES.md](FIXES.md) and
-[FINAL_REVIEW.md](FINAL_REVIEW.md).
+See [FIXES.md](FIXES.md) for the post-review code-generation corrections.

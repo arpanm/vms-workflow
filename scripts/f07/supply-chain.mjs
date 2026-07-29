@@ -287,11 +287,178 @@ export function applyMediumRiskDispositions(report, inventory, now = new Date())
   };
 }
 
-async function licenseInventory(sbom) {
-  const policy = await readJson(repoPath("scripts/f07/license-policy.json"));
+function tokenizeSpdx(expression) {
+  const tokens = [];
+  let offset = 0;
+  while (offset < expression.length) {
+    const remaining = expression.slice(offset);
+    const whitespace = remaining.match(/^\s+/);
+    if (whitespace) {
+      offset += whitespace[0].length;
+      continue;
+    }
+    if (remaining[0] === "(" || remaining[0] === ")") {
+      tokens.push(remaining[0]);
+      offset += 1;
+      continue;
+    }
+    const identifier = remaining.match(/^[A-Za-z0-9][A-Za-z0-9.+-]*/);
+    if (!identifier) {
+      throw new Error(`invalid SPDX token at offset ${offset}`);
+    }
+    const value = identifier[0];
+    tokens.push(["AND", "OR", "WITH"].includes(value.toUpperCase())
+      ? value.toUpperCase()
+      : value);
+    offset += value.length;
+  }
+  return tokens;
+}
+
+function parseSpdxExpression(expression) {
+  const tokens = tokenizeSpdx(expression);
+  let index = 0;
+  const peek = () => tokens[index];
+  const consume = () => tokens[index++];
+
+  function primary() {
+    if (peek() === "(") {
+      consume();
+      const nested = orExpression();
+      if (consume() !== ")") {
+        throw new Error("unbalanced SPDX expression");
+      }
+      return nested;
+    }
+    const license = consume();
+    if (!license || [")", "AND", "OR", "WITH"].includes(license)) {
+      throw new Error("SPDX expression requires a license identifier");
+    }
+    if (peek() === "WITH") {
+      consume();
+      const exception = consume();
+      if (!exception || [")", "AND", "OR", "WITH"].includes(exception)) {
+        throw new Error("SPDX WITH requires an exception identifier");
+      }
+      return { exception, license, type: "WITH" };
+    }
+    return { license, type: "LICENSE" };
+  }
+
+  function andExpression() {
+    let node = primary();
+    while (peek() === "AND") {
+      consume();
+      node = { left: node, right: primary(), type: "AND" };
+    }
+    return node;
+  }
+
+  function orExpression() {
+    let node = andExpression();
+    while (peek() === "OR") {
+      consume();
+      node = { left: node, right: andExpression(), type: "OR" };
+    }
+    return node;
+  }
+
+  if (tokens.length === 0) {
+    throw new Error("SPDX expression is empty");
+  }
+  const result = orExpression();
+  if (index !== tokens.length) {
+    throw new Error("SPDX expression has trailing tokens");
+  }
+  return result;
+}
+
+function evaluateSpdxNode(node, allowed, denied) {
+  if (node.type === "LICENSE") {
+    if (denied.has(node.license)) {
+      return { approved: false, reason: `denied license ${node.license}` };
+    }
+    return allowed.has(node.license)
+      ? { approved: true }
+      : { approved: false, reason: `unapproved license ${node.license}` };
+  }
+  if (node.type === "WITH") {
+    const expression = `${node.license} WITH ${node.exception}`;
+    // A narrowly approved SPDX exception may make an otherwise denied base
+    // license acceptable; no other exception inherits that approval.
+    if (allowed.has(expression)) {
+      return { approved: true };
+    }
+    if (denied.has(expression) || denied.has(node.license)) {
+      return { approved: false, reason: `denied license ${expression}` };
+    }
+    return {
+      approved: false,
+      reason: `unapproved license ${expression}`,
+    };
+  }
+  const left = evaluateSpdxNode(node.left, allowed, denied);
+  const right = evaluateSpdxNode(node.right, allowed, denied);
+  if (node.type === "AND") {
+    return left.approved && right.approved
+      ? { approved: true }
+      : {
+          approved: false,
+          reason: [left.reason, right.reason].filter(Boolean).join("; "),
+        };
+  }
+  if (node.type === "OR") {
+    return left.approved || right.approved
+      ? { approved: true }
+      : {
+          approved: false,
+          reason: [left.reason, right.reason].filter(Boolean).join("; "),
+        };
+  }
+  return { approved: false, reason: "unsupported SPDX expression node" };
+}
+
+export function evaluateLicenseExpression(expression, policy) {
+  try {
+    return evaluateSpdxNode(
+      parseSpdxExpression(expression),
+      new Set(policy.allowed ?? []),
+      new Set(policy.denied ?? []),
+    );
+  } catch (error) {
+    return {
+      approved: false,
+      reason: `invalid SPDX expression ${expression}: ${safeError(error)}`,
+    };
+  }
+}
+
+export function createLicenseInventory(sbom, policy) {
   const allowed = new Set(policy.allowed);
   const denied = new Set(policy.denied);
-  const components = (sbom.components ?? []).map((component) => {
+  if (
+    policy.schemaVersion !== 1 ||
+    !Array.isArray(policy.allowed) ||
+    !Array.isArray(policy.denied) ||
+    policy.missingLicenseAction !== "FAIL"
+  ) {
+    throw new Error("license policy has an invalid or fail-open schema");
+  }
+  const scannerInputManifestNames = new Set([
+    "backend/pom.xml",
+    "package-lock.json",
+  ]);
+  const components = (sbom.components ?? [])
+    // Trivy emits these exact source manifests as synthetic application
+    // components without package identity. Do not exclude any other
+    // application component: it may be a shipped third-party program.
+    .filter((component) => !(
+      component.type === "application" &&
+      !component.purl &&
+      !component.version &&
+      scannerInputManifestNames.has(component.name)
+    ))
+    .map((component) => {
     const licenses = (component.licenses ?? [])
       .map((entry) => entry.license?.id ?? entry.license?.name ?? entry.expression)
       .filter(Boolean)
@@ -307,13 +474,18 @@ async function licenseInventory(sbom) {
   for (const component of components) {
     if (component.licenses.length === 0 && policy.missingLicenseAction === "FAIL") {
       findings.push(`${component.name}@${component.version ?? "unknown"}: license missing`);
+      continue;
     }
-    for (const license of component.licenses) {
-      if (denied.has(license)) {
-        findings.push(`${component.name}: denied license ${license}`);
-      } else if (!allowed.has(license)) {
-        findings.push(`${component.name}: unapproved license ${license}`);
-      }
+    const evaluations = component.licenses.map((license) =>
+      evaluateLicenseExpression(license, { allowed: [...allowed], denied: [...denied] }),
+    );
+    // Multiple CycloneDX license entries describe available choices. A
+    // component is acceptable only when at least one complete choice is
+    // policy-approved; AND operands inside a choice must all be approved.
+    if (!evaluations.some((evaluation) => evaluation.approved)) {
+      findings.push(
+        `${component.name}: ${evaluations.map((evaluation) => evaluation.reason).join(" | ")}`,
+      );
     }
   }
   return {
@@ -322,6 +494,11 @@ async function licenseInventory(sbom) {
     kind: "license-inventory",
     result: findings.length === 0 ? "PASS" : "FAIL",
   };
+}
+
+async function licenseInventory(sbom) {
+  const policy = await readJson(repoPath("scripts/f07/license-policy.json"));
+  return createLicenseInventory(sbom, policy);
 }
 
 function scanTarget(target, targetKind) {
@@ -356,7 +533,9 @@ function scanTarget(target, targetKind) {
 }
 
 export function validateImageReference(image) {
-  if (!/^[^\s@]+@sha256:[0-9a-f]{64}$/.test(image ?? "")) {
+  if (
+    !/^[a-z0-9][a-z0-9./:_-]*@sha256:[0-9a-f]{64}$/.test(image ?? "")
+  ) {
     throw new Error(`container image must be pinned by sha256 digest: ${image}`);
   }
   return image;
@@ -587,7 +766,7 @@ async function main() {
   process.exitCode = summary.result === "PASS" ? 0 : 1;
 }
 
-if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   main().catch((error) => {
     process.stderr.write(`F07 supply-chain gate failed safely: ${safeError(error)}\n`);
     process.exitCode = 1;

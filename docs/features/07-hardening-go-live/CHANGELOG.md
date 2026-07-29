@@ -41,10 +41,12 @@ mutable image provenance and output collisions.
 
 ### Verification status
 
-Focused evidence exists, including the F07 accessibility 24/30 matrix and
-isolated Firefox 6/6 recovery run. The final consolidated regression and
-post-fix review have not yet been recorded. Production/platform/provider/legal
-and organizational gates remain `ACTION_REQUIRED`.
+At this historical 2026-07-28 checkpoint, focused evidence existed, including
+the F07 accessibility 24/30 matrix and isolated Firefox 6/6 recovery run; the
+final consolidated regression and post-fix review had not yet been recorded.
+Their later results are preserved in the 2026-07-29 section below.
+Production/platform/provider/legal and organizational gates remain
+`ACTION_REQUIRED`.
 
 Preserved failures include a Vitest zero-test discovery after 92 tests passed
 and a Testcontainers bootstrap log-wait timeout after the feature-flag subset
@@ -68,6 +70,27 @@ bootstrap was bounded by a port wait; corrected focused/static reruns pass.
   Linear terminal-attempt observability.
 - Corrected system-test authority, timestamp canonicalization and version
   header setup.
+
+### Supply-chain remediation
+
+- Preserved the first exact supply-chain run as a real failed gate: it found
+  PostgreSQL JDBC 42.7.11 HIGH risk, newly published Jackson MEDIUM risks,
+  vulnerable packages in the then-current official PostgreSQL 18 Alpine image,
+  four worker deployment-policy gaps and license inventory false positives.
+- Upgraded PostgreSQL JDBC to 42.7.12 and Jackson 2/3 databind lines to 2.21.5
+  and 3.1.5.
+- Replaced all executable PostgreSQL image contracts with digest-pinned
+  Chainguard PostgreSQL 18.4; its focused Trivy scan has zero HIGH/CRITICAL
+  findings and the official entrypoint/environment contract passes a real
+  database smoke.
+- Added restricted pod and container security contexts for every F07 worker.
+- Corrected the fail-closed license inventory to exclude synthetic scanner
+  manifests, parse SPDX `AND`, `OR` and `WITH`, enumerate accepted transitive
+  licenses and continue rejecting unknown/malformed/forbidden licenses.
+- The exact full post-fix supply-chain run passes every scanner/report, both
+  release artifacts and the digest-pinned PostgreSQL image with zero findings.
+  Commit-bound provenance binding remains required after the remediation
+  commit.
 - Bounded migration browser polling and captured exact multipart filenames;
   the isolated Firefox `_page` error did not reproduce.
 

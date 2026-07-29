@@ -24,9 +24,9 @@ public final class VmsPostgreSqlContainerProvider
     private static final String DEFAULT_TAG = "18-alpine";
     private static final DockerImageName POSTGRES_IMAGE =
         DockerImageName.parse(
-            "postgres:18-alpine@sha256:"
-                + "9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595"
-                + "148e674e0a3181de15")
+            "cgr.dev/chainguard/postgres@sha256:"
+                + "dc2f04037c1044a22af76cee4de70b9111885b17c561b93"
+                + "9d7ed70103d100759")
             .asCompatibleSubstituteFor("postgres");
     private static final Duration STARTUP_TIMEOUT = Duration.ofMinutes(3);
     public static final String POSTGRES_DATA_DIRECTORY =
@@ -52,6 +52,10 @@ public final class VmsPostgreSqlContainerProvider
         }
         PostgreSQLContainer<?> container =
             new PostgreSQLContainer<>(POSTGRES_IMAGE);
+        // The Chainguard image's immutable entrypoint already includes
+        // `postgres`; replace Testcontainers' default `postgres -c ...`
+        // command with only the server arguments.
+        container.withCommand("-c", "fsync=off");
         container.withTmpFs(Map.of(
             POSTGRES_DATA_DIRECTORY, POSTGRES_TMPFS_OPTIONS));
         container.waitingFor(

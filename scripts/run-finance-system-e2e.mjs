@@ -113,7 +113,7 @@ try {
     "--env", "POSTGRES_DB=vms_workflow",
     "--env", "POSTGRES_USER=vms",
     "--env", `POSTGRES_PASSWORD=${postgresPassword}`,
-    "postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15",
+    "cgr.dev/chainguard/postgres@sha256:dc2f04037c1044a22af76cee4de70b9111885b17c561b939d7ed70103d100759",
   ], 60_000);
   const postgresPort = mappedPostgresPort();
   await waitForPostgres(postgresPort);

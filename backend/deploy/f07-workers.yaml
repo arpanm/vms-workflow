@@ -16,9 +16,13 @@ spec:
         app: vms-delivery-commitment-worker
     spec:
       automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: worker
-          image: registry.example.invalid/vms-workflow@sha256:REPLACE_WITH_RELEASE_DIGEST
+          image: gcr.io/example/vms-workflow@sha256:0000000000000000000000000000000000000000000000000000000000000000
           args:
             - --spring.profiles.active=worker-delivery-commitment
           envFrom:
@@ -28,6 +32,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+            privileged: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
 ---
@@ -46,9 +51,13 @@ spec:
         app: vms-certification-worker
     spec:
       automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: worker
-          image: registry.example.invalid/vms-workflow@sha256:REPLACE_WITH_RELEASE_DIGEST
+          image: gcr.io/example/vms-workflow@sha256:0000000000000000000000000000000000000000000000000000000000000000
           args:
             - --spring.profiles.active=worker-certification
           envFrom:
@@ -58,6 +67,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+            privileged: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
 ---
@@ -76,9 +86,13 @@ spec:
         app: vms-finance-worker
     spec:
       automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: worker
-          image: registry.example.invalid/vms-workflow@sha256:REPLACE_WITH_RELEASE_DIGEST
+          image: gcr.io/example/vms-workflow@sha256:0000000000000000000000000000000000000000000000000000000000000000
           args:
             - --spring.profiles.active=worker-finance
           envFrom:
@@ -88,6 +102,7 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+            privileged: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true
 ---
@@ -106,9 +121,13 @@ spec:
         app: vms-migration-worker
     spec:
       automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: worker
-          image: registry.example.invalid/vms-workflow@sha256:REPLACE_WITH_RELEASE_DIGEST
+          image: gcr.io/example/vms-workflow@sha256:0000000000000000000000000000000000000000000000000000000000000000
           args:
             - --spring.profiles.active=worker-migration
           envFrom:
@@ -118,5 +137,6 @@ spec:
             allowPrivilegeEscalation: false
             capabilities:
               drop: ["ALL"]
+            privileged: false
             readOnlyRootFilesystem: true
             runAsNonRoot: true

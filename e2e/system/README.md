@@ -18,7 +18,8 @@ npm run e2e:migration:system
 Prerequisites are Docker, Java 25, Maven, Node.js dependencies and the
 Playwright Chromium browser. The runner:
 
-1. creates an ephemeral `postgres:18-alpine` container on a random local port;
+1. creates an ephemeral digest-pinned Chainguard PostgreSQL 18 container on a
+   random local port;
 2. starts a process-local JWKS endpoint and signs one-hour JWTs for the
    synthetic vendor, Procurement, finance, governance and outsider identities;
 3. starts Spring Boot with production migrations plus the existing synthetic

@@ -22,7 +22,7 @@ import {
 import { staticPreflight } from "./migration-preflight.mjs";
 
 const image =
-  "postgres:18-alpine@sha256:9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595148e674e0a3181de15";
+  "cgr.dev/chainguard/postgres@sha256:dc2f04037c1044a22af76cee4de70b9111885b17c561b939d7ed70103d100759";
 
 function checked(label, args, deadline, timeoutMs = 30_000) {
   const remainingMs = Math.floor(deadline - performance.now());

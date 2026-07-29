@@ -29,13 +29,14 @@ class F07MigrationBootstrapIT {
         try (PostgreSQLContainer<?> postgres =
                  new PostgreSQLContainer<>(
                      DockerImageName.parse(
-                         "postgres:18-alpine@sha256:"
-                             + "9a8afca54e7861fd90fab5fdf4c42477a6b1cb7d293595"
-                             + "148e674e0a3181de15")
+                         "cgr.dev/chainguard/postgres@sha256:"
+                             + "dc2f04037c1044a22af76cee4de70b9111885b17c561b93"
+                             + "9d7ed70103d100759")
                          .asCompatibleSubstituteFor("postgres"))
                      .withDatabaseName("f07_bootstrap")
                      .withUsername("bootstrap_admin")
                      .withPassword("bootstrap-admin-password")
+                     .withCommand("-c", "fsync=off")
                      .waitingFor(Wait.forLogMessage(
                              ".*database system is ready to accept connections.*\\s",
                              2)

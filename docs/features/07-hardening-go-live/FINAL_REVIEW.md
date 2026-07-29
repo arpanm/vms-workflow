@@ -15,8 +15,9 @@ backup/restore harnesses.
 Independent backend and operations reviews found substantive P0/P1 issues. The
 current code contains remediations documented in [FIXES.md](FIXES.md).
 Focused backend, capacity, local-system, static, browser and definitive complete
-Maven evidence is green. Final Terra review closed with no P0–P3 finding.
-Commit-bound release evidence is not yet recorded.
+Maven evidence is green. Final product and post-supply-remediation Terra
+reviews closed with no open P0–P3 finding. Commit-bound release evidence is not
+yet recorded.
 
 ## Evidence available now
 
@@ -37,18 +38,25 @@ Commit-bound release evidence is not yet recorded.
 - production Flyway schema: **V1–V33**; V1000+ remains test-fixture-only;
 - complete Maven verification R3: **PASS — 73 unit + 217 integration
   (290/290)**, zero failures/errors/skips, BUILD SUCCESS in 03:21;
+- complete Maven verification R4 on digest-pinned Chainguard PostgreSQL 18.4:
+  **PASS — 73 unit + 217 integration (290/290)**, zero failures/errors/skips,
+  BUILD SUCCESS in 02:48;
+- exact remediated supply-chain gate: **PASS**, with zero findings in every
+  scanner/report, both release artifacts and the database image;
 - preserved Maven R2: 73 unit pass and 215/217 integration pass in 39:23, with
   two approximately 16–17 minute host starvation/clock-leap pauses. Its two
   worker counts came from non-dedicated test-database state; the dedicated
   worker database correction passes in R3.
-- final independent Terra review: **CLOSED**, no P0–P3 finding.
+- final independent Terra product review and supply-remediation re-review:
+  **CLOSED**, no open P0–P3 finding.
 
 This is strong local development evidence. It is still not production
 acceptance.
 
 ## Required local closure
 
-1. Preserve R2 and R3 in commit-bound evidence.
+1. Preserve R2/R3/R4 and the exact remediated supply-chain rerun in
+   commit-bound evidence.
 2. Execute commit-bound migration compatibility, supply-chain, backup/restore
    and rollback/release evidence against the exact local commit.
 3. Keep the release verdict fail-closed for every missing/failed/expired or

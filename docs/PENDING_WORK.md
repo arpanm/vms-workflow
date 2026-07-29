@@ -7,9 +7,9 @@ feature task and test catalogs remain authoritative for implementation
 requirements; this file answers what is still pending now.
 
 **Last reconciled:** 2026-07-29 (final local F07 evidence)
-**Committed base under active work:** `cc5049e`
-**Current implementation scope:** local commit and exact
-commit-bound release evidence after definitive complete Maven R3 passed.
+**Committed base under active work:** `9f4ac5a`
+**Current implementation scope:** preserve the reviewed supply-chain
+remediation in a local commit and bind its exact rerun to that clean commit.
 **Production release state:** `NO-GO / ACTION_REQUIRED`; local synthetic or
 recorded adapters cannot satisfy production provider, legal, identity,
 capacity, recovery or human approval gates.
@@ -21,8 +21,9 @@ capacity, recovery or human approval gates.
 | F07 real-system workforce and greytHR journeys | `PASSED LOCALLY` | Final V1–V33 serialized system run passed E2E-01, E2E-02 and E2E-03 through Vite, Spring Security, Flyway and PostgreSQL. | Preserve in the final evidence/status reconciliation; production greytHR acceptance remains external. |
 | F07 delivery and confirmation journeys | `PASSED LOCALLY` | Final V1–V33 system run passed E2E-03, E2E-04 and E2E-05, including authorization, commitment dispatch and confirmation-to-certification handoff. | Preserve in final evidence/status reconciliation; live provider/mailbox acceptance remains external. |
 | F07 correction/outage/recovery journeys | `PASSED LOCALLY` | Final V1–V33 system run passed E2E-07 and E2E-10 with public-API, lineage, canary-abort and recovery assertions. | Preserve in final evidence/status reconciliation; production outage/tabletop acceptance remains external. |
-| F07 independent review | `CLOSED` | Final Terra review closed with no P0–P3 finding. | Preserve the review in commit-bound evidence. |
-| F07 complete regression | `PASSED LOCALLY` | Frontend typecheck/lint/Vitest/build/diff passes (24 files/92 tests; 0 lint errors/6 warnings); focused backend 73+45; capacity 73+2; systems 7/7, 4/4, 6/6; browser 274/274; Maven R3 290/290. | Preserve R2/R3, then exact commit-bound compatibility/supply-chain/restore/rollback evidence. |
+| F07 independent review | `CLOSED` | Final product review and the post-remediation supply-chain re-review closed with no open P0–P3 finding. | Preserve both reviews in commit-bound evidence. |
+| F07 complete regression | `PASSED LOCALLY` | Frontend typecheck/lint/Vitest/build/diff passes (24 files/92 tests; 0 lint errors/6 warnings); focused backend 73+45; capacity 73+2; systems 7/7, 4/4, 6/6; browser 274/274; Maven R3 and PostgreSQL 18.4 R4 both 290/290. | Preserve R2/R3/R4, then exact commit-bound compatibility/supply-chain/restore/rollback evidence. |
+| F07 supply-chain remediation | `PASSED LOCALLY; COMMIT BINDING PENDING` | The first exact run failed safely. After JDBC/Jackson, PostgreSQL 18.4 image, worker security-context and fail-closed SPDX fixes, the complete rerun passes every scanner/report plus both artifacts and the image with zero findings. Maven R4 also passes 290/290 on PostgreSQL 18.4. | Preserve the reviewed patch in a local commit, then rerun and bind the exact scanner evidence to that clean commit. |
 | F07 documentation and Git | `DOCUMENTATION RECONCILED; COMMIT PENDING` | Task/test/API/UI/architecture/review/fix/status/regression documents carry the V1–V33 evidence and root README cross-links. | Root must append the final reviewer result, create the requested local commit, run commit-bound evidence, and never push. |
 
 ## Open F07 implementation/review findings
