@@ -17,9 +17,11 @@ import com.vms.workflow.api.DeliveryDtos.DependencyView;
 import com.vms.workflow.api.DeliveryDtos.PlanSummaryView;
 import com.vms.workflow.api.DeliveryDtos.PlanView;
 import com.vms.workflow.api.DeliveryDtos.RecipientView;
+import com.vms.workflow.api.DeliveryDtos.RevisionComparisonView;
 import com.vms.workflow.api.DeliveryDtos.RevisionRequest;
 import com.vms.workflow.api.DomainConflictException;
 import com.vms.workflow.security.DeliveryAuthorizationService;
+import com.vms.workflow.security.DeliveryAuthorizationService.PlanApprovalAuthority;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -111,6 +113,106 @@ public class DeliveryPlanningService {
         return planView(planId);
     }
 
+    /**
+     * Compare the current revision to the exact immutable version it supersedes.
+     * The result is derived from persisted rows so a browser cannot choose which
+     * version or fields are presented as the commitment delta.
+     */
+    public RevisionComparisonView revisionComparison(String subject, UUID planId) {
+        authorization.requirePlan(subject, planId, DeliveryAuthorizationService.PLAN_READ);
+        RevisionPair pair = jdbc.query("""
+            SELECT plan.current_version_id, current.prior_version_id,
+                   current.version, prior.version
+            FROM delivery_plans plan
+            JOIN delivery_plan_versions current
+              ON current.id = plan.current_version_id
+            LEFT JOIN delivery_plan_versions prior
+              ON prior.id = current.prior_version_id
+            WHERE plan.id = ?
+            """, rs -> rs.next() ? new RevisionPair(
+                rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
+                rs.getInt(3), rs.getObject(4, Integer.class)) : null, planId);
+        if (pair == null) {
+            throw notFound();
+        }
+        if (pair.priorVersionId() == null) {
+            return new RevisionComparisonView(
+                planId, null, pair.currentVersionId(), 0, pair.currentVersion(),
+                List.of(), 0, 0, 0);
+        }
+        List<String> changedPlanFields = jdbc.query("""
+            SELECT field_name
+            FROM (
+                SELECT 'title' AS field_name, current.title IS DISTINCT FROM prior.title AS changed
+                FROM delivery_plan_versions current
+                JOIN delivery_plan_versions prior ON prior.id = current.prior_version_id
+                WHERE current.id = ?
+                UNION ALL SELECT 'summary', current.summary IS DISTINCT FROM prior.summary
+                FROM delivery_plan_versions current JOIN delivery_plan_versions prior ON prior.id = current.prior_version_id WHERE current.id = ?
+                UNION ALL SELECT 'businessOutcomes', current.business_outcomes IS DISTINCT FROM prior.business_outcomes
+                FROM delivery_plan_versions current JOIN delivery_plan_versions prior ON prior.id = current.prior_version_id WHERE current.id = ?
+                UNION ALL SELECT 'coordinatorSubject', current.coordinator_subject IS DISTINCT FROM prior.coordinator_subject
+                FROM delivery_plan_versions current JOIN delivery_plan_versions prior ON prior.id = current.prior_version_id WHERE current.id = ?
+                UNION ALL SELECT 'baselineType', current.baseline_type IS DISTINCT FROM prior.baseline_type
+                FROM delivery_plan_versions current JOIN delivery_plan_versions prior ON prior.id = current.prior_version_id WHERE current.id = ?
+                UNION ALL SELECT 'approvalQuorum', (current.quorum_mode, current.quorum_required)
+                    IS DISTINCT FROM (prior.quorum_mode, prior.quorum_required)
+                FROM delivery_plan_versions current JOIN delivery_plan_versions prior ON prior.id = current.prior_version_id WHERE current.id = ?
+            ) comparison
+            WHERE changed
+            ORDER BY field_name
+            """, (rs, rowNum) -> rs.getString(1), pair.currentVersionId(),
+            pair.currentVersionId(), pair.currentVersionId(), pair.currentVersionId(),
+            pair.currentVersionId(), pair.currentVersionId());
+        RevisionDeliverableCounts counts = jdbc.query("""
+            WITH prior AS (
+                SELECT deliverable_id, title, description, business_objective,
+                       project_id, product_owner_subject, vendor_owner_subject,
+                       priority, target_completion_date, evidence_expectations,
+                       dependency_none_declared, risk_and_assumptions,
+                       delivery_category, link_exception_reason
+                FROM delivery_deliverable_versions WHERE plan_version_id = ?
+            ), current AS (
+                SELECT deliverable_id, title, description, business_objective,
+                       project_id, product_owner_subject, vendor_owner_subject,
+                       priority, target_completion_date, evidence_expectations,
+                       dependency_none_declared, risk_and_assumptions,
+                       delivery_category, link_exception_reason
+                FROM delivery_deliverable_versions WHERE plan_version_id = ?
+            )
+            SELECT COUNT(*) FILTER (WHERE prior.deliverable_id IS NULL),
+                   COUNT(*) FILTER (WHERE current.deliverable_id IS NULL),
+                   COUNT(*) FILTER (WHERE prior.deliverable_id IS NOT NULL
+                                      AND current.deliverable_id IS NOT NULL
+                                      AND ROW(prior.title, prior.description,
+                                              prior.business_objective, prior.project_id,
+                                              prior.product_owner_subject, prior.vendor_owner_subject,
+                                              prior.priority, prior.target_completion_date,
+                                              prior.evidence_expectations,
+                                              prior.dependency_none_declared,
+                                              prior.risk_and_assumptions,
+                                              prior.delivery_category,
+                                              prior.link_exception_reason)
+                                          IS DISTINCT FROM
+                                          ROW(current.title, current.description,
+                                              current.business_objective, current.project_id,
+                                              current.product_owner_subject, current.vendor_owner_subject,
+                                              current.priority, current.target_completion_date,
+                                              current.evidence_expectations,
+                                              current.dependency_none_declared,
+                                              current.risk_and_assumptions,
+                                              current.delivery_category,
+                                              current.link_exception_reason))
+            FROM prior FULL OUTER JOIN current USING (deliverable_id)
+            """, rs -> rs.next() ? new RevisionDeliverableCounts(
+                rs.getInt(1), rs.getInt(2), rs.getInt(3)) : new RevisionDeliverableCounts(0, 0, 0),
+            pair.priorVersionId(), pair.currentVersionId());
+        return new RevisionComparisonView(
+            planId, pair.priorVersionId(), pair.currentVersionId(),
+            pair.priorVersion(), pair.currentVersion(), changedPlanFields,
+            counts.added(), counts.removed(), counts.changed());
+    }
+
     @Transactional
     public PlanView create(String subject, CreatePlanRequest request) {
         authorization.requireMonth(
@@ -186,7 +288,9 @@ public class DeliveryPlanningService {
 
     @Transactional
     public PlanView approve(String subject, UUID planId, ApprovalRequest request) {
-        authorization.requirePlan(subject, planId, DeliveryAuthorizationService.PLAN_APPROVE);
+        PlanApprovalAuthority approvalAuthority =
+            authorization.resolvePlanApprovalAuthority(
+                subject, planId, request.onBehalfOfSubject());
         if (!Set.of("APPROVE", "REJECT").contains(request.decision())) {
             throw new IllegalArgumentException("decision must be APPROVE or REJECT.");
         }
@@ -200,24 +304,64 @@ public class DeliveryPlanningService {
                 WHERE plan_version_id = ? AND approver_subject = ?
                   AND authority_snapshot @> '{"eligible":true}'::jsonb
             )
-            """, Boolean.class, current.versionId(), subject);
+            """, Boolean.class, current.versionId(),
+            approvalAuthority.approverSubject());
         if (!Boolean.TRUE.equals(eligible)) {
             throw new EntityNotFoundException("Resource not found.");
         }
+        Boolean actorConflict = jdbc.queryForObject("""
+            SELECT EXISTS (
+                SELECT 1
+                FROM delivery_plan_versions version
+                WHERE version.id = ?
+                  AND (
+                      version.created_by_subject = ?
+                      OR version.coordinator_subject = ?
+                      OR EXISTS (
+                          SELECT 1
+                          FROM delivery_deliverable_versions deliverable
+                          WHERE deliverable.plan_version_id = version.id
+                            AND ? IN (
+                                deliverable.product_owner_subject,
+                                deliverable.vendor_owner_subject)
+                      )
+                  )
+            )
+            """, Boolean.class, current.versionId(), subject, subject, subject);
+        if (Boolean.TRUE.equals(actorConflict)) {
+            throw new DomainConflictException(
+                "APPROVER_SEPARATION_OF_DUTIES_CONFLICT:" + subject);
+        }
         UUID approvalId = UUID.randomUUID();
-        String authoritySnapshot = jdbc.queryForObject("""
+        String configuredAuthoritySnapshot = jdbc.queryForObject("""
             SELECT authority_snapshot::text
             FROM delivery_plan_approvers
             WHERE plan_version_id = ? AND approver_subject = ?
-            """, String.class, current.versionId(), subject);
+            """, String.class, current.versionId(),
+            approvalAuthority.approverSubject());
+        Map<String, Object> actionAuthority = new java.util.LinkedHashMap<>();
+        actionAuthority.put(
+            "configuredAuthority", objectMap(configuredAuthoritySnapshot));
+        actionAuthority.put("actingSubject", subject);
+        actionAuthority.put(
+            "authorityHolderSubject", approvalAuthority.approverSubject());
+        actionAuthority.put("delegated", approvalAuthority.delegated());
+        actionAuthority.put("delegationId", approvalAuthority.delegationId());
+        actionAuthority.put(
+            "delegationValidTo", approvalAuthority.delegationValidTo());
         jdbc.update("""
             INSERT INTO delivery_plan_approvals
                 (id, plan_version_id, approver_subject, decision, signed_checksum,
-                 authority_snapshot, comment)
-            VALUES (?, ?, ?, ?, ?, ?::jsonb, ?)
-            """, approvalId, current.versionId(), subject, request.decision(),
-            current.checksum(), authoritySnapshot,
-            request.comment());
+                 authority_snapshot, comment, acting_subject, delegation_id,
+                 delegated_from_subject)
+            VALUES (?, ?, ?, ?, ?, ?::jsonb, ?, ?, ?, ?)
+            """, approvalId, current.versionId(),
+            approvalAuthority.approverSubject(), request.decision(),
+            current.checksum(), json(actionAuthority),
+            request.comment(),
+            subject, approvalAuthority.delegationId(),
+            approvalAuthority.delegated()
+                ? approvalAuthority.approverSubject() : null);
         if ("REJECT".equals(request.decision())) {
             jdbc.update("""
                 UPDATE delivery_plan_versions
@@ -236,7 +380,11 @@ public class DeliveryPlanningService {
             """, Integer.class, current.versionId());
         if (approvals >= requiredApprovals(
             current.quorumMode(), current.quorumRequired(), approvers)) {
-            freeze(planId, current, subject);
+            freeze(
+                planId,
+                current,
+                approvalAuthority.approverSubject(),
+                subject);
         }
         return planView(planId);
     }
@@ -280,7 +428,12 @@ public class DeliveryPlanningService {
         return planView(planId);
     }
 
-    private void freeze(UUID planId, CurrentVersion current, String actor) {
+    private void freeze(
+        UUID planId,
+        CurrentVersion current,
+        String authorityHolder,
+        String actingActor
+    ) {
         UUID baselineId = UUID.randomUUID();
         int deliverableCount = jdbc.queryForObject("""
             SELECT COUNT(*) FROM delivery_deliverable_versions
@@ -317,9 +470,16 @@ public class DeliveryPlanningService {
             """, outboxId, current.versionId(), baselineId, messageType,
             "commitment:" + current.versionId(), json(recipients),
             subject, plain, html, "db://commitment-outbox/" + outboxId);
-        audit(planId, current.versionId(), "PLAN_FROZEN", actor,
-            "{\"checksum\":\"" + current.checksum()
-                + "\",\"businessAcceptanceChanged\":false}");
+        audit(
+            planId,
+            current.versionId(),
+            "PLAN_FROZEN",
+            authorityHolder,
+            json(Map.of(
+                "checksum", current.checksum(),
+                "businessAcceptanceChanged", false,
+                "actingSubject", actingActor,
+                "authorityHolderSubject", authorityHolder)));
         jdbc.update("""
             UPDATE delivery_plan_versions
             SET state = 'FROZEN', frozen_at = CURRENT_TIMESTAMP,
@@ -1010,13 +1170,16 @@ public class DeliveryPlanningService {
 
     private List<ApprovalView> approvals(UUID versionId) {
         return jdbc.query("""
-            SELECT id, approver_subject, decision, signed_checksum, comment, decided_at
+            SELECT id, approver_subject, acting_subject, delegation_id,
+                   decision, signed_checksum, comment, decided_at
             FROM delivery_plan_approvals
             WHERE plan_version_id = ?
             ORDER BY decided_at
             """, (rs, rowNum) -> new ApprovalView(
                 rs.getObject("id", UUID.class),
                 rs.getString("approver_subject"),
+                rs.getString("acting_subject"),
+                rs.getObject("delegation_id", UUID.class),
                 rs.getString("decision"),
                 rs.getString("signed_checksum"),
                 rs.getString("comment"),
@@ -1043,17 +1206,21 @@ public class DeliveryPlanningService {
 
     private String checksum(UUID versionId) {
         StringBuilder canonical = new StringBuilder();
-        appendCanonical(canonical, "schema", "delivery-commitment-v2");
+        appendCanonical(canonical, "schema", "delivery-commitment-v3");
         jdbc.query("""
-            SELECT version.version, version.title, version.summary,
+            SELECT version.id, version.plan_id, plan.engagement_month_id,
+                   version.prior_version_id, version.revision_reason,
+                   version.revision_impact, version.version, version.title, version.summary,
                    version.business_outcomes, version.coordinator_subject,
                    version.baseline_type, version.quorum_mode, version.quorum_required
-            FROM delivery_plan_versions version WHERE version.id = ?
+            FROM delivery_plan_versions version
+            JOIN delivery_plans plan ON plan.id = version.plan_id
+            WHERE version.id = ?
             """, rs -> {
                 if (!rs.next()) {
                     throw notFound();
                 }
-                for (int column = 1; column <= 8; column++) {
+                for (int column = 1; column <= 14; column++) {
                     appendCanonical(canonical, "plan." + column, rs.getString(column));
                 }
                 return null;
@@ -1295,6 +1462,16 @@ public class DeliveryPlanningService {
         }
     }
 
+    private Map<String, Object> objectMap(String value) {
+        try {
+            return objectMapper.readValue(value, new TypeReference<>() {
+            });
+        } catch (JacksonException exception) {
+            throw new IllegalStateException(
+                "Stored authority snapshot JSON is invalid.", exception);
+        }
+    }
+
     private String json(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
@@ -1386,6 +1563,17 @@ public class DeliveryPlanningService {
     }
 
     private record PlanQuorum(String mode, int required) {
+    }
+
+    private record RevisionPair(
+        UUID currentVersionId,
+        UUID priorVersionId,
+        int currentVersion,
+        Integer priorVersion
+    ) {
+    }
+
+    private record RevisionDeliverableCounts(int added, int removed, int changed) {
     }
 
     private record CloneDeliverable(UUID sourceVersionId, UUID stableId) {

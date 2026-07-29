@@ -37,6 +37,31 @@ public final class AttendanceDtos {
     ) {
     }
 
+    public record StartBreakRequest(
+        @NotNull UUID employeeId,
+        @NotBlank @Size(max = 160) String idempotencyKey
+    ) {
+    }
+
+    public record EndBreakRequest(
+        @NotBlank @Size(max = 160) String idempotencyKey
+    ) {
+    }
+
+    public record AttendanceBreakView(
+        UUID id,
+        UUID sessionId,
+        UUID employeeId,
+        LocalDate workDate,
+        UUID breakStartEventId,
+        UUID breakEndEventId,
+        OffsetDateTime startedAt,
+        OffsetDateTime endedAt,
+        Integer minutes,
+        String status
+    ) {
+    }
+
     public record AttendanceDayView(
         @Schema(
             nullable = true,

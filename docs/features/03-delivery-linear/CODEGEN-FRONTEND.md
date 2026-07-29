@@ -32,6 +32,17 @@ UNAVAILABLE`;
   - approval/rejection controls are rendered only for `PENDING_APPROVAL`;
   - revision is rendered only for `FROZEN`;
   - all non-draft content is presented as read-only.
+- The revision card requests a server-derived revision comparison and displays
+  changed top-level commitment fields plus added/removed/changed deliverable
+  counts. It does not calculate a client-side diff or compare provider state.
+- Integration health exposes the existing authorized, idempotent terminal
+  reconciliation command with an explicit provider-available/unavailable
+  outcome and recorded reason. It never calls Linear from the browser and does
+  not represent the command as live provider polling.
+- Operators with `delivery.commitment.replay` can view a bounded, redacted
+  dead-letter list and queue a reasoned, idempotent commitment replay. The UI
+  explains that it preserves original evidence and does not configure/send via
+  a live mail provider.
 - Added explicit presentation for every plan, commitment, link, normalized
   execution, snapshot, connection and provider-registration state. Frozen,
   superseded, cancelled, rejected, imported historical, stale, broken and
@@ -90,9 +101,9 @@ live provider.
 - The frontend contract is still hand-maintained. There is no checked-in
   generated OpenAPI client/schema decoder to reject runtime response drift
   before rendering.
-- Health exposes aggregate stale counts but not separate inaccessible counts
-  or caller capabilities for refresh/replay. The UI therefore does not expose
-  those operator controls.
+- Health exposes aggregate stale counts but not separate inaccessible counts.
+  Commitment replay capability is read from the authenticated permission set;
+  the backend remains authoritative for every operation.
 - Provider error values are sanitized strings rather than a closed,
   documented error-code union, so the UI can label the error safely but cannot
   provide code-specific remediation.

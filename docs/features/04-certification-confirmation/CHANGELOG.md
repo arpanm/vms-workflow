@@ -1,5 +1,16 @@
 # F04 Changelog
 
+## 2026-07-29 — Cross-month work and operations completion
+
+- Replaced UUID-only entry as the primary flow with server-scoped
+  certification and confirmation work inboxes, while retaining safe direct
+  month access.
+- Added read-only durable health for notification, reminder/expiry, and F05
+  readiness-handoff jobs without exposing message content, recipients, token
+  material, raw provider payloads, or secrets.
+- Added reasoned, exact-month-version, retained-idempotency notification replay
+  from the confirmation operations surface for existing authorized operators.
+
 ## 2026-07-26 — Local provider-neutral completion record
 
 - Added the Java/PostgreSQL/Flyway certification and confirmation vertical, including V11/V12 hardening, secured API/OpenAPI routes, immutable lineage, local workers, and versioned F05 readiness handoff.

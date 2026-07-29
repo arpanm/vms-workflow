@@ -41,3 +41,34 @@ Implemented: application bootstrap, PostgreSQL/Flyway startup, basic organizatio
 Missing: canonical permission model and scoped assignments; identity-provider/session metadata; invitations/revocation; configuration versioning; teams/contacts; approval policies/actions/delegation; guarded state transitions/history; PostgreSQL roles; canonical mutations; Bean Validation request DTOs; optimistic versions, idempotency and audit; typed domain errors; issuer/key-rotation proof; full authorization matrix; OpenAPI generation/client verification; and staging evidence.
 
 No application or backend code was modified by this review. Recommended backend repair order: issuer/real-JWT proof, fail-closed principal/scope resolution, RBAC/object scopes, database least privilege/schema constraints, then the remaining Phase 1 domain and contract.
+## Completion architecture analysis — 2026-07-29
+
+F01 now has one additive administrative core rather than UI-owned policy:
+Spring resolves the authenticated subject and exact resource scope, the
+application service evaluates permission/version/workflow rules, and
+PostgreSQL independently enforces cross-scope pointers, immutable published
+versions, current-stage actions, delegation bounds and transition history.
+Approval evidence stores both the actual actor and original authority holder;
+quorum and self-approval both use that authority identity once.
+
+The public approval execution path is intentionally not generic. It accepts a
+published engagement-scoped `REOPEN` policy and a reopen-requested month ID,
+then derives the month version, evidence hash, scope and permission itself.
+Each request freezes its eligible authorities/quorum/delegation rule. Actor-
+scoped action idempotency makes transport retries safe. Final approval and the
+month reopen are one transaction, with V34 triggers/grants preventing direct
+request-state or unapproved-reopen bypasses. Policy changes create a new draft
+revision under the stable policy ID and supersede the prior published version
+only when the revision publishes.
+
+Specialized F03–F06 evidence stores remain authoritative for their existing
+verticals. V34 supplies the administrative source of truth and governed reopen
+path without rewriting historical specialized evidence or routing other action
+types through an incomplete generic dispatcher.
+
+The final review additionally closed three policy-semantics gaps. `ALL` derives
+its quorum from the complete request-time authority snapshot and that derived
+value is returned in request details. A future-effective draft/publication
+keeps the current published version usable until an explicit non-overlapping
+window handoff. A captured evidence-required policy rejects blank action
+reasons before any immutable action or request version is written.

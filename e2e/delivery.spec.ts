@@ -283,6 +283,48 @@ test("[E2E-F03-007] health renders not-configured and action-required states wit
   await expect(page.getByRole("button", { name: /poll|refresh|replay|process/i })).toHaveCount(0);
 });
 
+test("[E2E-F03-008] authorized integration health records reconciliation and queues an immutable commitment replay", async ({
+  page,
+}) => {
+  const api = await mockDeliveryApi(page, {
+    healthScenario: "ACTION_REQUIRED",
+    commitmentOperations: true,
+  });
+  await page.goto("/delivery/integration-health");
+
+  await page.getByLabel("Reconciliation reason").fill("Recorded provider check completed.");
+  await page.getByRole("button", { name: "Record reconciliation" }).click();
+  await expect(page.getByText("Commitment delivery dead letters", { exact: true })).toBeVisible();
+  await expect(page.getByText(/v1 initial commitment/i)).toBeVisible();
+  await expect(page.getByText(/COMMITMENT_PROVIDER_NOT_CONFIGURED/)).toBeVisible();
+  await page.getByRole("button", { name: "Queue replay" }).click();
+  await page
+    .getByLabel("Commitment replay rationale")
+    .fill("Provider configuration was reviewed and recovery is authorized.");
+  await page.getByRole("button", { name: "Queue immutable replay" }).click();
+
+  await expect
+    .poll(() => api.mutations.map(({ path, body }) => ({ path, body })))
+    .toEqual(
+      expect.arrayContaining([
+        {
+          path: `/api/v1/integrations/linear/connections/${deliveryFixture.ids.connection}/reconciliations`,
+          body: {
+            outcome: "AVAILABLE",
+            reason: "Recorded provider check completed.",
+          },
+        },
+        {
+          path: `/api/v1/delivery/commitment-operations/${deliveryFixture.ids.commitmentOutbox}/replays`,
+          body: {
+            reason: "Provider configuration was reviewed and recovery is authorized.",
+          },
+        },
+      ]),
+    );
+  await expect(page.getByText(/live email provider/i)).toBeVisible();
+});
+
 test("[E2E-XF-001] completed Linear execution and commitment delivery never imply acceptance or certification", async ({
   page,
 }) => {

@@ -1,8 +1,10 @@
 package com.vms.workflow.api;
 
 import com.vms.workflow.api.AttendanceDtos.AttendanceDayView;
+import com.vms.workflow.api.AttendanceDtos.AttendanceBreakView;
 import com.vms.workflow.api.AttendanceDtos.AttendanceSnapshotView;
 import com.vms.workflow.api.AttendanceDtos.CloseSnapshotRequest;
+import com.vms.workflow.api.AttendanceDtos.EndBreakRequest;
 import com.vms.workflow.api.AttendanceDtos.PunchRequest;
 import com.vms.workflow.api.AttendanceDtos.PunchView;
 import com.vms.workflow.api.AttendanceDtos.RegularizationRequest;
@@ -10,6 +12,7 @@ import com.vms.workflow.api.AttendanceDtos.RegularizationView;
 import com.vms.workflow.api.AttendanceDtos.RegularizationDecisionRequest;
 import com.vms.workflow.api.AttendanceDtos.RegularizationDecisionView;
 import com.vms.workflow.api.AttendanceDtos.ReopenSnapshotRequest;
+import com.vms.workflow.api.AttendanceDtos.StartBreakRequest;
 import com.vms.workflow.application.AttendanceService;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
@@ -44,6 +47,36 @@ public class AttendanceController {
     PunchView punch(@AuthenticationPrincipal Jwt jwt,
                     @Valid @RequestBody PunchRequest request) {
         return attendance.punch(jwt.getSubject(), request);
+    }
+
+    @PostMapping("/breaks")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Start an idempotent break in the current attendance session")
+    AttendanceBreakView startBreak(
+        @AuthenticationPrincipal Jwt jwt,
+        @Valid @RequestBody StartBreakRequest request
+    ) {
+        return attendance.startBreak(jwt.getSubject(), request);
+    }
+
+    @PostMapping("/breaks/{id}/end")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "End an open attendance break with immutable event lineage")
+    AttendanceBreakView endBreak(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID id,
+        @Valid @RequestBody EndBreakRequest request
+    ) {
+        return attendance.endBreak(jwt.getSubject(), id, request);
+    }
+
+    @GetMapping("/breaks")
+    @Operation(summary = "List attendance breaks visible to the authenticated identity")
+    List<AttendanceBreakView> breaks(
+        @AuthenticationPrincipal Jwt jwt,
+        @RequestParam UUID employeeId
+    ) {
+        return attendance.breaks(jwt.getSubject(), employeeId);
     }
 
     @GetMapping("/days")

@@ -47,7 +47,10 @@ public class CatalogQueryService {
         var profile = users.findByIdentitySubjectAndStatus(subject, "ACTIVE")
             .orElseThrow(() -> new org.springframework.security.access.AccessDeniedException(
                 "The authenticated identity has no active application access."));
-        return MeView.from(profile, authorization.sessionMemberships(subject));
+        return MeView.from(
+            profile,
+            authorization.sessionMemberships(subject),
+            authorization.effectivePermissions(subject));
     }
 
     public List<OrganizationView> organizations(String subject) {

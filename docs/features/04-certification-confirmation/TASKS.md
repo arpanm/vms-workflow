@@ -66,6 +66,11 @@ implemented. The current completion markers are:
 
 - [x] `F04-TASK-001`–`F04-TASK-026` — provider-neutral local implementation,
   documentation, and agent-run evidence are recorded in this worktree.
+- [x] `F04-TASK-027` — replace UUID-only landing flows with a server-scoped
+  certification/confirmation work inbox and add governed operations health for
+  notification, reminder/expiry, and F05-handoff durable work. Failed
+  configured notifications expose reasoned, exact-month-version replay only to
+  the existing `certification.outbox.replay` authority.
 - [ ] G4 embedded provider/deployment acceptance — sender/mailbox/storage,
   controlled identity, production grants/platform controls, and full-stack
   acceptance remain open.

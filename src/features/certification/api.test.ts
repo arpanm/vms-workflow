@@ -60,15 +60,44 @@ describe("certification API contract", () => {
   });
 
   it("[F04-UNIT-API-001] scopes and URL-encodes every certification read", async () => {
+    await certificationApi.inbox(25);
+    await certificationApi.operations(75);
     await certificationApi.month("month/one");
     await certificationApi.readiness("month/one");
     await certificationApi.confirmationRequest("request/one");
 
     expect(apiMocks.get.mock.calls).toEqual([
+      ["/certification/inbox?limit=25"],
+      ["/certification/operations?limit=75"],
       ["/certification/months/month%2Fone"],
       ["/certification/months/month%2Fone/readiness"],
       ["/certification/confirmation-requests/request%2Fone"],
     ]);
+  });
+
+  it("[F04-UNIT-API-005] replays only an exact-version notification with retained intent headers", async () => {
+    await certificationApi.replayNotification(
+      {
+        notificationId: "notice/one",
+        expectedMonthVersion: 12,
+        reason: "The recorded provider outage is resolved.",
+      },
+      intentKey(11),
+    );
+
+    expect(apiMocks.post).toHaveBeenCalledWith(
+      "/certification/notifications/notice%2Fone/replays",
+      {
+        expectedMonthVersion: 12,
+        reason: "The recorded provider outage is resolved.",
+      },
+      {
+        headers: {
+          "If-Match": "\"12\"",
+          "Idempotency-Key": intentKey(11),
+        },
+      },
+    );
   });
 
   it("[F04-UNIT-API-002] sends expected-version and idempotency headers on every mutation", async () => {

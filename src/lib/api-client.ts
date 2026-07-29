@@ -178,6 +178,12 @@ export function createApiClient(options: ApiClientOptions = {}) {
       request<T>(path, { ...options, method: "GET" }),
     post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
       request<T>(path, { ...options, method: "POST", body }),
+    patch: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+      request<T>(path, { ...options, method: "PATCH", body }),
+    put: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+      request<T>(path, { ...options, method: "PUT", body }),
+    delete: <T>(path: string, options?: RequestOptions) =>
+      request<T>(path, { ...options, method: "DELETE" }),
     postForm: <T>(path: string, body: FormData, options?: RequestOptions) =>
       request<T>(path, { ...options, method: "POST", body }),
     download,

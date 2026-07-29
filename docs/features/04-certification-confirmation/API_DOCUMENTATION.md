@@ -6,6 +6,8 @@ All F04 routes are rooted at `/api/v1/certification`, use authenticated server-r
 
 | Route | Purpose |
 | --- | --- |
+| `GET /inbox?limit=` | Return a safe, server-scoped cross-month work list with assigned review, evidence-review, readiness, due/overdue, and next-action facts. |
+| `GET /operations?limit=` | Return authorized notification, reminder/expiry, and F05-handoff queue health plus actionable durable work; it never returns rendered bodies, recipients, tokens, MIME, or provider secrets. |
 | `GET /months/{monthId}` | Scoped certification workspace and confirmation preview. |
 | `POST /months/{monthId}/submissions` | Create/save versioned vendor draft. |
 | `POST /submissions/{submissionId}/submit` | Lock an exact submission version. |
@@ -21,7 +23,7 @@ All F04 routes are rooted at `/api/v1/certification`, use authenticated server-r
 | `POST /months/{monthId}/manual-evidence`, `POST /manual-evidence/{evidenceId}/reviews` | Record and second-review manual evidence. |
 | `POST /months/{monthId}/reopen-requests`, `POST /reopen-requests/{reopenRequestId}/decisions` | Request and decide reopen lineage. |
 | `POST /months/{monthId}/closures`, `POST /invalidations/{invalidationId}/resolutions` | Close immutable scope and append effective invalidation resolution. |
-| `POST /notifications/{notificationId}/replays` | Authorized durable notification replay. |
+| `POST /notifications/{notificationId}/replays` | Authorized durable notification replay, bound to an exact month version, reason, and retained idempotency key. |
 | `POST /months/{monthId}/policy-versions` | Append/supersede policy version. |
 | `POST /submissions/{submissionId}/evidence-exceptions`, `POST /months/{monthId}/attendance-exceptions` | Record separately authorized, scoped exceptions. |
 

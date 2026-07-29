@@ -20,6 +20,15 @@ and timestamp values use canonical JSON strings; dates are ISO `yyyy-MM-dd`.
 | GET | `/api/v1/workforce/employees/{id}/leave-balances` | — | `LeaveBalanceView[]` |
 | GET | `/api/v1/workforce/employees/{id}/leave-requests` | — | `LeaveRequestView[]` |
 | POST | `/api/v1/workforce/employees/{id}/leave-requests` | `LeaveRequest` | `201 LeaveRequestView` |
+| GET/POST | `/api/v1/workforce/employees/{id}/aliases` | `EmployeeAliasInput` | `EmployeeAliasView[]` / `201 EmployeeAliasView` |
+| GET/POST | `/api/v1/workforce/employees/{id}/deliverable-allocations` | `DeliverableAllocationInput` | `DeliverableAllocationView[]` / `201 DeliverableAllocationView` |
+| GET/POST | `/api/v1/workforce/organizations/{id}/calendars` | `PublishCalendarInput` | `CalendarVersionView[]` / `201 CalendarVersionView` |
+| GET/POST | `/api/v1/workforce/organizations/{id}/leave-policies` | `PublishLeavePolicyInput` | `LeavePolicyView[]` / `201 LeavePolicyView` |
+| POST | `/api/v1/workforce/employees/{id}/leave-balance-commands` | `LeaveBalanceCommandInput` | `201 LeaveBalanceCommandView` |
+| GET | `/api/v1/workforce/leave-request-inbox?organizationId={uuid}` | manager query | `LeaveRequestView[]` |
+| POST | `/api/v1/workforce/leave-requests/{id}/decisions` | exact version, stable idempotency key and reason | `201 LeaveDecisionView` |
+| GET | `/api/v1/workforce/regularization-inbox?organizationId={uuid}` | reviewer query | `RegularizationView[]` |
+| POST | `/api/v1/workforce/organizations/{id}/imports` | bounded CSV validate/apply command | `201 WorkforceCsvImportView` |
 
 DTO fields:
 
@@ -71,7 +80,8 @@ DTO fields:
 
 ```text
 PunchRequest
-  employeeId, eventType(CHECK_IN|CHECK_OUT), idempotencyKey
+  employeeId, eventType(CHECK_IN|CHECK_OUT|BREAK_START|BREAK_END),
+  idempotencyKey
 
 PunchView
   id, employeeId, eventType, occurredAt, workDate, source, idempotencyKey,
@@ -112,6 +122,11 @@ every allocated employee/date in the month before readiness validation and
 snapshotting. Multi-day leave totals are stored once and apportioned into
 immutable per-date paid/LWP units.
 
+Leave and regularization inboxes require organization manage/review authority;
+ordinary workforce readers cannot enumerate coworker reasons. Leave decisions
+use optimistic request versions and return the original immutable result on an
+exact idempotent replay, even after a later cancellation.
+
 Punches, leave submissions and regularization submissions require the active
 linked employee plus `attendance.self`; `attendance.review` remains read-only.
 `/employees/me` applies the same active-link boundary without requiring
@@ -126,3 +141,20 @@ active authorized employee link exists.
 - `404` sanitized inaccessible or unknown employee/engagement/snapshot scope;
 - `409` open-session conflict, allocation/temporal constraint conflict,
   overlapping leave, unavailable source mode or snapshot readiness conflict.
+
+## Shift and roster completion API
+
+- `GET|POST /api/v1/workforce/organizations/{organizationId}/shift-policies`
+  lists or publishes immutable effective shift versions.
+- `GET|POST /api/v1/workforce/employees/{employeeId}/shift-assignments`
+  lists or creates non-overlapping effective assignments.
+- `GET /api/v1/workforce/engagement-months/{engagementMonthId}/roster-readiness`
+  returns exact allocation-day coverage counts and up to 250 actionable gaps.
+- `GET|POST /api/v1/workforce/engagement-months/{engagementMonthId}/roster-snapshots`
+  lists or finalizes checksummed immutable roster versions.
+
+Roster finalization requires allocation, calendar, shift, employee-version and
+attendance-source coverage for every allocated employee-day. Attendance close
+requires the current finalized roster and snapshots exactly its distinct
+employee/date population. Overnight attribution, maximum duration and
+split-session allowance come from the effective shift policy.

@@ -34,10 +34,15 @@ public final class ApiDtos {
     }
 
     public record MeView(UUID id, String subject, String email, String displayName,
-                         List<MembershipView> memberships) {
-        public static MeView from(UserProfile profile, List<Membership> memberships) {
+                         List<MembershipView> memberships,
+                         List<UUID> organizationIds,
+                         List<String> permissions) {
+        public static MeView from(UserProfile profile, List<Membership> memberships,
+                                  List<String> permissions) {
             return new MeView(profile.getId(), profile.getIdentitySubject(), profile.getEmail(),
-                profile.getDisplayName(), memberships.stream().map(MembershipView::from).toList());
+                profile.getDisplayName(), memberships.stream().map(MembershipView::from).toList(),
+                memberships.stream().map(value -> value.getOrganization().getId()).distinct().toList(),
+                permissions);
         }
     }
 
@@ -61,10 +66,12 @@ public final class ApiDtos {
     }
 
     public record EngagementMonthView(UUID id, UUID engagementId, LocalDate monthStartDate,
-                                      String state, String riskStatus, boolean historicalFlag) {
+                                      String state, String riskStatus, boolean historicalFlag,
+                                      long governanceVersion) {
         public static EngagementMonthView from(EngagementMonth value) {
             return new EngagementMonthView(value.getId(), value.getEngagement().getId(),
-                value.getMonthStartDate(), value.getState(), value.getRiskStatus(), value.isHistoricalFlag());
+                value.getMonthStartDate(), value.getState(), value.getRiskStatus(),
+                value.isHistoricalFlag(), value.getGovernanceVersion());
         }
     }
 }

@@ -32,6 +32,8 @@ import com.vms.workflow.api.CertificationDtos.SubmissionView;
 import com.vms.workflow.api.CertificationDtos.SummaryRequest;
 import com.vms.workflow.api.CertificationDtos.TimelineEventView;
 import com.vms.workflow.api.CertificationDtos.VendorCriterionResponse;
+import com.vms.workflow.api.CoreAdministrationDtos.ApprovalActionInput;
+import com.vms.workflow.api.CoreAdministrationDtos.ApprovalRequestView;
 import com.vms.workflow.api.DomainConflictException;
 import com.vms.workflow.application.CanonicalEvidenceHasher.HashResult;
 import com.vms.workflow.infrastructure.CorrelationIdFilter;
@@ -77,6 +79,7 @@ public class CertificationWorkflowService {
     private final CertificationConfiguration configuration;
     private final CertificationReviewService reviews;
     private final CertificationHandoffService handoffs;
+    private final CoreAdministrationService coreAdministration;
     private final Clock clock;
 
     public CertificationWorkflowService(
@@ -88,6 +91,7 @@ public class CertificationWorkflowService {
         CertificationConfiguration configuration,
         CertificationReviewService reviews,
         CertificationHandoffService handoffs,
+        CoreAdministrationService coreAdministration,
         Clock clock
     ) {
         this.jdbc = jdbc;
@@ -98,6 +102,7 @@ public class CertificationWorkflowService {
         this.configuration = configuration;
         this.reviews = reviews;
         this.handoffs = handoffs;
+        this.coreAdministration = coreAdministration;
         this.clock = clock;
     }
 
@@ -654,6 +659,8 @@ public class CertificationWorkflowService {
         recordIdempotency(subject, "REQUEST_REOPEN", monthId, idempotencyKey,
             requestHash, "month_reopen_request", reopenId);
         bumpMonth(monthId, "REOPEN_REQUESTED");
+        coreAdministration.createF04ReopenApproval(
+            subject, reopenId, monthId, correlationId);
         return workspaceView(subject, monthId,
             authorization.requireMonthRead(subject, monthId));
     }
@@ -799,6 +806,11 @@ public class CertificationWorkflowService {
 
         UUID decisionId = UUID.randomUUID();
         UUID correlationId = CorrelationIdFilter.currentOrNew();
+        jdbc.queryForMap("""
+            SELECT set_config('vms.actor_subject', ?, TRUE),
+                   set_config('vms.transition_reason', ?, TRUE),
+                   set_config('vms.correlation_id', ?, TRUE)
+            """, subject, request.reasoning(), correlationId.toString());
         jdbc.update("""
             INSERT INTO month_reopen_decisions
                 (id, reopen_request_id, decision, reasoning,
@@ -809,6 +821,25 @@ public class CertificationWorkflowService {
                 subject, source.monthId(), null,
                 CertificationAuthorizationService.REOPEN_APPROVE),
             subject, correlationId);
+        if (source.coreApprovalRequestId() == null) {
+            throw new DomainConflictException(
+                "F04_REOPEN_APPROVAL_BINDING_MISSING",
+                "The reopen request has no governed core approval binding.");
+        }
+        String coreDecision = "APPROVE".equals(request.decision())
+            ? "APPROVED" : "REJECTED";
+        ApprovalRequestView approval = coreAdministration.actOnApprovalRequest(
+            subject, source.coreApprovalRequestId(),
+            new ApprovalActionInput(
+                coreDecision, request.reasoning(), null,
+                "f04-decision:" + decisionId, 0L),
+            correlationId);
+        if (!coreDecision.equals(approval.status())) {
+            throw new DomainConflictException(
+                "F04_REOPEN_APPROVAL_INCOMPLETE",
+                "The governed core approval did not reach its final state.",
+                approval.version());
+        }
         String resultingState;
         if ("APPROVE".equals(request.decision())) {
             UUID reopenCorrelationId = correlationId;
@@ -1128,6 +1159,7 @@ public class CertificationWorkflowService {
         ReopenSource value = jdbc.query("""
             SELECT request.id, request.engagement_month_id, request.closure_id,
                    request.requested_by_subject, decision.id AS decision_id,
+                   binding.core_approval_request_id,
                    (
                        SELECT confirmation.policy_version_id
                        FROM business_confirmation_requests confirmation
@@ -1139,6 +1171,8 @@ public class CertificationWorkflowService {
             FROM month_reopen_requests request
             LEFT JOIN month_reopen_decisions decision
               ON decision.reopen_request_id = request.id
+            LEFT JOIN f04_core_reopen_approval_bindings binding
+              ON binding.reopen_request_id = request.id
             WHERE request.id = ?
             """ + (lock ? " FOR UPDATE OF request" : ""),
             rs -> rs.next() ? new ReopenSource(
@@ -1147,6 +1181,7 @@ public class CertificationWorkflowService {
                 rs.getObject("closure_id", UUID.class),
                 rs.getString("requested_by_subject"),
                 rs.getObject("decision_id", UUID.class),
+                rs.getObject("core_approval_request_id", UUID.class),
                 rs.getObject("policy_version_id", UUID.class))
                 : null, reopenRequestId);
         if (value == null) {
@@ -3632,6 +3667,7 @@ public class CertificationWorkflowService {
         UUID closureId,
         String requestedBySubject,
         UUID decisionId,
+        UUID coreApprovalRequestId,
         UUID policyVersionId
     ) {
     }

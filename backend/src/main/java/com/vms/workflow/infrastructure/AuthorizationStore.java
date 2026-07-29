@@ -245,6 +245,32 @@ public class AuthorizationStore {
         ORDER BY pr.id
         """;
 
+    private static final String EFFECTIVE_PERMISSIONS = """
+        SELECT DISTINCT permission.code
+        FROM user_profiles user_profile
+        JOIN memberships membership
+          ON membership.user_profile_id = user_profile.id
+        JOIN organizations organization
+          ON organization.id = membership.organization_id
+        JOIN role_assignments assignment
+          ON assignment.user_profile_id = user_profile.id
+         AND assignment.organization_id = organization.id
+        JOIN roles role
+          ON role.id = assignment.role_id AND role.status = 'ACTIVE'
+        JOIN role_permissions mapping ON mapping.role_id = role.id
+        JOIN permissions permission ON permission.id = mapping.permission_id
+        WHERE user_profile.identity_subject = ?
+          AND user_profile.status = 'ACTIVE'
+          AND organization.status = 'ACTIVE'
+          AND membership.status = 'ACTIVE'
+          AND membership.valid_from <= ?
+          AND (membership.valid_to IS NULL OR membership.valid_to >= ?)
+          AND assignment.status = 'ACTIVE'
+          AND assignment.valid_from <= ?
+          AND (assignment.valid_to IS NULL OR assignment.valid_to >= ?)
+        ORDER BY permission.code
+        """;
+
     private final JdbcTemplate jdbc;
 
     public AuthorizationStore(JdbcTemplate jdbc) {
@@ -313,5 +339,19 @@ public class AuthorizationStore {
         return jdbc.queryForList(
             PROJECT_SCOPED_IDS, UUID.class,
             engagementId, subject, today, today, today, today, permission);
+    }
+
+    public List<String> findEffectivePermissions(
+        String subject,
+        LocalDate today
+    ) {
+        return jdbc.queryForList(
+            EFFECTIVE_PERMISSIONS,
+            String.class,
+            subject,
+            today,
+            today,
+            today,
+            today);
     }
 }

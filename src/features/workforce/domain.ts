@@ -89,6 +89,172 @@ export type LeaveRequest = {
   paidUnits: number;
   lwpUnits: number;
   createdAt: string;
+  version: number;
+};
+
+export type EmployeeAlias = {
+  id: string;
+  employeeId: string;
+  aliasType: "HRIS_ID" | "EMAIL" | "BADGE" | "LEGACY_ID" | "OTHER";
+  aliasValue: string;
+  validFrom: string;
+  validTo?: string | null;
+  status: "ACTIVE" | "ENDED";
+  createdAt: string;
+};
+
+export type DeliverableAllocation = {
+  id: string;
+  employeeId: string;
+  projectAllocationId: string;
+  deliverableId: string;
+  deliverableCode: string;
+  validFrom: string;
+  validTo?: string | null;
+  allocationPercent: number;
+  roleOnDeliverable?: string | null;
+  status: "PLANNED" | "ACTIVE" | "ENDED";
+};
+
+export type CalendarVersion = {
+  id: string;
+  organizationId: string;
+  name: string;
+  timezone: string;
+  version: number;
+  validFrom: string;
+  validTo?: string | null;
+  expectedFullMinutes: number;
+  expectedHalfMinutes: number;
+  weekdays: Array<{
+    isoWeekday: number;
+    classification: "WORKING" | "WEEKLY_OFF" | "HALF_DAY_EXPECTED";
+    expectedMinutes: number;
+  }>;
+  holidays: Array<{
+    holidayDate: string;
+    name: string;
+    classification: "HOLIDAY" | "HALF_DAY_EXPECTED";
+    expectedMinutes: number;
+  }>;
+};
+
+export type ShiftPolicy = {
+  id: string;
+  organizationId: string;
+  code: string;
+  name: string;
+  timezone: string;
+  version: number;
+  validFrom: string;
+  validTo?: string | null;
+  scheduledStartLocalTime: string;
+  scheduledEndLocalTime: string;
+  overnightCutoffLocalTime: string;
+  expectedNetMinutes: number;
+  maximumSessionMinutes: number;
+  allowSplitSessions: boolean;
+  minimumBreakMinutes: number;
+  status: "PUBLISHED" | "SUPERSEDED";
+  publishedAt: string;
+};
+
+export type ShiftAssignment = {
+  id: string;
+  employeeId: string;
+  shiftPolicyVersionId: string;
+  shiftPolicyCode: string;
+  shiftPolicyName: string;
+  shiftPolicyVersion: number;
+  timezone: string;
+  validFrom: string;
+  validTo?: string | null;
+  createdAt: string;
+};
+
+export type RosterReadiness = {
+  engagementMonthId: string;
+  monthStartDate: string;
+  allocatedEmployeeCount: number;
+  allocatedEmployeeDayCount: number;
+  missingCalendarDayCount: number;
+  missingShiftDayCount: number;
+  missingEmployeeVersionDayCount: number;
+  missingSourceModeDayCount: number;
+  ready: boolean;
+  issues: Array<{
+    code: string;
+    employeeId?: string | null;
+    workDate?: string | null;
+    message: string;
+  }>;
+};
+
+export type RosterSnapshot = {
+  id: string;
+  engagementMonthId: string;
+  version: number;
+  supersedesId?: string | null;
+  status: "FINALIZED";
+  checksum: string;
+  employeeCount: number;
+  employeeDayCount: number;
+  finalizedAt: string;
+  finalizedBySubject: string;
+  reason: string;
+};
+
+export type LeavePolicy = {
+  id: string;
+  organizationId: string;
+  leaveTypeId: string;
+  leaveTypeCode: string;
+  leaveTypeName: string;
+  version: number;
+  status: "DRAFT" | "PUBLISHED" | "SUPERSEDED";
+  validFrom: string;
+  validTo?: string | null;
+  approvalRequired: boolean;
+  maximumUnitsPerRequest?: number | null;
+  excessToLwp: boolean;
+  cancellationAllowed: boolean;
+  rules: Record<string, unknown>;
+  publishedAt?: string | null;
+};
+
+export type LeaveDecision = {
+  id: string;
+  leaveRequestId: string;
+  decision: "APPROVE" | "REJECT" | "CANCEL";
+  expectedRequestVersion: number;
+  requestStatus: "APPROVED" | "REJECTED" | "CANCELLED";
+  requestVersion: number;
+  paidUnits: number;
+  lwpUnits: number;
+  reason: string;
+  decidedBySubject: string;
+  decidedAt: string;
+};
+
+export type WorkforceCsvImport = {
+  id: string;
+  organizationId: string;
+  importType:
+    | "EMPLOYEE_ALIASES"
+    | "DELIVERABLE_ALLOCATIONS"
+    | "LEAVE_BALANCE_COMMANDS";
+  fileName: string;
+  checksum: string;
+  status: "VALIDATED" | "IMPORTED" | "FAILED";
+  rowCount: number;
+  importedCount: number;
+  errors: Array<{
+    rowNumber: number;
+    fieldName: string;
+    errorCode: string;
+    message: string;
+  }>;
+  replay: boolean;
 };
 
 export type AttendanceSession = {
@@ -118,7 +284,7 @@ export type AttendanceDay = {
 export type Punch = {
   id: string;
   employeeId: string;
-  eventType: "CHECK_IN" | "CHECK_OUT";
+  eventType: "CHECK_IN" | "CHECK_OUT" | "BREAK_START" | "BREAK_END";
   occurredAt: string;
   workDate: string;
   source: string;

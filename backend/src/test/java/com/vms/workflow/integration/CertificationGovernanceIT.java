@@ -224,6 +224,15 @@ class CertificationGovernanceIT {
         assertEquals("REOPENED", jdbc.queryForObject("""
             SELECT state FROM engagement_months WHERE id = ?::uuid
             """, String.class, MONTH));
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*)
+            FROM f04_core_reopen_approval_bindings binding
+            JOIN core_approval_requests approval
+              ON approval.id = binding.core_approval_request_id
+            WHERE binding.reopen_request_id = ?
+              AND approval.object_id = ?::uuid
+              AND approval.status = 'APPROVED'
+            """, Integer.class, reopenId, MONTH));
         assertEquals("INVALIDATED", jdbc.queryForObject("""
             SELECT effective_status
             FROM effective_f05_certification_handoffs

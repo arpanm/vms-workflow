@@ -27,6 +27,7 @@ import {
   useLinkIssue,
   usePlan,
   usePlanDecision,
+  useRevisionComparison,
   useRevisePlan,
   useSubmitPlan,
 } from "@/features/delivery/hooks";
@@ -73,7 +74,9 @@ function PlanReview({ plan }: { plan: PlanView }) {
   const submit = useSubmitPlan(plan.id);
   const decision = usePlanDecision(plan.id);
   const revise = useRevisePlan(plan.id);
+  const comparison = useRevisionComparison(plan.id);
   const [decisionComment, setDecisionComment] = useState("");
+  const [onBehalfOfSubject, setOnBehalfOfSubject] = useState("");
   const [revision, setRevision] = useState({ reason: "", impact: "" });
   const [revisionErrors, setRevisionErrors] = useState<Record<string, string>>({});
   const readOnly = isPlanContentReadOnly(plan.state);
@@ -171,6 +174,19 @@ function PlanReview({ plan }: { plan: PlanView }) {
             <Field label="Prior version" value={plan.priorVersionId ?? "Original version"} mono />
             <Field label="Reason" value={plan.revisionReason ?? "Not recorded"} />
             <Field label="Impact" value={plan.revisionImpact ?? "Not recorded"} />
+            {comparison.data && (
+              <div className="md:col-span-3 rounded-md border bg-muted/30 p-3 text-xs">
+                <p className="font-medium">
+                  Server-derived comparison: v{comparison.data.priorVersion} → v{comparison.data.currentVersion}
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  {comparison.data.changedPlanFields.length
+                    ? `Changed plan fields: ${comparison.data.changedPlanFields.join(", ")}.`
+                    : "No top-level commitment field changed."}{" "}
+                  Deliverables: {comparison.data.addedDeliverableCount} added, {comparison.data.removedDeliverableCount} removed, {comparison.data.changedDeliverableCount} changed.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -289,7 +305,11 @@ function PlanReview({ plan }: { plan: PlanView }) {
                   className="flex flex-wrap justify-between gap-2 rounded-md border p-3 text-sm"
                 >
                   <span>
-                    {approval.approverSubject} · {approval.comment ?? "No comment"}
+                    {approval.actingSubject}
+                    {approval.delegationId
+                      ? ` for ${approval.approverSubject}`
+                      : ""}{" "}
+                    · {approval.comment ?? "No comment"}
                   </span>
                   <StatusBadge status={approval.decision} />
                 </div>
@@ -301,6 +321,16 @@ function PlanReview({ plan }: { plan: PlanView }) {
             id="decision-comment"
             value={decisionComment}
             onChange={(event) => setDecisionComment(event.target.value)}
+            disabled={!mayDecide}
+          />
+          <Label htmlFor="decision-authority-holder">
+            Authority holder subject (delegated action only)
+          </Label>
+          <Input
+            id="decision-authority-holder"
+            value={onBehalfOfSubject}
+            onChange={(event) => setOnBehalfOfSubject(event.target.value)}
+            placeholder="Leave blank when acting with direct authority"
             disabled={!mayDecide}
           />
           <div className="flex flex-wrap gap-2">
@@ -317,6 +347,7 @@ function PlanReview({ plan }: { plan: PlanView }) {
                     decision.mutate({
                       decision: "APPROVE",
                       comment: decisionComment || undefined,
+                      onBehalfOfSubject: onBehalfOfSubject.trim() || undefined,
                     })
                   }
                   disabled={decision.isPending}
@@ -329,6 +360,7 @@ function PlanReview({ plan }: { plan: PlanView }) {
                     decision.mutate({
                       decision: "REJECT",
                       comment: decisionComment || undefined,
+                      onBehalfOfSubject: onBehalfOfSubject.trim() || undefined,
                     })
                   }
                   disabled={decision.isPending || !decisionComment.trim()}

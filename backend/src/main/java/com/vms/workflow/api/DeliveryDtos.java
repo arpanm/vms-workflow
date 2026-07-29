@@ -98,13 +98,65 @@ public final class DeliveryDtos {
 
     public record ApprovalRequest(
         @NotBlank @Pattern(regexp = "APPROVE|REJECT") String decision,
-        @Size(max = 4_000) String comment
+        @Size(max = 4_000) String comment,
+        @Size(max = 255) String onBehalfOfSubject
     ) {
     }
 
     public record RevisionRequest(
         @NotBlank @Size(max = 4_000) String reason,
         @NotBlank @Size(max = 4_000) String impact
+    ) {
+    }
+
+    /**
+     * Server-derived comparison of the active revision and its immutable
+     * predecessor. This intentionally reports only commitment fields, never
+     * mutable provider projections or delivery status.
+     */
+    public record RevisionComparisonView(
+        UUID planId,
+        UUID priorVersionId,
+        UUID currentVersionId,
+        int priorVersion,
+        int currentVersion,
+        List<String> changedPlanFields,
+        int addedDeliverableCount,
+        int removedDeliverableCount,
+        int changedDeliverableCount
+    ) {
+    }
+
+    public record CommitmentReplayRequest(
+        @NotBlank @Size(max = 4_000) String reason
+    ) {
+    }
+
+    /**
+     * Deliberately excludes recipient and rendered message content. Operators
+     * only need safe transport facts to decide whether to enqueue a replay.
+     */
+    public record CommitmentDeadLetterView(
+        UUID outboxId,
+        UUID planId,
+        UUID planVersionId,
+        int planVersion,
+        String messageType,
+        int attemptCount,
+        String lastErrorCode,
+        OffsetDateTime deadLetteredAt,
+        OffsetDateTime createdAt,
+        int replayCount
+    ) {
+    }
+
+    public record CommitmentReplayView(
+        UUID replayId,
+        UUID originalOutboxId,
+        UUID replayOutboxId,
+        String status,
+        int replayNumber,
+        boolean replay
     ) {
     }
 
@@ -165,6 +217,8 @@ public final class DeliveryDtos {
     public record ApprovalView(
         UUID id,
         String approverSubject,
+        String actingSubject,
+        UUID delegationId,
         String decision,
         String signedChecksum,
         String comment,

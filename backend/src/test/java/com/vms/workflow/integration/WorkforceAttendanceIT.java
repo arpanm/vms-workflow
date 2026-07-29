@@ -216,6 +216,214 @@ class WorkforceAttendanceIT {
     }
 
     @Test
+    void attendanceBreakEndpointsAreTargetedIdempotentAndTenantAuthorized() throws Exception {
+        mvc.perform(post("/api/v1/attendance/punches")
+                .with(token("user-employee"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "employeeId": "%s",
+                      "eventType": "CHECK_IN",
+                      "idempotencyKey": "break-api-check-in"
+                    }
+                    """.formatted(EMPLOYEE)))
+            .andExpect(status().isCreated());
+
+        String startRequest = """
+            {
+              "employeeId": "%s",
+              "idempotencyKey": "break-api-start"
+            }
+            """.formatted(EMPLOYEE);
+        String firstStart = mvc.perform(post("/api/v1/attendance/breaks")
+                .with(token("user-employee"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(startRequest))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.employeeId").value(EMPLOYEE))
+            .andExpect(jsonPath("$.status").value("OPEN"))
+            .andExpect(jsonPath("$.breakStartEventId").isNotEmpty())
+            .andExpect(jsonPath("$.breakEndEventId").doesNotExist())
+            .andReturn().getResponse().getContentAsString();
+        String breakId = extractId(firstStart);
+
+        mvc.perform(post("/api/v1/attendance/breaks")
+                .with(token("user-employee"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(startRequest))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value(breakId));
+
+        mvc.perform(post("/api/v1/attendance/punches")
+                .with(token("user-employee"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "employeeId": "%s",
+                      "eventType": "CHECK_OUT",
+                      "idempotencyKey": "break-api-premature-check-out"
+                    }
+                    """.formatted(EMPLOYEE)))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.detail")
+                .value("End the active break before checking out."));
+
+        mvc.perform(post("/api/v1/attendance/breaks/{id}/end", breakId)
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"idempotencyKey": "break-api-end"}
+                    """))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.detail").value("Resource not found."));
+
+        for (int attempt = 0; attempt < 2; attempt++) {
+            mvc.perform(post("/api/v1/attendance/breaks/{id}/end", breakId)
+                    .with(token("user-employee"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {"idempotencyKey": "break-api-end"}
+                        """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(breakId))
+                .andExpect(jsonPath("$.status").value("CLOSED"))
+                .andExpect(jsonPath("$.breakEndEventId").isNotEmpty())
+                .andExpect(jsonPath("$.minutes").isNumber());
+        }
+
+        mvc.perform(get("/api/v1/attendance/breaks")
+                .queryParam("employeeId", EMPLOYEE)
+                .with(token("user-employee")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].id").value(breakId));
+        mvc.perform(get("/api/v1/attendance/breaks")
+                .queryParam("employeeId", EMPLOYEE)
+                .with(token("user-arrow")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].id").value(breakId));
+        mvc.perform(get("/api/v1/attendance/breaks")
+                .queryParam("employeeId", EMPLOYEE)
+                .with(token("user-reliance")))
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.detail").value("Resource not found."));
+
+        mvc.perform(post("/api/v1/attendance/punches")
+                .with(token("user-employee"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "employeeId": "%s",
+                      "eventType": "CHECK_OUT",
+                      "idempotencyKey": "break-api-check-out"
+                    }
+                    """.formatted(EMPLOYEE)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.sessionStatus").value("CLOSED"));
+
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*) FROM attendance_events
+            WHERE employee_id = ? AND idempotency_key = 'break-api-start'
+              AND event_type = 'BREAK_START'
+            """, Integer.class, UUID.fromString(EMPLOYEE)));
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*) FROM attendance_events
+            WHERE employee_id = ? AND idempotency_key = 'break-api-end'
+              AND event_type = 'BREAK_END'
+            """, Integer.class, UUID.fromString(EMPLOYEE)));
+    }
+
+    @Test
+    void overnightBreakKeepsSessionWorkDateAndReducesCheckoutMinutes() throws Exception {
+        OffsetDateTime breakStart = OffsetDateTime.now(ZoneOffset.UTC).minusHours(25);
+        OffsetDateTime checkIn = breakStart.minusMinutes(30);
+        String workDate = checkIn.toLocalDate().toString();
+        UUID checkInId = UUID.randomUUID();
+        UUID sessionId = UUID.randomUUID();
+        UUID breakStartEventId = UUID.randomUUID();
+        UUID breakId = UUID.randomUUID();
+        insertOpenSession(
+            checkInId.toString(), sessionId.toString(), checkIn.toString(), workDate);
+        jdbc.update("""
+            INSERT INTO attendance_events
+                (id, employee_id, event_type, occurred_at, work_date, source,
+                 idempotency_key, recorded_by_subject)
+            VALUES (?, ?, 'BREAK_START', ?, ?::date, 'INTERNAL_WEB',
+                    'overnight-break-start', 'test-fixture')
+            """, breakStartEventId, UUID.fromString(EMPLOYEE), breakStart, workDate);
+        jdbc.update("""
+            INSERT INTO attendance_breaks
+                (id, session_id, employee_id, break_start_event_id,
+                 started_at, status)
+            VALUES (?, ?, ?, ?, ?, 'OPEN')
+            """, breakId, sessionId, UUID.fromString(EMPLOYEE),
+            breakStartEventId, breakStart);
+
+        mvc.perform(post("/api/v1/attendance/breaks/{id}/end", breakId)
+                .with(token("user-employee"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"idempotencyKey": "overnight-break-end"}
+                    """))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.id").value(breakId.toString()))
+            .andExpect(jsonPath("$.workDate").value(workDate))
+            .andExpect(jsonPath("$.status").value("CLOSED"))
+            .andExpect(jsonPath("$.minutes").isNumber());
+
+        mvc.perform(post("/api/v1/attendance/punches")
+                .with(token("user-employee"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "employeeId": "%s",
+                      "eventType": "CHECK_OUT",
+                      "idempotencyKey": "overnight-break-check-out"
+                    }
+                    """.formatted(EMPLOYEE)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.workDate").value(workDate))
+            .andExpect(jsonPath("$.sessionStatus").value("CLOSED"));
+
+        Integer storedNetMinutes = jdbc.queryForObject("""
+            SELECT net_minutes FROM attendance_sessions WHERE id = ?
+            """, Integer.class, sessionId);
+        Integer expectedNetMinutes = jdbc.queryForObject("""
+            SELECT GREATEST(
+                0,
+                FLOOR(EXTRACT(EPOCH FROM (session.check_out_at - session.check_in_at)) / 60)::int
+                  - COALESCE(SUM(attendance_break.minutes), 0)::int
+            )
+            FROM attendance_sessions session
+            LEFT JOIN attendance_breaks attendance_break
+              ON attendance_break.session_id = session.id
+             AND attendance_break.status = 'CLOSED'
+            WHERE session.id = ?
+            GROUP BY session.check_out_at, session.check_in_at
+            """, Integer.class, sessionId);
+        assertEquals(expectedNetMinutes, storedNetMinutes);
+        assertEquals(30, storedNetMinutes);
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*)
+            FROM attendance_breaks attendance_break
+            JOIN attendance_events start_event
+              ON start_event.id = attendance_break.break_start_event_id
+             AND start_event.event_type = 'BREAK_START'
+            JOIN attendance_events end_event
+              ON end_event.id = attendance_break.break_end_event_id
+             AND end_event.event_type = 'BREAK_END'
+            WHERE attendance_break.id = ?
+              AND start_event.work_date = ?::date
+              AND end_event.work_date = ?::date
+              AND end_event.occurred_at > start_event.occurred_at
+            """, Integer.class, breakId, workDate, workDate));
+        assertThrows(DataAccessException.class, () -> jdbc.update("""
+            UPDATE attendance_events
+            SET occurred_at = occurred_at + INTERVAL '1 minute'
+            WHERE id = ?
+            """, breakStartEventId));
+    }
+
+    @Test
     void tAtt004006_partialLeaveClassifiesAndMissingCheckoutInventsNoPunchOrMinutes() throws Exception {
         mvc.perform(post("/api/v1/workforce/employees/{id}/leave-requests", EMPLOYEE)
                 .with(token("user-employee"))
@@ -618,8 +826,7 @@ class WorkforceAttendanceIT {
                 .content("""
                     {"engagementMonthId": "%s"}
                     """.formatted(JUNE_MONTH)))
-            .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.dayCount").value(0));
+            .andExpect(status().isConflict());
 
         assertEquals(0, jdbc.queryForObject("""
             SELECT COUNT(*)

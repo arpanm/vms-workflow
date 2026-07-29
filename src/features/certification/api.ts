@@ -1,6 +1,8 @@
 import { apiClient } from "@/lib/api-client";
 
 import type {
+  CertificationInboxView,
+  CertificationOperationsView,
   CertificationRequest,
   ClarificationRequest,
   ConfirmationActionRequest,
@@ -10,6 +12,8 @@ import type {
   InboundReviewView,
   ManualEvidenceReviewRequest,
   MonthCertificationView,
+  NotificationReplayRequest,
+  NotificationReplayView,
   ReadinessView,
   ReopenRequestInput,
   SaveSubmissionRequest,
@@ -27,6 +31,28 @@ function mutationHeaders(expectedVersion: number, idempotencyKey: string) {
 }
 
 export const certificationApi = {
+  inbox: (limit = 50) =>
+    apiClient.get<CertificationInboxView>(
+      `${root}/inbox?limit=${encodeURIComponent(String(limit))}`,
+    ),
+
+  operations: (limit = 100) =>
+    apiClient.get<CertificationOperationsView>(
+      `${root}/operations?limit=${encodeURIComponent(String(limit))}`,
+    ),
+
+  replayNotification: (input: NotificationReplayRequest, idempotencyKey: string) =>
+    apiClient.post<NotificationReplayView>(
+      `${root}/notifications/${encoded(input.notificationId)}/replays`,
+      {
+        expectedMonthVersion: input.expectedMonthVersion,
+        reason: input.reason,
+      },
+      {
+        headers: mutationHeaders(input.expectedMonthVersion, idempotencyKey),
+      },
+    ),
+
   month: (monthId: string) =>
     apiClient.get<MonthCertificationView>(`${root}/months/${encoded(monthId)}`),
 

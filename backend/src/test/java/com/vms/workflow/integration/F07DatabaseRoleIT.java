@@ -501,6 +501,73 @@ class F07DatabaseRoleIT {
     }
 
     @Test
+    void runtimeCannotForgeLegacyReopenApprovalEvidence() throws Exception {
+        UUID reopenRequestId = UUID.randomUUID();
+        try (Connection connection = jdbc.getDataSource().getConnection();
+             Statement statement = connection.createStatement()) {
+            connection.setAutoCommit(false);
+            statement.execute("SET ROLE vms_app_runtime");
+            statement.execute("""
+                UPDATE engagement_months
+                SET state = 'REOPEN_REQUESTED'
+                WHERE id = '00000000-0000-0000-0000-000000000602'
+                """);
+            statement.execute("""
+                INSERT INTO month_reopen_requests(
+                    id, engagement_month_id, status, reason, category,
+                    impacted_records, package_or_invoice_submitted,
+                    recipient_snapshot, risk_statement,
+                    requested_by_subject, idempotency_key
+                ) VALUES (
+                    '%s', '00000000-0000-0000-0000-000000000602',
+                    'REQUESTED', 'Adversarial runtime request', 'CORRECTION',
+                    '[]'::jsonb, FALSE, '{}'::jsonb,
+                    'Runtime SQL must not self-assert approval authority',
+                    'user-reliance', 'f07-forged-reopen-%s'
+                )
+                """.formatted(reopenRequestId, reopenRequestId));
+            statement.execute("""
+                SELECT set_config(
+                    'vms.actor_subject', 'user-governance', TRUE)
+                """);
+            assertEquals(1, statement.executeUpdate("""
+                INSERT INTO month_reopen_decisions(
+                    id, reopen_request_id, decision, reasoning,
+                    authority_snapshot, decided_by_subject, correlation_id
+                ) VALUES (
+                    gen_random_uuid(), '%s', 'APPROVE',
+                    'Self-asserted runtime evidence',
+                    jsonb_build_object(
+                        'actorSubject', 'user-governance',
+                        'engagementMonthId',
+                            '00000000-0000-0000-0000-000000000602',
+                        'permission', 'certification.reopen.approve',
+                        'resolvedServerSide', TRUE
+                    ),
+                    'user-governance', gen_random_uuid()
+                )
+                """.formatted(reopenRequestId)));
+
+            Savepoint forgedTransition = connection.setSavepoint();
+            assertThrows(java.sql.SQLException.class, () ->
+                statement.execute("""
+                    UPDATE engagement_months
+                    SET state = 'REOPENED'
+                    WHERE id = '00000000-0000-0000-0000-000000000602'
+                    """));
+            connection.rollback(forgedTransition);
+            try (ResultSet rows = statement.executeQuery("""
+                SELECT state FROM engagement_months
+                WHERE id = '00000000-0000-0000-0000-000000000602'
+                """)) {
+                assertTrue(rows.next());
+                assertEquals("REOPEN_REQUESTED", rows.getString(1));
+            }
+            connection.rollback();
+        }
+    }
+
+    @Test
     void migrationCapabilityIsNoLoginAndRuntimeCannotAssumeIt() {
         assertTrue(jdbc.queryForObject("""
             SELECT has_schema_privilege(

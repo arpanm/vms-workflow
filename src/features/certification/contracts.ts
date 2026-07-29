@@ -199,6 +199,96 @@ export type NotificationView = {
   correlationId: string | null;
 };
 
+export type CertificationInboxItem = {
+  monthId: string;
+  engagementId: string;
+  engagementCode: string;
+  engagementName: string;
+  monthStartDate: string;
+  monthLabel: string;
+  lifecycleState: string;
+  monthVersion: number;
+  submissionStatus: SubmissionStatus | null;
+  deliverableCount: number;
+  terminalDecisionCount: number;
+  assignedReviewCount: number;
+  pendingInboundReviewCount: number;
+  confirmationState: ConfirmationState | null;
+  confirmationDueAt: string | null;
+  readinessStatus: "READY_FOR_REQUEST" | "READY_FOR_F05" | "BLOCKED" | "INVALIDATED" | null;
+  overdue: boolean;
+  nextAction:
+    | "REVIEW_CONFIRMATION_EVIDENCE"
+    | "CERTIFY_ASSIGNED_DELIVERABLES"
+    | "START_DELIVERY_SUBMISSION"
+    | "COMPLETE_DELIVERY_SUBMISSION"
+    | "CREATE_CONFIRMATION_REQUEST"
+    | "RESPOND_TO_CONFIRMATION"
+    | "GENERATE_CERTIFICATION_SUMMARY"
+    | "NO_ACTION";
+  actionPath: string;
+};
+
+export type CertificationInboxView = {
+  generatedAt: string;
+  total: number;
+  actionRequired: number;
+  overdue: number;
+  items: CertificationInboxItem[];
+};
+
+export type CertificationQueueSummary = {
+  queue: "NOTIFICATION" | "SCHEDULE" | "F05_HANDOFF";
+  pending: number;
+  claimed: number;
+  failed: number;
+  deadLetter: number;
+  completed: number;
+  cancelled: number;
+  oldestActionableAt: string | null;
+};
+
+export type CertificationOperationItem = {
+  id: string;
+  monthId: string;
+  monthVersion: number;
+  monthLabel: string;
+  engagementCode: string;
+  queue: "NOTIFICATION" | "SCHEDULE" | "F05_HANDOFF";
+  workType: string;
+  status: string;
+  attemptCount: number;
+  dueAt: string | null;
+  lastAttemptAt: string | null;
+  safeErrorCode: string | null;
+  correlationId: string | null;
+  replayAllowed: boolean;
+};
+
+export type CertificationOperationsView = {
+  generatedAt: string;
+  providerConfiguration: "NOT_CONFIGURED" | "ACTION_REQUIRED" | "CONFIGURED";
+  queues: CertificationQueueSummary[];
+  actionableItems: CertificationOperationItem[];
+};
+
+export type NotificationReplayRequest = {
+  notificationId: string;
+  expectedMonthVersion: number;
+  reason: string;
+};
+
+export type NotificationReplayView = {
+  id: string;
+  notificationId: string;
+  monthId: string;
+  transportStatus: TransportStatus;
+  replayNumber: number;
+  totalAttemptCount: number;
+  replayedAt: string;
+  correlationId: string;
+};
+
 export type TimelineEventView = {
   id: string;
   label: string;

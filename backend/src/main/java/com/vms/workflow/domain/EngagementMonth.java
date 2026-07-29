@@ -24,6 +24,7 @@ public class EngagementMonth {
     private String state;
     private String riskStatus;
     private boolean historicalFlag;
+    private long governanceVersion;
 
     protected EngagementMonth() {
     }
@@ -34,4 +35,5 @@ public class EngagementMonth {
     public String getState() { return state; }
     public String getRiskStatus() { return riskStatus; }
     public boolean isHistoricalFlag() { return historicalFlag; }
+    public long getGovernanceVersion() { return governanceVersion; }
 }

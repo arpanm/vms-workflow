@@ -6,10 +6,10 @@ that can only be produced in an approved external environment. Detailed
 feature task and test catalogs remain authoritative for implementation
 requirements; this file answers what is still pending now.
 
-**Last reconciled:** 2026-07-29 (final local F07 evidence)
-**Committed base under active work:** `9f4ac5a`
-**Current implementation scope:** preserve the reviewed supply-chain
-remediation in a local commit and bind its exact rerun to that clean commit.
+**Last reconciled:** 2026-07-29 (F01–F03 integrated implementation)
+**Committed base under active work:** `eda3eb8`
+**Current implementation scope:** finish the serialized V1–V38 focused regression,
+reconcile the F01–F04 ledgers, and create the requested local-only commit.
 **Production release state:** `NO-GO / ACTION_REQUIRED`; local synthetic or
 recorded adapters cannot satisfy production provider, legal, identity,
 capacity, recovery or human approval gates.
@@ -18,13 +18,23 @@ capacity, recovery or human approval gates.
 
 | Work item | State | Completed evidence | Still required |
 |---|---|---|---|
-| F07 real-system workforce and greytHR journeys | `PASSED LOCALLY` | Final V1–V33 serialized system run passed E2E-01, E2E-02 and E2E-03 through Vite, Spring Security, Flyway and PostgreSQL. | Preserve in the final evidence/status reconciliation; production greytHR acceptance remains external. |
-| F07 delivery and confirmation journeys | `PASSED LOCALLY` | Final V1–V33 system run passed E2E-03, E2E-04 and E2E-05, including authorization, commitment dispatch and confirmation-to-certification handoff. | Preserve in final evidence/status reconciliation; live provider/mailbox acceptance remains external. |
-| F07 correction/outage/recovery journeys | `PASSED LOCALLY` | Final V1–V33 system run passed E2E-07 and E2E-10 with public-API, lineage, canary-abort and recovery assertions. | Preserve in final evidence/status reconciliation; production outage/tabletop acceptance remains external. |
-| F07 independent review | `CLOSED` | Final product review and the post-remediation supply-chain re-review closed with no open P0–P3 finding. | Preserve both reviews in commit-bound evidence. |
-| F07 complete regression | `PASSED LOCALLY` | Frontend typecheck/lint/Vitest/build/diff passes (24 files/92 tests; 0 lint errors/6 warnings); focused backend 73+45; capacity 73+2; systems 7/7, 4/4, 6/6; browser 274/274; Maven R3 and PostgreSQL 18.4 R4 both 290/290. | Preserve R2/R3/R4, then exact commit-bound compatibility/supply-chain/restore/rollback evidence. |
-| F07 supply-chain remediation | `PASSED LOCALLY; COMMIT BINDING PENDING` | The first exact run failed safely. After JDBC/Jackson, PostgreSQL 18.4 image, worker security-context and fail-closed SPDX fixes, the complete rerun passes every scanner/report plus both artifacts and the image with zero findings. Maven R4 also passes 290/290 on PostgreSQL 18.4. | Preserve the reviewed patch in a local commit, then rerun and bind the exact scanner evidence to that clean commit. |
-| F07 documentation and Git | `DOCUMENTATION RECONCILED; COMMIT PENDING` | Task/test/API/UI/architecture/review/fix/status/regression documents carry the V1–V33 evidence and root README cross-links. | Root must append the final reviewer result, create the requested local commit, run commit-bound evidence, and never push. |
+| F01 core administration | `LOCAL PRODUCT COMPLETE` | V34, typed Java APIs, React administration flows, approval engine, F04 governed-reopen bridge and permanent E2E catalog are implemented. Focused PostgreSQL verification passes 45/45. | Complete repository regression, ledger reconciliation and local commit; production identity remains external. |
+| F02 workforce/attendance | `LOCAL PRODUCT COMPLETE` | V35 plus V37 implement aliases, allocations, calendars/leave governance, breaks, versioned shift policies, overnight/split-session rules, exact roster readiness and immutable roster snapshots with manager React flows. Focused PostgreSQL passes administration 4/4 and attendance 22/22; browser passes 8/8. | Real greytHR tenant/cutover, production IdP and controlled staging/load acceptance remain external. |
+| F03 delivery/Linear | `LOCAL PRODUCT COMPLETE` | V36 plus V38 implement replay/reconciliation operations, revision comparison, delegated approval lineage/quorum de-duplication and bounded cursor reconciliation with checkpoint/retry/partial-error evidence. Focused PostgreSQL passes 19/19; browser passes 9/9. | Exhaustive perimeter/failure-injection expansion remains a test-hardening item. Live Linear/mail acceptance remains external. |
+| F04 certification/confirmation | `LOCAL PRODUCT COMPLETE` | V11–V13 vertical plus cross-month certification/confirmation inboxes, operations health and exact-version reasoned replay UI are implemented. The new PostgreSQL inbox/operations case passes 1/1; typecheck and focused Vitest 6/6 pass. | All remaining provider/deployment gates are external. |
+| F07 hardening/go-live | `LOCAL ENGINEERING AND COMMIT EVIDENCE COMPLETE` | Product and supply reviews closed; Maven R3/R4 290/290, browser 274/274, system lanes 7/7 + 4/4 + 6/6, exact supply zero findings, and clean-commit migration/supply evidence are bound to `eda3eb8`. | External production identity/provider/legal/capacity/DR/UAT approvals only. |
+
+## Consolidated local execution backlog
+
+This is the ordered, stable-ID list of product work still executable in this
+repository. External approvals and production evidence are listed separately
+under each feature below.
+
+| ID | Feature | Pending local subtask | Required closure evidence |
+|---|---|---|---|
+| LOCAL-FINAL-REGRESSION | F01–F03 | Complete the active full Maven/PostgreSQL and final combined browser regression, then bind the evidence to a local commit. | Zero failing local lanes and commit hash |
+| LOCAL-F03-PERIMETER | F03 | Complete exhaustive least-privilege/OpenAPI/Swagger and failure-injection coverage beyond the implemented scoped integration suites. | Role matrix, OpenAPI access and failure-injection cases |
+| LOCAL-FINAL-001 | Cross-feature | Run final complete regression after all feature commits and update root status, pending, regression and architecture indexes. | Clean worktree, cross-linked evidence and no remote push |
 
 ## Open F07 implementation/review findings
 
@@ -56,45 +66,58 @@ capacity, recovery or human approval gates.
 
 ### F01 — Identity and core administration
 
-- `VERIFY/CLOSE LOCALLY`: re-audit later migrations/services against the older
-  F01 checklist because F03–F07 added contacts, approval, month lifecycle,
-  database roles, typed errors and OpenAPI behavior after the F01 commit.
-- `PENDING LOCAL PRODUCT`: finish any audit-confirmed gaps in engagement/contact
-  administration, approval/delegation administration, active
-  organization/engagement/month selector, permission-aware navigation and
-  executable OpenAPI/frontend type compatibility.
+- `LOCAL PRODUCT COMPLETE`: V34 and the typed `/api/v1/core/**` surface close
+  engagement/configuration/contact/policy/delegation administration,
+  stable-identity policy revisions, server-derived governed-reopen requests,
+  immutable eligibility snapshots, idempotent actions, delegated
+  self-approval/exact-project/authority-identity quorum enforcement,
+  authoritative atomic reopen dispatch, guarded month transitions/history,
+  canonical roles, runtime/public database privileges, effective session
+  permissions, active-scope navigation and executable OpenAPI/frontend
+  compatibility.
+- `LOCAL VERIFICATION COMPLETE`: 73 backend unit tests plus 17 focused F01
+  PostgreSQL integration tests pass; the focused F01 verify independently
+  migrated V1–V34 and V1000–V1005 on PostgreSQL 18.4 with 17/17 passing.
 - `EXTERNAL — ACTION_REQUIRED`: approved OIDC tenant/BFF login/logout,
   provisioning/invitation process, claim mapping/MFA/key rotation and deployed
   identity acceptance. Local signed JWT/JWKS tests do not close this.
 
 ### F02 — Workforce, attendance and greytHR
 
+- `LOCAL PRODUCT VERTICAL COMPLETE`: V35 provides governed employee aliases,
+  bounded deliverable allocations, effective calendars/holidays and leave
+  policies, accrual/grant/adjustment commands, exact-version leave decisions,
+  regularization review, CSV import controls, and immutable attendance-break
+  lineage with overnight-session guards. Manager/admin and self-service UI
+  flows are implemented.
+- `LOCAL VERIFICATION COMPLETE`: WorkforceAdministrationIT passes 3/3,
+  WorkforceAttendanceIT passes 22/22 and the complete workforce browser
+  project passes 8/8.
+- `LOCAL ENHANCEMENT`: a generalized configurable roster/shift-template rule
+  DSL and exhaustive roster-completeness policies remain beyond the effective
+  calendar, overnight-session and break controls now implemented.
 - `LOCAL F07 SYSTEM PASS`: provider-neutral greytHR
   discovery/probe/sync/reconciliation/cutover, source authority, corrections,
   freshness and exact E2E-02.
-- `PENDING LOCAL PRODUCT`: employee aliases/deliverable allocations; governed
-  leave accrual/grant/adjustment/approval/cancellation and excess-to-LWP
-  administration; calendar/policy manager UI; regularization review/correction
-  UI; break/overnight-shift rules; workforce CSV import validation; explicit
-  manager/admin loading/empty/stale/conflict/denied flows.
-- `PENDING VERIFICATION`: complete `T-WF`, `T-ATT`, `T-GHR` catalog audit and
-  extend the permanent regression catalog for every implemented subflow.
 - `EXTERNAL — ACTION_REQUIRED`: real greytHR tenant/scopes/credentials,
   26-employee parallel run, reconciliation owner approval and authority
   cutover.
 
 ### F03 — Delivery planning and Linear
 
-- `PARTIAL LOCAL PRODUCT`: plan/freeze/revision/baseline, signed webhooks,
-  immutable current/snapshot evidence and business-status guardrails are
-  implemented.
+- `LOCAL PRODUCT VERTICAL COMPLETE`: plan/freeze/revision/baseline, signed
+  webhooks, immutable current/snapshot evidence and business-status guardrails
+  are implemented. V36 adds revision-aware checksums, server-derived revision
+  comparison, scoped reconciliation controls, immutable commitment
+  dead-letter replay and integration-health administration.
+- `LOCAL VERIFICATION COMPLETE`: DeliveryLinearIT passes 17/17 and the complete
+  delivery browser project passes 9/9.
 - `LOCAL F07 SYSTEM PASS`: provider recovery command, last-known/stale behavior,
   commitment dispatch worker, retry/lease/dead-letter evidence and E2E-03/10.
-- `PENDING LOCAL PRODUCT`: audit and close data-driven quorum/SOD edge cases,
-  dependency cycles/allocation coverage, provider adapter/error/pagination
-  boundaries, scheduled reconciliation/manual refresh/replay administration,
-  plan builder/revision compare/integration-health UI and exhaustive
-  least-privilege/OpenAPI tests.
+- `LOCAL ENHANCEMENT`: delivery-specific use of the shared delegation model,
+  scheduled live-provider delta pagination and exhaustive role/OpenAPI/failure
+  injection matrices remain. Manual reconciliation/replay and their scoped
+  audit trail are implemented.
 - `EXTERNAL — ACTION_REQUIRED`: real Linear OAuth/PKCE app, workspace/scopes,
   webhook registration/secret rotation and live email provider/sender/mailbox.
 
@@ -137,12 +160,12 @@ capacity, recovery or human approval gates.
 
 ### F07 — Hardening and go-live
 
-- `LOCAL ENGINEERING COMPLETE / COMMIT-BOUND EVIDENCE PENDING`:
+- `LOCAL ENGINEERING COMPLETE / COMMIT-BOUND EVIDENCE COMPLETE`:
   PEND-F07-001 through PEND-F07-011 are
   implemented with focused evidence; F07/finance/migration systems pass 7/7,
-  4/4 and 6/6; capacity passes 73 + 2; browser passes 274/274. Finish the
-  local implementation commit and commit-bound
-  compatibility/supply-chain/restore/rollback evidence.
+  4/4 and 6/6; capacity passes 73 + 2; browser passes 274/274. Exact
+  compatibility, migration-rehearsal and supply evidence is bound to clean
+  commit `eda3eb8`.
 - `EXTERNAL — ACTION_REQUIRED`: named release/security/data/legal/operations
   approvers; production OIDC/secrets/providers; legal/privacy/retention
   approval; scanner/storage/telemetry/on-call; production-like capacity and
@@ -165,6 +188,5 @@ capacity, recovery or human approval gates.
 8. `COMPLETE`: final Terra review closed with no P0–P3 finding.
 9. `COMPLETE FOR CURRENT EVIDENCE`: feature/status/regression/root README
    documentation reconciliation.
-10. `PENDING`: local Git commit only, then commit-bound migration
-    compatibility, rollback/post-deploy evidence and a local evidence commit.
-    No remote push.
+10. `COMPLETE FOR F07`: local implementation and evidence commits created;
+    clean-commit migration/supply binding completed. No remote push.

@@ -12,11 +12,18 @@ The following production integrations are **externally blocked**, not silently e
 
 ## Implementation tasks
 
-**Current implementation disposition (2026-07-26):** a reviewed,
-provider-neutral local slice exists and V10 resolves the local P0 integrity
-findings. The unchecked tasks remain the full requirement scope: several local
-P1 capabilities and all live Linear/mail/BFF acceptance are still open. See
-[FIXES.md](FIXES.md) and [TEST_AUTOMATION.md](TEST_AUTOMATION.md).
+**Current implementation disposition (2026-07-29):** the unchecked boxes are
+the full acceptance scope, not a claim that no local work exists. The evidence
+below records the implemented local slice and the material remaining boundary.
+
+| Tasks | Evidence-backed local disposition | Material remainder |
+| --- | --- | --- |
+| 001–002 | V7–V10 provide versioned plan/deliverable/criteria/dependency/assignment/approval/baseline/Linear persistence, immutable guards, stable lineage and scoped service authorization; `DeliveryPlanningService` validates completeness and dependency cycles. | No separate editable-draft API after creation; changes remain revision-by-clone. |
+| 003 | Scoped quorum, self-approval guard, atomic freeze/baseline, revision clone, immutable evidence and the `GET /delivery/plans/{planId}/revision-comparison` API/UI are implemented; v3 checksums bind revision context. V38 binds an active shared-core delegation to the configured authority holder while retaining the distinct acting subject and exact delegation ID. | Live identity-provider acceptance remains an environment gate. |
+| 004–005 | V28/V32 and `DeliveryCommitmentOperationsWorker` provide recipient snapshots, immutable rendered content, claim/lease, retry and dead-letter behavior through a configured adapter. | A real mail provider, contact-group authorization and live send are externally blocked. |
+| 006, 008–010 | Recorded/provider-neutral issue links, current projections, snapshots, signed webhook queue handling, health and an idempotent reconciliation command ledger are implemented and integration tested. V38 adds ordered `updatedAt`/UUID cursor pagination, bounded pages, scheduled due checkpoints, retry/dead-letter state, immutable per-attempt checksums, and explicit GraphQL data-plus-errors failure handling behind `LinearReconciliationAdapter`. | No live Linear OAuth/GraphQL adapter is configured; tenant acceptance remains external. |
+| 011–012 | Secured Java endpoints, OpenAPI operations, plan builder/review, revision comparison, delegated approval input/evidence, issue evidence and integration-health UI are present. Reconciliation checkpoint/job summaries are exposed through a secret-redacted, engagement-scoped OpenAPI operation. | Full accessibility/Playwright coverage remains open. |
+| 013–014 | `DeliveryLinearIT` and `DeliveryCommitmentOperationsWorkerIT` cover the local planning/revision/reconciliation and transport paths; API/frontend contract tests cover the added endpoints. | Exhaustive least-privilege, OpenAPI/Swagger access, failure injection and operator-runbook acceptance remain open. |
 
 - [ ] **F03-TASK-001 — Delivery schema and Flyway baseline** *(locally implementable; PRD 02, 07 §2–4, 13, 22).* Add append-only reviewed Flyway migrations for plan/version, deliverable/version, acceptance criterion, dependency, effective-dated employee assignment, approval, exception, checksum, baseline, Linear link/current/event/snapshot, connection/job/webhook-delivery, outbox/email-attempt and audit records. Enforce one engagement month, stable deliverable-code lineage, unique `(deliverable_version_id, linear_issue_uuid)`, delivery/event dedupe, foreign keys, tenant/engagement scope, optimistic versions and no destructive deletion after evidence use.
 - [ ] **F03-TASK-002 — Plan and deliverable domain services** *(locally implementable; PRD 02, 03, 07 §2–4, 13, 22).* Implement explicit state transitions `DRAFT → READY_FOR_REVIEW → PENDING_APPROVAL → APPROVED → FROZEN → SUPERSEDED`, with terminal submission states and revision-by-clone only. Validate all mandatory deliverable fields, independently testable criteria, dependency/risk declarations, valid allocations/target dates, active owners/approvers/contact groups, cycle detection, link exception authority, and no-deliverables exception approval. Compute canonical checksum and audit every consequential action.

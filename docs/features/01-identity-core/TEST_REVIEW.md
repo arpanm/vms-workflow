@@ -37,3 +37,15 @@ The unit tests provide useful coverage of API header/error mapping, environment 
 ### What they do not prove
 
 `SecurityMockMvcRequestPostProcessors.jwt()` constructs an authenticated test security context (`ApiTenantSecurityIT.java:85-87`); it does not send a signed bearer token through the configured `JwtDecoder`. Consequently, the suite does not test JWKS lookup/signature, issuer, expiry/not-before, audience rejection, algorithms, or key rotation. It also omits inactive/expired/revoked membership, inactive organization, project/month direct IDs, permissions/object assignments, schema constraints, OpenAPI, CORS/CSRF, database grants, mutations, audit/idempotency, and typed domain errors.
+## Final review — 2026-07-29
+
+The completion suite is accepted for local F01 product scope. Review found and
+closed two P1 approval defects before the green run: project-scoped role
+eligibility previously accepted any project in an engagement, and quorum
+previously counted delegates as independent from their authority holder.
+Exact-request-project checks, an authority-identity uniqueness index and
+`COUNT(DISTINCT COALESCE(delegated_from_user_id, actor_user_id))` now enforce
+the intended behavior in Java and PostgreSQL.
+
+Provider-backed OIDC/BFF acceptance remains external and is not represented as
+passing local automation.

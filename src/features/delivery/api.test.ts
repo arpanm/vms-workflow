@@ -41,11 +41,55 @@ describe("delivery API contract", () => {
     });
   });
 
+  it("loads revision comparison from the exact plan resource", async () => {
+    apiMocks.get.mockResolvedValue({});
+    await deliveryApi.revisionComparison("plan/1");
+    expect(apiMocks.get).toHaveBeenCalledWith(
+      "/delivery/plans/plan%2F1/revision-comparison",
+    );
+  });
+
+  it("reads a bounded engagement-scoped commitment dead-letter list", async () => {
+    apiMocks.get.mockResolvedValue([]);
+    await deliveryApi.commitmentDeadLetters("engagement/1", 10);
+    expect(apiMocks.get).toHaveBeenCalledWith(
+      "/delivery/commitment-operations?engagementId=engagement%2F1&limit=10",
+    );
+  });
+
+  it("replays only one outbox identifier with a command key", async () => {
+    apiMocks.post.mockResolvedValue({});
+    await deliveryApi.replayCommitment(
+      "outbox/1",
+      { reason: "Provider incident resolved" },
+      "commitment-replay-key",
+    );
+    expect(apiMocks.post).toHaveBeenCalledWith(
+      "/delivery/commitment-operations/outbox%2F1/replays",
+      { reason: "Provider incident resolved" },
+      { headers: { "Idempotency-Key": "commitment-replay-key" } },
+    );
+  });
+
   it("reads provider health without any credential fields in the request", async () => {
     apiMocks.get.mockResolvedValue({});
     await deliveryApi.linearHealth("engagement-1");
     expect(apiMocks.get).toHaveBeenCalledWith(
       "/integrations/linear/health?engagementId=engagement-1",
+    );
+  });
+
+  it("records a provider-neutral reconciliation with an idempotency key", async () => {
+    apiMocks.post.mockResolvedValue({});
+    await deliveryApi.reconcileLinear(
+      "connection/1",
+      { outcome: "UNAVAILABLE", errorCode: "PROVIDER_UNAVAILABLE", reason: "Timed out" },
+      "reconcile-key",
+    );
+    expect(apiMocks.post).toHaveBeenCalledWith(
+      "/integrations/linear/connections/connection%2F1/reconciliations",
+      { outcome: "UNAVAILABLE", errorCode: "PROVIDER_UNAVAILABLE", reason: "Timed out" },
+      { headers: { "Idempotency-Key": "reconcile-key" } },
     );
   });
 

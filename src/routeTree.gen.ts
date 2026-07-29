@@ -17,6 +17,10 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as RequirementsRouteImport } from './routes/requirements'
 import { Route as ScopeRouteImport } from './routes/scope'
 import { Route as UatRouteImport } from './routes/uat'
+import { Route as AdministrationApprovalPoliciesRouteImport } from './routes/administration.approval-policies'
+import { Route as AdministrationContactGroupsRouteImport } from './routes/administration.contact-groups'
+import { Route as AdministrationEngagementsRouteImport } from './routes/administration.engagements'
+import { Route as AdministrationMonthsRouteImport } from './routes/administration.months'
 import { Route as AttendanceLeaveRouteImport } from './routes/attendance.leave'
 import { Route as AttendanceMonthCloseRouteImport } from './routes/attendance.month-close'
 import { Route as AttendanceRegularizationsRouteImport } from './routes/attendance.regularizations'
@@ -30,6 +34,9 @@ import { Route as FinanceIndexRouteImport } from './routes/finance.index'
 import { Route as FinanceProcurementRouteImport } from './routes/finance.procurement'
 import { Route as FinanceReportsRouteImport } from './routes/finance.reports'
 import { Route as MigrationIndexRouteImport } from './routes/migration.index'
+import { Route as WorkforceAdministrationRouteImport } from './routes/workforce.administration'
+import { Route as AdministrationApprovalRequestsIndexRouteImport } from './routes/administration.approval-requests.index'
+import { Route as AdministrationApprovalRequestsRequestIdRouteImport } from './routes/administration.approval-requests.$requestId'
 import { Route as CertificationMonthIdIndexRouteImport } from './routes/certification.$monthId.index'
 import { Route as CertificationMonthIdReviewRouteImport } from './routes/certification.$monthId.review'
 import { Route as ConfirmationRequestsRequestIdRouteImport } from './routes/confirmation.requests.$requestId'
@@ -77,6 +84,29 @@ const ScopeRoute = ScopeRouteImport.update({
 const UatRoute = UatRouteImport.update({
   id: '/uat',
   path: '/uat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdministrationApprovalPoliciesRoute =
+  AdministrationApprovalPoliciesRouteImport.update({
+    id: '/administration/approval-policies',
+    path: '/administration/approval-policies',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdministrationContactGroupsRoute =
+  AdministrationContactGroupsRouteImport.update({
+    id: '/administration/contact-groups',
+    path: '/administration/contact-groups',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdministrationEngagementsRoute =
+  AdministrationEngagementsRouteImport.update({
+    id: '/administration/engagements',
+    path: '/administration/engagements',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdministrationMonthsRoute = AdministrationMonthsRouteImport.update({
+  id: '/administration/months',
+  path: '/administration/months',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AttendanceLeaveRoute = AttendanceLeaveRouteImport.update({
@@ -146,6 +176,23 @@ const MigrationIndexRoute = MigrationIndexRouteImport.update({
   path: '/migration/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkforceAdministrationRoute = WorkforceAdministrationRouteImport.update({
+  id: '/workforce/administration',
+  path: '/workforce/administration',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdministrationApprovalRequestsIndexRoute =
+  AdministrationApprovalRequestsIndexRouteImport.update({
+    id: '/administration/approval-requests/',
+    path: '/administration/approval-requests/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const AdministrationApprovalRequestsRequestIdRoute =
+  AdministrationApprovalRequestsRequestIdRouteImport.update({
+    id: '/administration/approval-requests/$requestId',
+    path: '/administration/approval-requests/$requestId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const CertificationMonthIdIndexRoute =
   CertificationMonthIdIndexRouteImport.update({
     id: '/',
@@ -200,6 +247,10 @@ export interface FileRoutesByFullPath {
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
   '/uat': typeof UatRoute
+  '/administration/approval-policies': typeof AdministrationApprovalPoliciesRoute
+  '/administration/contact-groups': typeof AdministrationContactGroupsRoute
+  '/administration/engagements': typeof AdministrationEngagementsRoute
+  '/administration/months': typeof AdministrationMonthsRoute
   '/attendance/leave': typeof AttendanceLeaveRoute
   '/attendance/month-close': typeof AttendanceMonthCloseRoute
   '/attendance/regularizations': typeof AttendanceRegularizationsRoute
@@ -209,15 +260,18 @@ export interface FileRoutesByFullPath {
   '/delivery/integration-health': typeof DeliveryIntegrationHealthRoute
   '/finance/procurement': typeof FinanceProcurementRoute
   '/finance/reports': typeof FinanceReportsRoute
+  '/workforce/administration': typeof WorkforceAdministrationRoute
   '/certification/': typeof CertificationIndexRoute
   '/confirmation/': typeof ConfirmationIndexRoute
   '/finance/': typeof FinanceIndexRoute
   '/migration/': typeof MigrationIndexRoute
+  '/administration/approval-requests/$requestId': typeof AdministrationApprovalRequestsRequestIdRoute
   '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
   '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
   '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
   '/delivery/plans/new': typeof DeliveryPlansNewRoute
   '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
+  '/administration/approval-requests/': typeof AdministrationApprovalRequestsIndexRoute
   '/certification/$monthId/': typeof CertificationMonthIdIndexRoute
   '/delivery/plans/': typeof DeliveryPlansIndexRoute
   '/workforce/employees/': typeof WorkforceEmployeesIndexRoute
@@ -231,6 +285,10 @@ export interface FileRoutesByTo {
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
   '/uat': typeof UatRoute
+  '/administration/approval-policies': typeof AdministrationApprovalPoliciesRoute
+  '/administration/contact-groups': typeof AdministrationContactGroupsRoute
+  '/administration/engagements': typeof AdministrationEngagementsRoute
+  '/administration/months': typeof AdministrationMonthsRoute
   '/attendance/leave': typeof AttendanceLeaveRoute
   '/attendance/month-close': typeof AttendanceMonthCloseRoute
   '/attendance/regularizations': typeof AttendanceRegularizationsRoute
@@ -239,15 +297,18 @@ export interface FileRoutesByTo {
   '/delivery/integration-health': typeof DeliveryIntegrationHealthRoute
   '/finance/procurement': typeof FinanceProcurementRoute
   '/finance/reports': typeof FinanceReportsRoute
+  '/workforce/administration': typeof WorkforceAdministrationRoute
   '/certification': typeof CertificationIndexRoute
   '/confirmation': typeof ConfirmationIndexRoute
   '/finance': typeof FinanceIndexRoute
   '/migration': typeof MigrationIndexRoute
+  '/administration/approval-requests/$requestId': typeof AdministrationApprovalRequestsRequestIdRoute
   '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
   '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
   '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
   '/delivery/plans/new': typeof DeliveryPlansNewRoute
   '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
+  '/administration/approval-requests': typeof AdministrationApprovalRequestsIndexRoute
   '/certification/$monthId': typeof CertificationMonthIdIndexRoute
   '/delivery/plans': typeof DeliveryPlansIndexRoute
   '/workforce/employees': typeof WorkforceEmployeesIndexRoute
@@ -262,6 +323,10 @@ export interface FileRoutesById {
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
   '/uat': typeof UatRoute
+  '/administration/approval-policies': typeof AdministrationApprovalPoliciesRoute
+  '/administration/contact-groups': typeof AdministrationContactGroupsRoute
+  '/administration/engagements': typeof AdministrationEngagementsRoute
+  '/administration/months': typeof AdministrationMonthsRoute
   '/attendance/leave': typeof AttendanceLeaveRoute
   '/attendance/month-close': typeof AttendanceMonthCloseRoute
   '/attendance/regularizations': typeof AttendanceRegularizationsRoute
@@ -271,15 +336,18 @@ export interface FileRoutesById {
   '/delivery/integration-health': typeof DeliveryIntegrationHealthRoute
   '/finance/procurement': typeof FinanceProcurementRoute
   '/finance/reports': typeof FinanceReportsRoute
+  '/workforce/administration': typeof WorkforceAdministrationRoute
   '/certification/': typeof CertificationIndexRoute
   '/confirmation/': typeof ConfirmationIndexRoute
   '/finance/': typeof FinanceIndexRoute
   '/migration/': typeof MigrationIndexRoute
+  '/administration/approval-requests/$requestId': typeof AdministrationApprovalRequestsRequestIdRoute
   '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
   '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
   '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
   '/delivery/plans/new': typeof DeliveryPlansNewRoute
   '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
+  '/administration/approval-requests/': typeof AdministrationApprovalRequestsIndexRoute
   '/certification/$monthId/': typeof CertificationMonthIdIndexRoute
   '/delivery/plans/': typeof DeliveryPlansIndexRoute
   '/workforce/employees/': typeof WorkforceEmployeesIndexRoute
@@ -295,6 +363,10 @@ export interface FileRouteTypes {
     | '/requirements'
     | '/scope'
     | '/uat'
+    | '/administration/approval-policies'
+    | '/administration/contact-groups'
+    | '/administration/engagements'
+    | '/administration/months'
     | '/attendance/leave'
     | '/attendance/month-close'
     | '/attendance/regularizations'
@@ -304,15 +376,18 @@ export interface FileRouteTypes {
     | '/delivery/integration-health'
     | '/finance/procurement'
     | '/finance/reports'
+    | '/workforce/administration'
     | '/certification/'
     | '/confirmation/'
     | '/finance/'
     | '/migration/'
+    | '/administration/approval-requests/$requestId'
     | '/certification/$monthId/review'
     | '/confirmation/requests/$requestId'
     | '/delivery/plans/$planId'
     | '/delivery/plans/new'
     | '/workforce/employees/$employeeId'
+    | '/administration/approval-requests/'
     | '/certification/$monthId/'
     | '/delivery/plans/'
     | '/workforce/employees/'
@@ -326,6 +401,10 @@ export interface FileRouteTypes {
     | '/requirements'
     | '/scope'
     | '/uat'
+    | '/administration/approval-policies'
+    | '/administration/contact-groups'
+    | '/administration/engagements'
+    | '/administration/months'
     | '/attendance/leave'
     | '/attendance/month-close'
     | '/attendance/regularizations'
@@ -334,15 +413,18 @@ export interface FileRouteTypes {
     | '/delivery/integration-health'
     | '/finance/procurement'
     | '/finance/reports'
+    | '/workforce/administration'
     | '/certification'
     | '/confirmation'
     | '/finance'
     | '/migration'
+    | '/administration/approval-requests/$requestId'
     | '/certification/$monthId/review'
     | '/confirmation/requests/$requestId'
     | '/delivery/plans/$planId'
     | '/delivery/plans/new'
     | '/workforce/employees/$employeeId'
+    | '/administration/approval-requests'
     | '/certification/$monthId'
     | '/delivery/plans'
     | '/workforce/employees'
@@ -356,6 +438,10 @@ export interface FileRouteTypes {
     | '/requirements'
     | '/scope'
     | '/uat'
+    | '/administration/approval-policies'
+    | '/administration/contact-groups'
+    | '/administration/engagements'
+    | '/administration/months'
     | '/attendance/leave'
     | '/attendance/month-close'
     | '/attendance/regularizations'
@@ -365,15 +451,18 @@ export interface FileRouteTypes {
     | '/delivery/integration-health'
     | '/finance/procurement'
     | '/finance/reports'
+    | '/workforce/administration'
     | '/certification/'
     | '/confirmation/'
     | '/finance/'
     | '/migration/'
+    | '/administration/approval-requests/$requestId'
     | '/certification/$monthId/review'
     | '/confirmation/requests/$requestId'
     | '/delivery/plans/$planId'
     | '/delivery/plans/new'
     | '/workforce/employees/$employeeId'
+    | '/administration/approval-requests/'
     | '/certification/$monthId/'
     | '/delivery/plans/'
     | '/workforce/employees/'
@@ -388,6 +477,10 @@ export interface RootRouteChildren {
   RequirementsRoute: typeof RequirementsRoute
   ScopeRoute: typeof ScopeRoute
   UatRoute: typeof UatRoute
+  AdministrationApprovalPoliciesRoute: typeof AdministrationApprovalPoliciesRoute
+  AdministrationContactGroupsRoute: typeof AdministrationContactGroupsRoute
+  AdministrationEngagementsRoute: typeof AdministrationEngagementsRoute
+  AdministrationMonthsRoute: typeof AdministrationMonthsRoute
   AttendanceLeaveRoute: typeof AttendanceLeaveRoute
   AttendanceMonthCloseRoute: typeof AttendanceMonthCloseRoute
   AttendanceRegularizationsRoute: typeof AttendanceRegularizationsRoute
@@ -397,14 +490,17 @@ export interface RootRouteChildren {
   DeliveryIntegrationHealthRoute: typeof DeliveryIntegrationHealthRoute
   FinanceProcurementRoute: typeof FinanceProcurementRoute
   FinanceReportsRoute: typeof FinanceReportsRoute
+  WorkforceAdministrationRoute: typeof WorkforceAdministrationRoute
   CertificationIndexRoute: typeof CertificationIndexRoute
   ConfirmationIndexRoute: typeof ConfirmationIndexRoute
   FinanceIndexRoute: typeof FinanceIndexRoute
   MigrationIndexRoute: typeof MigrationIndexRoute
+  AdministrationApprovalRequestsRequestIdRoute: typeof AdministrationApprovalRequestsRequestIdRoute
   ConfirmationRequestsRequestIdRoute: typeof ConfirmationRequestsRequestIdRoute
   DeliveryPlansPlanIdRoute: typeof DeliveryPlansPlanIdRoute
   DeliveryPlansNewRoute: typeof DeliveryPlansNewRoute
   WorkforceEmployeesEmployeeIdRoute: typeof WorkforceEmployeesEmployeeIdRoute
+  AdministrationApprovalRequestsIndexRoute: typeof AdministrationApprovalRequestsIndexRoute
   DeliveryPlansIndexRoute: typeof DeliveryPlansIndexRoute
   WorkforceEmployeesIndexRoute: typeof WorkforceEmployeesIndexRoute
 }
@@ -465,6 +561,34 @@ declare module '@tanstack/react-router' {
       path: '/uat'
       fullPath: '/uat'
       preLoaderRoute: typeof UatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/administration/approval-policies': {
+      id: '/administration/approval-policies'
+      path: '/administration/approval-policies'
+      fullPath: '/administration/approval-policies'
+      preLoaderRoute: typeof AdministrationApprovalPoliciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/administration/contact-groups': {
+      id: '/administration/contact-groups'
+      path: '/administration/contact-groups'
+      fullPath: '/administration/contact-groups'
+      preLoaderRoute: typeof AdministrationContactGroupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/administration/engagements': {
+      id: '/administration/engagements'
+      path: '/administration/engagements'
+      fullPath: '/administration/engagements'
+      preLoaderRoute: typeof AdministrationEngagementsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/administration/months': {
+      id: '/administration/months'
+      path: '/administration/months'
+      fullPath: '/administration/months'
+      preLoaderRoute: typeof AdministrationMonthsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/attendance/leave': {
@@ -558,6 +682,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MigrationIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/workforce/administration': {
+      id: '/workforce/administration'
+      path: '/workforce/administration'
+      fullPath: '/workforce/administration'
+      preLoaderRoute: typeof WorkforceAdministrationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/administration/approval-requests/': {
+      id: '/administration/approval-requests/'
+      path: '/administration/approval-requests'
+      fullPath: '/administration/approval-requests/'
+      preLoaderRoute: typeof AdministrationApprovalRequestsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/administration/approval-requests/$requestId': {
+      id: '/administration/approval-requests/$requestId'
+      path: '/administration/approval-requests/$requestId'
+      fullPath: '/administration/approval-requests/$requestId'
+      preLoaderRoute: typeof AdministrationApprovalRequestsRequestIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/certification/$monthId/': {
       id: '/certification/$monthId/'
       path: '/'
@@ -639,6 +784,10 @@ const rootRouteChildren: RootRouteChildren = {
   RequirementsRoute: RequirementsRoute,
   ScopeRoute: ScopeRoute,
   UatRoute: UatRoute,
+  AdministrationApprovalPoliciesRoute: AdministrationApprovalPoliciesRoute,
+  AdministrationContactGroupsRoute: AdministrationContactGroupsRoute,
+  AdministrationEngagementsRoute: AdministrationEngagementsRoute,
+  AdministrationMonthsRoute: AdministrationMonthsRoute,
   AttendanceLeaveRoute: AttendanceLeaveRoute,
   AttendanceMonthCloseRoute: AttendanceMonthCloseRoute,
   AttendanceRegularizationsRoute: AttendanceRegularizationsRoute,
@@ -648,14 +797,19 @@ const rootRouteChildren: RootRouteChildren = {
   DeliveryIntegrationHealthRoute: DeliveryIntegrationHealthRoute,
   FinanceProcurementRoute: FinanceProcurementRoute,
   FinanceReportsRoute: FinanceReportsRoute,
+  WorkforceAdministrationRoute: WorkforceAdministrationRoute,
   CertificationIndexRoute: CertificationIndexRoute,
   ConfirmationIndexRoute: ConfirmationIndexRoute,
   FinanceIndexRoute: FinanceIndexRoute,
   MigrationIndexRoute: MigrationIndexRoute,
+  AdministrationApprovalRequestsRequestIdRoute:
+    AdministrationApprovalRequestsRequestIdRoute,
   ConfirmationRequestsRequestIdRoute: ConfirmationRequestsRequestIdRoute,
   DeliveryPlansPlanIdRoute: DeliveryPlansPlanIdRoute,
   DeliveryPlansNewRoute: DeliveryPlansNewRoute,
   WorkforceEmployeesEmployeeIdRoute: WorkforceEmployeesEmployeeIdRoute,
+  AdministrationApprovalRequestsIndexRoute:
+    AdministrationApprovalRequestsIndexRoute,
   DeliveryPlansIndexRoute: DeliveryPlansIndexRoute,
   WorkforceEmployeesIndexRoute: WorkforceEmployeesIndexRoute,
 }

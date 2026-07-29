@@ -1,5 +1,16 @@
 # F02 UI documentation
 
+## Workforce administration
+
+`/workforce/administration` provides manager controls for employee aliases,
+bounded deliverable allocations, versioned leave policies and calendars
+(including an editable holiday), immutable balance commands, exact-version
+leave decisions, regularization review and bounded CSV validate/apply.
+Queries and mutations expose loading, empty, error and conflict states through
+the shared workforce boundary components. `/attendance/today` also exposes
+Start break and End break while an internal session is open; the backend
+remains authoritative for valid break order.
+
 F02 routes appear only when `VITE_FEATURE_WORKFORCE_GOVERNANCE=true`. The
 browser route guard returns the application's not-found route when the flag is
 off. This is a UI rollout flag; JWT/RBAC remains the backend security boundary.
@@ -104,3 +115,18 @@ readiness decision.
 - [FIXES.md](FIXES.md)
 - [TEST_CASES.md](TEST_CASES.md)
 - [CHANGELOG.md](CHANGELOG.md)
+
+## Workforce administration: shift and roster flow
+
+1. Publish a versioned shift policy with timezone, start/end, overnight cutoff,
+   expected minutes, maximum session and split-session behavior.
+2. Select an employee and assign a published policy over an effective range.
+3. Select an engagement and month in **Roster completeness**.
+4. Resolve every reported calendar, shift, employee-version or source gap.
+5. Enter the review reason and finalize the immutable roster.
+6. Use the displayed version, day count and checksum as the attendance-close
+   baseline. A later effective change creates a new superseding version.
+
+Earlier “known unavailable” statements in this document are superseded for
+calendar/leave administration, governed review, CSV, shift assignment and
+roster finalization by the completed `/workforce/administration` workspace.

@@ -73,3 +73,22 @@ BUILD SUCCESS
 - Migration-owner/runtime database roles, the full contacts/approval/
   delegation/month-transition model, typed legacy schemas and generated-client
   compatibility remain open.
+## Completion fixes — 2026-07-29
+
+| ID | Fix | Evidence |
+|---|---|---|
+| F01-FIX-CORE-01 | Added additive versioned engagement configuration/contact/policy/delegation and guarded month history schema. | V34 fresh migration; `CoreAdministrationIT` |
+| F01-FIX-CORE-02 | Added typed core administration and approval request/action APIs with optimistic conflict codes. | Generated OpenAPI assertions and HTTP integration tests |
+| F01-FIX-CORE-03 | Added exact-project stage eligibility in Java and PostgreSQL. | Wrong-project product owner case |
+| F01-FIX-CORE-04 | Counted original authority once across direct/delegated actions and added a database uniqueness backstop. | 2-of-3 duplicate-authority case |
+| F01-FIX-CORE-05 | Added self-approval, delegation expiry/action/stage and idempotency enforcement. | Approval engine cases |
+| F01-FIX-CORE-06 | Completed canonical roles while preserving no implicit business approval for platform/support/service identities. | Role inventory/mapping assertion |
+| F01-FIX-CORE-07 | Added effective permissions and active scope/permission-aware navigation contracts. | `/me`, frontend and browser-contract coverage |
+| F01-FIX-CORE-08 | Made object evidence server-authoritative: the public request input is only policy, month and idempotency key; non-REOPEN/specialized action types are rejected by this engine. | Forged-evidence and authoritative reopen integration cases |
+| F01-FIX-CORE-09 | Added immutable per-request stage electorate/quorum/delegation snapshots so later role, membership or contact changes cannot alter pending decisions. | Eligibility-drift case plus SQL mutation guards |
+| F01-FIX-CORE-10 | Closed delegated self-approval by comparing the requester with the original authority, not only the acting delegate. | Direct and delegated self-action cases |
+| F01-FIX-CORE-11 | Added actor-scoped action idempotency with exact replay and mismatched-content conflict. | Approval-action replay integration case |
+| F01-FIX-CORE-12 | Added stable-identity policy revision with a non-overlapping future-effective handoff; drafting or publishing a future version does not disable the currently effective published version. | Revision continuity integration and frontend contract |
+| F01-FIX-CORE-13 | Bound final request approval to the authoritative atomic month reopen; database triggers reject direct request transitions and unapproved `REOPENED` writes. | Service dispatch and adversarial SQL cases |
+| F01-FIX-CORE-14 | Derived `ALL` quorum from the complete request-time electorate and returned that captured value to clients. | Add-member-before-request 3-of-3 regression |
+| F01-FIX-CORE-15 | Enforced captured `evidenceRequired` with a nonblank action reason and permission-aware UI validation. | HTTP rejection plus frontend contract |

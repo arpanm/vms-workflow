@@ -61,25 +61,56 @@ public class TenantAuthorizationService {
     }
 
     public void requireOrganization(String subject, UUID organizationId) {
+        requireOrganizationPermission(subject, organizationId, CATALOG_READ);
+    }
+
+    public void requireOrganizationPermission(
+        String subject,
+        UUID organizationId,
+        String permission
+    ) {
         requireActivePrincipal(subject);
         if (!authorization.hasOrganizationPermission(
-            subject, organizationId, CATALOG_READ, LocalDate.now(clock))) {
+            subject, organizationId, permission, LocalDate.now(clock))) {
             throw notFound();
         }
     }
 
     public void requireEngagement(String subject, UUID engagementId) {
+        requireEngagementPermission(subject, engagementId, CATALOG_READ);
+    }
+
+    public void requireEngagementPermission(
+        String subject,
+        UUID engagementId,
+        String permission
+    ) {
         requireActivePrincipal(subject);
         if (!authorization.hasEngagementPermission(
-            subject, engagementId, CATALOG_READ, LocalDate.now(clock))) {
+            subject, engagementId, permission, LocalDate.now(clock))) {
             throw notFound();
         }
     }
 
+    public List<String> effectivePermissions(String subject) {
+        requireActivePrincipal(subject);
+        return authorization.findEffectivePermissions(
+            subject,
+            LocalDate.now(clock));
+    }
+
     public void requireProject(String subject, UUID projectId) {
+        requireProjectPermission(subject, projectId, CATALOG_READ);
+    }
+
+    public void requireProjectPermission(
+        String subject,
+        UUID projectId,
+        String permission
+    ) {
         requireActivePrincipal(subject);
         if (!authorization.hasProjectPermission(
-            subject, projectId, CATALOG_READ, LocalDate.now(clock))) {
+            subject, projectId, permission, LocalDate.now(clock))) {
             throw notFound();
         }
     }

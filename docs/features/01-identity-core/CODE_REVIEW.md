@@ -46,3 +46,27 @@ The backend is a tenant-filtered read-only catalog prototype, not the specified 
 - Only organizations, memberships, engagements, projects, engagement months, and immutable legacy snapshots are modeled. Roles/permissions/assignments, configuration versions, contacts/teams, approvals/delegations, guarded transitions/history, audit/idempotency, and mutation contracts are absent.
 - The generated OpenAPI endpoint is protected, but the OpenAPI model declares only title/version/description and no bearer security scheme or standardized ProblemDetail responses.
 - Successful `verify` proves container startup and four read cases; its mock JWTs bypass the configured decoder and therefore do not prove real JWT validation.
+## Final completion review — 2026-07-29
+
+Reviewed scope: V34, authorization/session changes, core DTO/controller/service,
+fixtures, `CoreAdministrationIT`, React administration/navigation work and
+feature documentation.
+
+Closed findings include cross-engagement configuration/policy pointers,
+effective-window overlap, participant membership checks, delegation authority
+windows, exact pending stage enforcement, approval idempotency, project scope,
+self-approval, stale versions and delegate/authority quorum double counting.
+
+The final remediation pass also closed seven adversarial gaps:
+
+- delegated self-approval now compares the requester with the underlying
+  authority;
+- database request-transition/grant guards block direct SQL mutation;
+- public request input is server-derived and limited to governed month reopen;
+- approval actions have actor-scoped exact-replay idempotency;
+- policy changes use immutable revision/supersession;
+- each request freezes stage eligibility/quorum/delegation;
+- final request approval atomically dispatches the bound month reopen, with a
+  database backstop against an unapproved reopen.
+
+No open local P0–P3 F01 product finding remains after focused verification.

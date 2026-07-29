@@ -9,6 +9,7 @@ import com.vms.workflow.api.LinearDtos.IssueLinkView;
 import com.vms.workflow.api.LinearDtos.IssueSnapshotView;
 import com.vms.workflow.api.LinearDtos.LinearHealthView;
 import com.vms.workflow.api.LinearDtos.LinearReconciliationRequest;
+import com.vms.workflow.api.LinearDtos.LinearReconciliationStatusView;
 import com.vms.workflow.api.LinearDtos.LinearReconciliationView;
 import com.vms.workflow.api.LinearDtos.LinkIssueRequest;
 import com.vms.workflow.api.LinearDtos.WebhookAcceptedView;
@@ -388,6 +389,53 @@ public class LinearIntegrationService {
                     rs.getString("last_error_code")
                 );
             }, engagementId);
+    }
+
+    public LinearReconciliationStatusView reconciliationStatus(
+        String subject,
+        UUID connectionId
+    ) {
+        authorization.requireConnection(
+            subject, connectionId, DeliveryAuthorizationService.LINEAR_READ);
+        return jdbc.query("""
+            SELECT checkpoint.connection_id, checkpoint.cursor_updated_at,
+                   checkpoint.cursor_issue_uuid, checkpoint.next_run_at,
+                   checkpoint.last_started_at, checkpoint.last_completed_at,
+                   checkpoint.consecutive_failures, checkpoint.last_error_code,
+                   latest.id AS latest_job_id, latest.status AS latest_job_status,
+                   COALESCE(latest.attempt_count, 0) AS latest_attempt_count,
+                   COALESCE((
+                       SELECT SUM(attempt.partial_error_count)
+                       FROM linear_reconciliation_attempts attempt
+                       WHERE attempt.sync_job_id = latest.id
+                   ), 0) AS latest_partial_error_count
+            FROM linear_reconciliation_checkpoints checkpoint
+            LEFT JOIN LATERAL (
+                SELECT job.id, job.status, job.attempt_count
+                FROM linear_sync_jobs job
+                WHERE job.connection_id = checkpoint.connection_id
+                ORDER BY job.created_at DESC, job.id DESC
+                LIMIT 1
+            ) latest ON TRUE
+            WHERE checkpoint.connection_id = ?
+            """, rs -> {
+                if (!rs.next()) {
+                    throw notFound();
+                }
+                return new LinearReconciliationStatusView(
+                    rs.getObject("connection_id", UUID.class),
+                    rs.getObject("cursor_updated_at", OffsetDateTime.class),
+                    rs.getObject("cursor_issue_uuid", UUID.class),
+                    rs.getObject("next_run_at", OffsetDateTime.class),
+                    rs.getObject("last_started_at", OffsetDateTime.class),
+                    rs.getObject("last_completed_at", OffsetDateTime.class),
+                    rs.getInt("consecutive_failures"),
+                    rs.getString("last_error_code"),
+                    rs.getObject("latest_job_id", UUID.class),
+                    rs.getString("latest_job_status"),
+                    rs.getInt("latest_attempt_count"),
+                    rs.getInt("latest_partial_error_count"));
+            }, connectionId);
     }
 
     @Transactional

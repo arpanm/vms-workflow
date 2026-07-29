@@ -11,10 +11,13 @@ F03 route.
 |---|---|---|---|
 | GET | `/api/v1/delivery/plans?engagementMonthId={uuid}` | query | `PlanSummaryView[]` |
 | GET | `/api/v1/delivery/plans/{planId}` | — | `PlanView` |
+| GET | `/api/v1/delivery/plans/{planId}/revision-comparison` | — | `RevisionComparisonView` |
 | POST | `/api/v1/delivery/plans` | `CreatePlanRequest` | `201 PlanView` |
 | POST | `/api/v1/delivery/plans/{planId}/submit` | — | `PlanView` |
 | POST | `/api/v1/delivery/plans/{planId}/approvals` | `ApprovalRequest` | `PlanView` |
 | POST | `/api/v1/delivery/plans/{planId}/revisions` | `RevisionRequest` | `201 PlanView` |
+| GET | `/api/v1/delivery/commitment-operations?engagementId={uuid}&limit={1..100}` | query | `CommitmentDeadLetterView[]` |
+| POST | `/api/v1/delivery/commitment-operations/{outboxId}/replays` | `CommitmentReplayRequest` + `Idempotency-Key` | `201 CommitmentReplayView` |
 
 `CreatePlanRequest` contains `engagementMonthId`, plan title/summary/business
 outcomes, coordinator subject, baseline type (`ON_TIME`, `LATE_APPROVED` or
@@ -42,6 +45,19 @@ and commitment status. Linear completion is exposed only as
 `executionProjection`; it is not acceptance, certification, confirmation or
 invoice eligibility.
 
+`RevisionComparisonView` is available when the current version has a stored
+predecessor. It returns the exact persisted predecessor/current IDs and
+versions, changed top-level commitment fields, and added/removed/changed
+deliverable counts. Original plans return empty changes and a null predecessor;
+the endpoint never compares browser-selected versions or mutable Linear state.
+
+Commitment dead-letter operations require the separately scoped
+`delivery.commitment.replay` permission. List rows are bounded and omit
+recipient/message content. A replay is reason-bound and idempotent per original
+outbox row: it preserves that terminal row and appends an immutable command plus
+a separate `PENDING` outbox row containing the same frozen commitment content.
+It does not configure or imply a live email provider.
+
 ## Local Linear evidence
 
 | Method | Path | Request | Response |
@@ -50,6 +66,7 @@ invoice eligibility.
 | GET | `/api/v1/integrations/linear/links/{linkId}/current` | — | `IssueCurrentView` |
 | GET | `/api/v1/integrations/linear/links/{linkId}/snapshots` | — | `IssueSnapshotView[]` |
 | GET | `/api/v1/integrations/linear/health?engagementId={uuid}` | query | `LinearHealthView` |
+| GET | `/api/v1/integrations/linear/connections/{connectionId}/reconciliation-status` | — | `LinearReconciliationStatusView` |
 | POST | `/api/v1/integrations/linear/deliveries/{deliveryId}/process` | — | `WebhookProcessView` |
 
 `LinkIssueRequest` accepts only a draft `deliverableVersionId`, connection ID,
@@ -63,6 +80,20 @@ state, timestamps and payload hash. Snapshot rows are append-only.
 `LinearHealthView` reports registration/readiness, stale/linked counts and
 durable queue/dead-letter counts without returning credential or webhook-secret
 references.
+
+`POST /api/v1/delivery/plans/{planId}/approve` accepts optional
+`onBehalfOfSubject`. When present, the backend resolves one active shared-core
+delegation for `delivery.plan.approve`, verifies engagement/project scope and
+the configured approver, then records both the authority holder and acting
+subject plus delegation ID. The checksum and quorum continue to belong to the
+configured authority holder; the UI cannot invent delegation authority.
+
+Scheduled delta reconciliation uses a provider-neutral adapter with a maximum
+page size of 250, an ordered `(updatedAt, issue UUID)` cursor and a configurable
+maximum page count per run. Each terminal page attempt stores cursor bounds,
+counts, partial GraphQL errors and a SHA-256 evidence checksum. A GraphQL
+data-plus-errors response is recorded as `PARTIAL`, does not advance the cursor,
+marks retained state stale and enters bounded retry/dead-letter handling.
 
 ## Signed webhook
 

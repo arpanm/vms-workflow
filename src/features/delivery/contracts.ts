@@ -122,6 +122,8 @@ export type DeliverableView = Omit<
 export type ApprovalView = {
   id: string;
   approverSubject: string;
+  actingSubject: string;
+  delegationId: string | null;
   decision: "APPROVE" | "REJECT";
   signedChecksum: string;
   comment: string | null;
@@ -174,11 +176,50 @@ export type PlanView = {
 export type ApprovalRequest = {
   decision: "APPROVE" | "REJECT";
   comment?: string;
+  onBehalfOfSubject?: string;
 };
 
 export type RevisionRequest = {
   reason: string;
   impact: string;
+};
+
+export type RevisionComparisonView = {
+  planId: string;
+  priorVersionId: string | null;
+  currentVersionId: string;
+  priorVersion: number;
+  currentVersion: number;
+  changedPlanFields: string[];
+  addedDeliverableCount: number;
+  removedDeliverableCount: number;
+  changedDeliverableCount: number;
+};
+
+export type CommitmentDeadLetterView = {
+  outboxId: string;
+  planId: string;
+  planVersionId: string;
+  planVersion: number;
+  messageType: "INITIAL" | "REVISION";
+  attemptCount: number;
+  lastErrorCode: string | null;
+  deadLetteredAt: string;
+  createdAt: string;
+  replayCount: number;
+};
+
+export type CommitmentReplayRequest = {
+  reason: string;
+};
+
+export type CommitmentReplayView = {
+  replayId: string;
+  originalOutboxId: string;
+  replayOutboxId: string;
+  status: "PENDING" | "RETRY" | "SENDING" | "SENT" | "DEAD_LETTER";
+  replayNumber: number;
+  replay: boolean;
 };
 
 export type LinkIssueRequest = {
@@ -245,6 +286,31 @@ export type LinearHealthView = {
   queuedCount: number;
   deadLetterCount: number;
   lastError: string | null;
+};
+
+export type LinearReconciliationRequest = {
+  outcome: "AVAILABLE" | "UNAVAILABLE";
+  errorCode?:
+    | "PROVIDER_UNAVAILABLE"
+    | "AUTHENTICATION_FAILED"
+    | "RATE_LIMITED"
+    | "SCHEMA_INVALID"
+    | "PROVIDER_TIMEOUT";
+  reason: string;
+};
+
+export type LinearReconciliationView = {
+  jobId: string;
+  connectionId: string;
+  jobStatus: "SUCCEEDED" | "FAILED";
+  connectionStatus: LinearConnectionStatus;
+  staleIssueCount: number;
+  recordedAt: string;
+  errorCode: string | null;
+  commandChecksum: string;
+  correlationId: string;
+  causationId: string;
+  replay: boolean;
 };
 
 export type ConnectionMetadataView = {

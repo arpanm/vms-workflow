@@ -389,6 +389,17 @@ final class F04TestSupport {
                 """, requestId, snapshotId, value.subject(), value.projectId(),
                 sequence++);
         }
+        // Mirror BusinessConfirmationService#create: a directly seeded
+        // awaiting-response request must also move the governed month into the
+        // confirmation-pending state. V34 deliberately rejects the otherwise
+        // impossible DELIVERY_REVIEW -> CONFIRMED shortcut.
+        jdbc.update("""
+            UPDATE engagement_months
+            SET certification_version = certification_version + 1,
+                state = 'CONFIRMATION_PENDING',
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = ?::uuid
+            """, MONTH);
         return new DirectConfirmation(
             requestId, policyId, requestVersion, dueAt);
     }

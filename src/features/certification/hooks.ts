@@ -10,6 +10,7 @@ import type {
   InboundMessageReviewRequest,
   ManualEvidenceReviewRequest,
   MonthCertificationView,
+  NotificationReplayRequest,
   ReopenRequestInput,
   SaveSubmissionRequest,
   SummaryRequest,
@@ -17,10 +18,38 @@ import type {
 import { MutationIntentStore } from "./idempotency";
 
 export const certificationKeys = {
+  inbox: ["certification", "inbox"] as const,
+  operations: ["certification", "operations"] as const,
   month: (monthId: string) => ["certification", "month", monthId] as const,
   readiness: (monthId: string) => ["certification", "readiness", monthId] as const,
   confirmation: (requestId: string) => ["certification", "confirmation", requestId] as const,
 };
+
+export function useCertificationInbox(limit = 50) {
+  return useQuery({
+    queryKey: [...certificationKeys.inbox, limit],
+    queryFn: () => certificationApi.inbox(limit),
+  });
+}
+
+export function useCertificationOperations(limit = 100) {
+  return useQuery({
+    queryKey: [...certificationKeys.operations, limit],
+    queryFn: () => certificationApi.operations(limit),
+  });
+}
+
+export function useReplayCertificationNotification() {
+  const queryClient = useQueryClient();
+  return useRetainedIntentMutation({
+    mutationFn: (input: NotificationReplayRequest, idempotencyKey) =>
+      certificationApi.replayNotification(input, idempotencyKey),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: certificationKeys.operations,
+      }),
+  });
+}
 
 export function useCertificationMonth(monthId: string) {
   return useQuery({

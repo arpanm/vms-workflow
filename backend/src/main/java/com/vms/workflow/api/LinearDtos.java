@@ -132,6 +132,22 @@ public final class LinearDtos {
     ) {
     }
 
+    public record LinearReconciliationStatusView(
+        UUID connectionId,
+        OffsetDateTime cursorUpdatedAt,
+        UUID cursorIssueUuid,
+        OffsetDateTime nextRunAt,
+        OffsetDateTime lastStartedAt,
+        OffsetDateTime lastCompletedAt,
+        int consecutiveFailures,
+        String lastErrorCode,
+        UUID latestJobId,
+        String latestJobStatus,
+        int latestAttemptCount,
+        int latestPartialErrorCount
+    ) {
+    }
+
     public record ConnectionMetadataView(
         UUID id,
         UUID engagementId,

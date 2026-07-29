@@ -92,6 +92,59 @@ export async function mockWorkforceApi(
   const requests: RecordedRequest[] = [];
   let leaveRequests: unknown[] = [];
   let regularizations: unknown[] = [];
+  let aliases: unknown[] = [];
+  let deliverableAllocations: unknown[] = [];
+  let calendars: unknown[] = [];
+  let shiftPolicies: unknown[] = [];
+  let shiftAssignments: unknown[] = [];
+  let rosterSnapshots: unknown[] = [];
+  const leavePolicies = [
+    {
+      id: "policy-casual-v1",
+      organizationId: organization.id,
+      leaveTypeId: "leave-casual",
+      leaveTypeCode: "CL",
+      leaveTypeName: "Casual leave",
+      version: 1,
+      status: "PUBLISHED",
+      validFrom: "2026-06-01",
+      approvalRequired: true,
+      maximumUnitsPerRequest: 30,
+      excessToLwp: true,
+      cancellationAllowed: true,
+      rules: { reviewerRequired: true },
+    },
+  ];
+  let administrationLeaveRequests: unknown[] = [
+    {
+      id: "leave-review-1",
+      employeeId: employee.id,
+      leaveTypeId: "leave-casual",
+      startDate: "2026-08-11",
+      endDate: "2026-08-11",
+      units: 1,
+      paidUnits: 1,
+      lwpUnits: 0,
+      reason: "Medical appointment",
+      status: "SUBMITTED",
+      idempotencyKey: "leave-review-fixture",
+      createdAt: "2026-07-29T04:00:00Z",
+      version: 0,
+    },
+  ];
+  let administrationRegularizations: unknown[] = [
+    {
+      id: "regularization-review-1",
+      employeeId: employee.id,
+      workDate: "2026-07-28",
+      reasonCode: "MISSED_CHECK_OUT",
+      narrative: "VPN logs confirm end of shift.",
+      requestedOutcome: "CORRECT_PUNCH",
+      idempotencyKey: "regularization-review-fixture",
+      status: "SUBMITTED",
+      createdAt: "2026-07-29T04:15:00Z",
+    },
+  ];
 
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
@@ -106,7 +159,13 @@ export async function mockWorkforceApi(
         email: "demo@example.invalid",
         displayName: "Demo User",
         organizationIds: [organization.id],
-        permissions: ["catalog.read", "workforce.read", "attendance.write"],
+        permissions: [
+          "catalog.read",
+          "workforce.read",
+          "workforce.manage",
+          "attendance.write",
+          "attendance.review",
+        ],
       });
       return;
     }
@@ -147,6 +206,26 @@ export async function mockWorkforceApi(
       return;
     }
     if (
+      path === `/api/v1/workforce/employees/${employee.id}/aliases`
+    ) {
+      if (method === "POST") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        mutations.push({ method, path, body });
+        const alias = {
+          id: "alias-new",
+          employeeId: employee.id,
+          ...body,
+          status: "ACTIVE",
+          createdAt: "2026-07-29T05:00:00Z",
+        };
+        aliases = [alias];
+        await json(route, alias, 201);
+        return;
+      }
+      await json(route, aliases);
+      return;
+    }
+    if (
       path ===
       `/api/v1/workforce/employees/${employee.id}/allocations`
     ) {
@@ -165,9 +244,241 @@ export async function mockWorkforceApi(
     }
     if (
       path ===
+      `/api/v1/workforce/employees/${employee.id}/deliverable-allocations`
+    ) {
+      if (method === "POST") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        mutations.push({ method, path, body });
+        const allocation = {
+          id: "deliverable-allocation-new",
+          employeeId: employee.id,
+          deliverableCode: "DEL-101",
+          status: "ACTIVE",
+          ...body,
+        };
+        deliverableAllocations = [allocation];
+        await json(route, allocation, 201);
+        return;
+      }
+      await json(route, deliverableAllocations);
+      return;
+    }
+    if (
+      path ===
       `/api/v1/workforce/employees/${employee.id}/leave-balances`
     ) {
       await json(route, leaveBalances);
+      return;
+    }
+    if (
+      path ===
+      `/api/v1/workforce/employees/${employee.id}/leave-balance-commands` &&
+      method === "POST"
+    ) {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      mutations.push({ method, path, body });
+      await json(route, {
+        id: "balance-command-new",
+        employeeId: employee.id,
+        ...body,
+        createdAt: "2026-07-29T05:05:00Z",
+      }, 201);
+      return;
+    }
+    if (
+      path ===
+      `/api/v1/workforce/organizations/${organization.id}/calendars`
+    ) {
+      if (method === "POST") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        mutations.push({ method, path, body });
+        const calendar = {
+          id: "calendar-v1",
+          organizationId: organization.id,
+          version: 1,
+          ...body,
+        };
+        calendars = [calendar];
+        await json(route, calendar, 201);
+        return;
+      }
+      await json(route, calendars);
+      return;
+    }
+    if (
+      path ===
+      `/api/v1/workforce/organizations/${organization.id}/shift-policies`
+    ) {
+      if (method === "POST") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        mutations.push({ method, path, body });
+        const policy = {
+          id: "shift-policy-v1",
+          organizationId: organization.id,
+          version: 1,
+          status: "PUBLISHED",
+          publishedAt: "2026-07-29T08:00:00Z",
+          ...body,
+        };
+        shiftPolicies = [policy];
+        await json(route, policy, 201);
+        return;
+      }
+      await json(route, shiftPolicies);
+      return;
+    }
+    if (
+      path ===
+      `/api/v1/workforce/employees/${employee.id}/shift-assignments`
+    ) {
+      if (method === "POST") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        mutations.push({ method, path, body });
+        const assignment = {
+          id: "shift-assignment-v1",
+          employeeId: employee.id,
+          shiftPolicyCode: "STANDARD_DAY",
+          shiftPolicyName: "Standard day shift",
+          shiftPolicyVersion: 1,
+          timezone: "Asia/Kolkata",
+          createdAt: "2026-07-29T08:01:00Z",
+          ...body,
+        };
+        shiftAssignments = [assignment];
+        await json(route, assignment, 201);
+        return;
+      }
+      await json(route, shiftAssignments);
+      return;
+    }
+    if (
+      path ===
+      "/api/v1/workforce/engagement-months/month-2026-06/roster-readiness"
+    ) {
+      await json(route, {
+        engagementMonthId: "month-2026-06",
+        monthStartDate: "2026-06-01",
+        allocatedEmployeeCount: 1,
+        allocatedEmployeeDayCount: 30,
+        missingCalendarDayCount: 0,
+        missingShiftDayCount: 0,
+        missingEmployeeVersionDayCount: 0,
+        missingSourceModeDayCount: 0,
+        ready: true,
+        issues: [],
+      });
+      return;
+    }
+    if (
+      path ===
+      "/api/v1/workforce/engagement-months/month-2026-06/roster-snapshots"
+    ) {
+      if (method === "POST") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        mutations.push({ method, path, body });
+        const snapshot = {
+          id: "roster-snapshot-v1",
+          engagementMonthId: "month-2026-06",
+          version: 1,
+          status: "FINALIZED",
+          checksum: "a".repeat(64),
+          employeeCount: 1,
+          employeeDayCount: 30,
+          finalizedAt: "2026-07-29T08:02:00Z",
+          finalizedBySubject: "demo-user",
+          ...body,
+        };
+        rosterSnapshots = [snapshot];
+        await json(route, snapshot, 201);
+        return;
+      }
+      await json(route, rosterSnapshots);
+      return;
+    }
+    if (
+      path ===
+      `/api/v1/workforce/organizations/${organization.id}/leave-policies`
+    ) {
+      if (method === "POST") {
+        const body = request.postDataJSON() as Record<string, unknown>;
+        mutations.push({ method, path, body });
+        await json(route, {
+          ...leavePolicies[0],
+          id: "policy-casual-v2",
+          version: 2,
+          ...body,
+        }, 201);
+        return;
+      }
+      await json(route, leavePolicies);
+      return;
+    }
+    if (
+      path === "/api/v1/workforce/leave-request-inbox" &&
+      method === "GET"
+    ) {
+      await json(route, administrationLeaveRequests);
+      return;
+    }
+    if (
+      path === "/api/v1/workforce/leave-requests/leave-review-1/decisions" &&
+      method === "POST"
+    ) {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      mutations.push({ method, path, body });
+      administrationLeaveRequests = [];
+      await json(route, {
+        id: "leave-decision-new",
+        leaveRequestId: "leave-review-1",
+        decision: body.decision,
+        expectedRequestVersion: body.expectedVersion,
+        requestStatus: "APPROVED",
+        requestVersion: 1,
+        paidUnits: 1,
+        lwpUnits: 0,
+        reason: body.reason,
+        decidedBySubject: "demo-user",
+        decidedAt: "2026-07-29T05:10:00Z",
+      }, 201);
+      return;
+    }
+    if (
+      path === "/api/v1/workforce/regularization-inbox" &&
+      method === "GET"
+    ) {
+      await json(route, administrationRegularizations);
+      return;
+    }
+    if (
+      path ===
+        "/api/v1/attendance/regularizations/regularization-review-1/decisions" &&
+      method === "POST"
+    ) {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      mutations.push({ method, path, body });
+      administrationRegularizations = [];
+      await json(route, { id: "regularization-decision-new", ...body }, 201);
+      return;
+    }
+    if (
+      path ===
+        `/api/v1/workforce/organizations/${organization.id}/imports` &&
+      method === "POST"
+    ) {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      mutations.push({ method, path, body });
+      await json(route, {
+        id: "workforce-import-new",
+        organizationId: organization.id,
+        importType: body.importType,
+        fileName: body.fileName,
+        checksum: "fixture-checksum",
+        status: body.apply ? "IMPORTED" : "VALIDATED",
+        rowCount: 1,
+        importedCount: body.apply ? 1 : 0,
+        errors: [],
+        replay: false,
+      }, 201);
       return;
     }
     if (

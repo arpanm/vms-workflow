@@ -24,6 +24,7 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -300,6 +301,62 @@ class BusinessConfirmationIT {
             SELECT COUNT(*) FROM business_confirmation_actions
             WHERE request_id = ?
             """, fixture.requestId()));
+    }
+
+    @Test
+    void directConfirmationFixturePreservesGovernedMonthTransitionLineage()
+        throws Exception {
+        F04TestSupport.DirectConfirmation fixture = directAnyOne(false);
+
+        assertEquals("CONFIRMATION_PENDING", jdbc.queryForObject("""
+            SELECT state FROM engagement_months WHERE id = ?::uuid
+            """, String.class, MONTH));
+        assertEquals(1, count("""
+            SELECT COUNT(*)
+            FROM engagement_month_transition_history history
+            WHERE history.engagement_month_id = ?::uuid
+              AND history.from_state = 'DELIVERY_REVIEW'
+              AND history.to_state = 'CONFIRMATION_PENDING'
+            """, MONTH));
+
+        action(
+            fixture.requestId(), "user-reliance",
+            "governed-fixture-confirm", """
+                {"expectedRequestVersion":1,"decision":"CONFIRM",
+                 "comment":"Confirmed through governed pending state"}
+                """, 200);
+
+        assertEquals(1, count("""
+            SELECT COUNT(*)
+            FROM engagement_month_transition_history history
+            WHERE history.engagement_month_id = ?::uuid
+              AND history.from_state = 'CONFIRMATION_PENDING'
+              AND history.to_state = 'CONFIRMED'
+            """, MONTH));
+        assertThrows(
+            RuntimeException.class,
+            () -> jdbc.update("""
+                UPDATE engagement_month_transition_history
+                SET reason = 'rewritten'
+                WHERE engagement_month_id = ?::uuid
+                """, MONTH));
+    }
+
+    @Test
+    void databaseRejectsDeliveryReviewToConfirmedShortcut()
+        throws Exception {
+        F04TestSupport.completedCertification(mvc, mapper, jdbc);
+        assertEquals("DELIVERY_REVIEW", jdbc.queryForObject("""
+            SELECT state FROM engagement_months WHERE id = ?::uuid
+            """, String.class, MONTH));
+
+        assertThrows(
+            RuntimeException.class,
+            () -> jdbc.update("""
+                UPDATE engagement_months
+                SET state = 'CONFIRMED'
+                WHERE id = ?::uuid
+                """, MONTH));
     }
 
     @Test

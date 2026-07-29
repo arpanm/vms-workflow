@@ -189,6 +189,26 @@ class F04RegressionIT {
             count("SELECT COUNT(*) FROM evidence_package_versions"));
     }
 
+    @Test
+    void reopenTransitionRequiresImmutableApprovedEvidence()
+        throws Exception {
+        F04TestSupport.completedCertification(mvc, mapper, jdbc);
+        jdbc.update("""
+            UPDATE engagement_months
+            SET state = 'REOPEN_REQUESTED'
+            WHERE id = ?::uuid
+            """, MONTH);
+
+        assertSqlRejected("""
+            UPDATE engagement_months
+            SET state = 'REOPENED'
+            WHERE id = '%s'::uuid
+            """.formatted(MONTH));
+        assertEquals("REOPEN_REQUESTED", jdbc.queryForObject("""
+            SELECT state FROM engagement_months WHERE id = ?::uuid
+            """, String.class, MONTH));
+    }
+
     private F04TestSupport.CompletedCertification completeExistingBaseline(
         F04TestSupport.FrozenBaseline baseline
     ) throws Exception {

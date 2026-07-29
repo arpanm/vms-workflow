@@ -38,6 +38,8 @@ const now = "2026-07-27T09:30:00Z";
 const hash = "sha256:954437d18b01f86bde5cf4ca897972bad61db6846a6692b6cd61b841522ea7b3";
 
 const allPermissions = [
+  "catalog.read",
+  "finance.read",
   "EVIDENCE_PACKAGE_VIEW",
   "EVIDENCE_PACKAGE_GENERATE",
   "EVIDENCE_PACKAGE_DOWNLOAD",
@@ -388,8 +390,19 @@ export async function mockFinanceApi(page: Page, options: FinanceApiOptions = {}
     if (path === "/api/v1/me") {
       await json(route, {
         id: actor.subject,
+        subject: actor.subject,
         email: actor.subject,
         displayName: actor.displayName,
+        memberships: [
+          {
+            organizationId: "org-reliance",
+            organizationCode: "RELIANCE",
+            organizationName: "Reliance Intelligence",
+            roleCode: "FINANCE_AP",
+            validFrom: "2026-01-01",
+            validTo: null,
+          },
+        ],
         organizationIds: ["org-reliance"],
         permissions: permissions(options),
       });

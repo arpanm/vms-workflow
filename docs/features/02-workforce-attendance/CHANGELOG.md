@@ -1,5 +1,20 @@
 # F02 changelog
 
+## 2026-07-29 — Local governance completion
+
+- Added immutable effective employee aliases and deliverable allocations
+  bounded by project percentage, dates, employee and engagement scope.
+- Added versioned calendar/holiday and leave-policy administration, immutable
+  balance commands, optimistic leave decisions/cancellation and stable replay.
+- Added manager-only leave/regularization inboxes, bounded workforce CSV
+  validation/apply, durable break pairs and break-aware checkout.
+- Added the workforce administration route with alias/allocation, policy,
+  calendar holiday, balance, approval, regularization and CSV controls.
+- Added Start break/End break controls to Today's attendance.
+- Added fresh-schema integration, API unit and intercepted Chromium evidence.
+- Remaining: a full roster/shift-template rule DSL and exhaustive roster
+  completeness policies; provider and controlled-staging gates remain external.
+
 ## 2026-07-26 — Workforce, leave and attendance vertical
 
 ### Backend and database
@@ -77,3 +92,13 @@ provider. See [TEST_AUTOMATION.md](TEST_AUTOMATION.md).
 
 See the dated disposition in [FIXES.md](FIXES.md) and detailed current contract
 in [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
+
+## 2026-07-29 — Shift and roster production flow
+
+- Added PostgreSQL-owned immutable shift policy, assignment and roster snapshot
+  tables with tenant/effective-range constraints and least-privilege grants.
+- Added Java API/service flows for shift publication/assignment, exact roster
+  readiness diagnostics and checksummed finalization.
+- Attendance now applies configured overnight work-date attribution, maximum
+  session and split-session rules, and closes only against a finalized roster.
+- Added the React manager flow plus Playwright fixtures/journey coverage.

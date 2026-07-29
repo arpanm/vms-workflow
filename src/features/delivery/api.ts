@@ -2,14 +2,20 @@ import { apiClient } from "@/lib/api-client";
 
 import type {
   ApprovalRequest,
+  CommitmentDeadLetterView,
+  CommitmentReplayRequest,
+  CommitmentReplayView,
   CreatePlanRequest,
   IssueCurrentView,
   IssueLinkView,
   IssueSnapshotView,
   LinearHealthView,
   LinkIssueRequest,
+  LinearReconciliationRequest,
+  LinearReconciliationView,
   PlanSummaryView,
   PlanView,
+  RevisionComparisonView,
   RevisionRequest,
 } from "./contracts";
 
@@ -24,6 +30,24 @@ export const deliveryApi = {
     ),
   plan: (planId: string) =>
     apiClient.get<PlanView>(`${deliveryPath}/plans/${encoded(planId)}`),
+  revisionComparison: (planId: string) =>
+    apiClient.get<RevisionComparisonView>(
+      `${deliveryPath}/plans/${encoded(planId)}/revision-comparison`,
+    ),
+  commitmentDeadLetters: (engagementId: string, limit = 25) =>
+    apiClient.get<CommitmentDeadLetterView[]>(
+      `${deliveryPath}/commitment-operations?engagementId=${encoded(engagementId)}&limit=${limit}`,
+    ),
+  replayCommitment: (
+    outboxId: string,
+    input: CommitmentReplayRequest,
+    idempotencyKey: string,
+  ) =>
+    apiClient.post<CommitmentReplayView>(
+      `${deliveryPath}/commitment-operations/${encoded(outboxId)}/replays`,
+      input,
+      { headers: { "Idempotency-Key": idempotencyKey } },
+    ),
   createPlan: (input: CreatePlanRequest) =>
     apiClient.post<PlanView>(`${deliveryPath}/plans`, input),
   submitPlan: (planId: string) =>
@@ -53,5 +77,15 @@ export const deliveryApi = {
   linearHealth: (engagementId: string) =>
     apiClient.get<LinearHealthView>(
       `${linearPath}/health?engagementId=${encoded(engagementId)}`,
+    ),
+  reconcileLinear: (
+    connectionId: string,
+    input: LinearReconciliationRequest,
+    idempotencyKey: string,
+  ) =>
+    apiClient.post<LinearReconciliationView>(
+      `${linearPath}/connections/${encoded(connectionId)}/reconciliations`,
+      input,
+      { headers: { "Idempotency-Key": idempotencyKey } },
     ),
 };

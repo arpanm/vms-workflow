@@ -21,6 +21,41 @@
     same-origin BFF login entry point;
   - sign-out calls the configurable backend logout endpoint;
   - the SPA does not derive authorization from the demo role.
+- Added the canonical F01 administration client and UI:
+  - runtime-validated TypeScript contracts for engagement administration,
+    immutable effective-dated configurations, contact groups/members, approval
+    policies/stages, approval requests/actions, eligible users, delegations,
+    engagement months and append-only transition history;
+  - `/administration/engagements`,
+    `/administration/contact-groups`,
+    `/administration/approval-policies`, `/administration/approval-requests`
+    and `/administration/months`;
+  - every consequential mutation sends the displayed optimistic version and
+    treats HTTP 409/412 as a reload/compare condition, never an overwrite;
+  - contact members retain verification, role attribution and effective-date
+    fields, configuration/policy publishing is distinct from mutable drafts,
+    and approval requests are bound to a published governed-reopen policy,
+    server-selected month evidence and a retry-stable idempotency key;
+  - approval actions show direct/delegated attribution, send the selected
+    delegation and displayed request version, and render only the
+    server-returned quorum/request state;
+  - month administration offers only the server-supported administrative
+    transitions and requires a reason plus consequence confirmation.
+- Hardened the final approval contract:
+  - the request form offers only published engagement-scoped `REOPEN` policies
+    and reopen-requested months, and sends only `policyId`, month `objectId` and
+    a retry-stable idempotency key; type/version/hash/scope remain server-owned;
+  - every action sends an actor-scoped idempotency key in addition to the
+    displayed request version and optional delegation;
+  - the policy card can create a next draft revision under the same policy
+    identity with an explicit future effective date.
+- Added a global active organization/engagement/month selector. Its saved IDs
+  are bound to a fingerprint of the authenticated identity, memberships,
+  effective dates and server permissions. Authority change removes cached F01
+  administration data and restores no selection from the prior authority.
+- Replaced demo-role navigation decisions with server permission checks.
+  Unauthorized deep links render a non-disclosing permission state and do not
+  issue the protected administration collection request.
 - Migrated legacy reads to:
   - `GET /api/v1/legacy/engagements`
   - `GET /api/v1/legacy/requirements`
@@ -45,13 +80,24 @@
 - Production environment demo-mode rejection.
 - Legacy-route flag behavior.
 - Unsafe historical status presentation.
+- Authority-bound scope restore/reset, malformed-storage failure, stale catalog
+  reconciliation and permission-derived presentation.
+- Runtime Java-response validation and exact core administration URL/body
+  contracts, including group, policy and month governance versions.
+- Browser contracts `E2E-F01-BC-010` through `E2E-F01-BC-018` cover persisted scope
+  invalidation, denied deep links, contact member concurrency, stale month
+  transition refusal, prospective configuration publishing, server-derived
+  reopen creation, idempotent delegated attribution without fabricated quorum,
+  stale approval refusal and approval-detail denial without a protected fetch.
 
 These are DB-independent frontend tests. They do not prove Java authorization, OIDC provider configuration, tenant isolation or backend security.
 
 ## Backend contract assumptions
 
 - Compatibility collection endpoints return JSON arrays.
-- `GET /api/v1/me` returns `{ id, email, displayName, organizationIds?, permissions? }` or HTTP 401.
+- `GET /api/v1/me` returns `{ id, subject, email, displayName, memberships,
+  organizationIds, permissions }` or HTTP 401. Navigation and mutation
+  affordances use only `permissions`; the selector never establishes authority.
 - An externally configured same-origin BFF login endpoint accepts a validated
   `returnTo` query parameter. The current resource-server backend does not
   provide this endpoint.

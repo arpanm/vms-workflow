@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -45,6 +46,13 @@ function EmployeeDirectory() {
         description="Effective-dated workforce roster. Payroll, salary and rate data are not collected or displayed."
       />
       <div className="p-6">
+        <div className="mb-4 flex justify-end">
+          <Button asChild variant="outline">
+            <Link to="/workforce/administration">
+              Workforce administration
+            </Link>
+          </Button>
+        </div>
         <OrganizationScope>
           {(organizationId) => (
             <EmployeeTable organizationId={organizationId} />

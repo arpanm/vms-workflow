@@ -39,7 +39,10 @@ allocation field is introduced.
 - A nested draft is created for one engagement month with server validation of
   baseline/quorum configuration, projects, active owner/approver subjects,
   contact-group presence, criteria, dependencies and assignments.
-- Submission recomputes completeness and a deterministic SHA-256 checksum.
+- Submission recomputes completeness and a deterministic SHA-256 checksum. The
+  current `delivery-commitment-v3` canonical document binds plan and
+  engagement-month identity plus prior-version/reason/impact context, so two
+  otherwise identical revisions cannot share a commitment checksum.
   Eligible approvals are scoped and creator self-approval is prohibited.
 - Quorum atomically freezes the exact version, stores approval and authority
   evidence, creates a baseline and immutable plan-time Linear snapshots,
@@ -48,6 +51,10 @@ allocation field is introduced.
 - Frozen versions reject in-place changes. A revision supersedes the frozen
   version and clones nested content while retaining stable deliverable IDs and
   prior-version reason/impact lineage.
+- `GET /api/v1/delivery/plans/{planId}/revision-comparison` derives the current
+  revision delta from stored plan and deliverable rows. It reports changed
+  top-level commitment fields and added/removed/changed deliverable counts;
+  clients cannot select an arbitrary predecessor or manufacture a diff.
 - Recorded issue linking is allowed only on the current draft. Original provider
   state fields are retained and normalized through versioned type/category
   mappings; names are never guessed.
@@ -60,6 +67,11 @@ allocation field is introduced.
   status.
 - Health explicitly reports `NOT_CONFIGURED`, `ACTION_REQUIRED` and
   externally-blocked provider registration states.
+- `DeliveryCommitmentOperationsService` lists at most 100 redacted dead letters
+  in an authorized engagement and appends reason-bound, idempotent replay
+  commands. The original terminal row is retained; each replay gets a new
+  queued outbox row and audit event, without configuring or invoking a live
+  email provider.
 
 ## Authorization
 
@@ -80,10 +92,12 @@ The generated backend does not claim:
   live GraphQL adapter, webhook registration or secret rotation;
 - a production secret-manager adapter (the local server configuration resolver
   is per-reference and has no global fallback);
-- scheduled delta/nightly/month-end reconciliation workers or a production
-  queue transport;
-- a selected mail provider, sender/mailbox, real delivery attempts, callbacks,
-  retry/dead-letter worker or inbound-message processing;
+- a live Linear GraphQL/OAuth adapter or production queue transport. The local
+  scheduled delta worker, compound cursor, retry/dead-letter checkpoint and
+  immutable page-attempt evidence are provider-neutral and disabled by default;
+- a selected mail provider, sender/mailbox, real delivery attempts, callbacks
+  or inbound-message processing. The local recorded commitment worker provides
+  bounded retry/dead-letter behavior only.
 - delivery acceptance/certification workflows.
 
 Those require tenant decisions, credentials and external acceptance. Local

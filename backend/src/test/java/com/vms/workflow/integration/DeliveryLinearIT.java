@@ -1,6 +1,7 @@
 package com.vms.workflow.integration;
 
 import com.vms.workflow.application.DeliveryPlanningService;
+import com.vms.workflow.application.LinearReconciliationOperations;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -69,6 +70,232 @@ class DeliveryLinearIT {
 
     @Autowired
     private DeliveryPlanningService deliveryPlanningService;
+
+    @Autowired
+    private LinearReconciliationOperations reconciliationOperations;
+
+    @Test
+    void delegatedPlanApprovalPreservesAuthorityHolderAndActingSubject()
+        throws Exception {
+        JsonNode created = createPlan("Approved local provider exception");
+        String planId = created.path("id").asText();
+        mvc.perform(post("/api/v1/delivery/plans/{planId}/submit", planId)
+                .with(token("user-arrow")))
+            .andExpect(status().isOk());
+        UUID delegationId = UUID.randomUUID();
+        jdbc.update("""
+            INSERT INTO delegations
+                (id, organization_id, engagement_id, delegator_user_id,
+                 delegate_user_id, action_codes, valid_from, valid_to,
+                 reason, created_by_subject)
+            VALUES (?, '00000000-0000-0000-0000-000000000102',
+                    ?::uuid, '00000000-0000-0000-0000-000000000220',
+                    '00000000-0000-0000-0000-000000000221',
+                    ARRAY['delivery.plan.approve'],
+                    CURRENT_TIMESTAMP - INTERVAL '1 hour',
+                    CURRENT_TIMESTAMP + INTERVAL '1 day',
+                    'Coverage for product-owner approval',
+                    'user-engagement-admin')
+            """, delegationId, ENGAGEMENT);
+
+        mvc.perform(post("/api/v1/delivery/plans/{planId}/approvals", planId)
+                .with(token("user-approver-2"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "decision":"APPROVE",
+                      "comment":"Acting under recorded delegation",
+                      "onBehalfOfSubject":"user-approver"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.state").value("FROZEN"))
+            .andExpect(jsonPath("$.approvals[0].approverSubject")
+                .value("user-approver"))
+            .andExpect(jsonPath("$.approvals[0].actingSubject")
+                .value("user-approver-2"))
+            .andExpect(jsonPath("$.approvals[0].delegationId")
+                .value(delegationId.toString()));
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*)
+            FROM delivery_plan_approvals
+            WHERE delegation_id = ?
+              AND approver_subject = 'user-approver'
+              AND acting_subject = 'user-approver-2'
+              AND delegated_from_subject = 'user-approver'
+              AND authority_snapshot @> '{"delegated":true}'::jsonb
+            """, Integer.class, delegationId));
+    }
+
+    @Test
+    void cursorReconciliationRecordsBoundedAttemptAndDurableCheckpoint()
+        throws Exception {
+        JsonNode created = createPlan("Approved local provider exception");
+        String deliverableVersionId = created.path("deliverables").get(0)
+            .path("deliverableVersionId").asText();
+        mvc.perform(post("/api/v1/integrations/linear/links")
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "deliverableVersionId":"%s",
+                      "connectionId":"%s",
+                      "issueUuid":"%s"
+                    }
+                    """.formatted(deliverableVersionId, CONNECTION, ISSUE)))
+            .andExpect(status().isCreated());
+        jdbc.update("""
+            UPDATE linear_issue_current
+            SET stale = TRUE
+            WHERE connection_id = ?::uuid
+            """, CONNECTION);
+        jdbc.update("""
+            UPDATE linear_reconciliation_checkpoints
+            SET cursor_updated_at = NULL, cursor_issue_uuid = NULL,
+                next_run_at = CURRENT_TIMESTAMP
+            WHERE connection_id = ?::uuid
+            """, CONNECTION);
+
+        UUID jobId = reconciliationOperations.reconcileConnection(
+            UUID.fromString(CONNECTION));
+
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*)
+            FROM linear_reconciliation_attempts
+            WHERE sync_job_id = ?
+              AND requested_limit BETWEEN 1 AND 250
+              AND fetched_count = 1
+              AND applied_count = 1
+              AND partial_error_count = 0
+              AND outcome = 'SUCCEEDED'
+              AND evidence_checksum ~ '^[0-9a-f]{64}$'
+            """, Integer.class, jobId));
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*)
+            FROM linear_reconciliation_checkpoints
+            WHERE connection_id = ?::uuid
+              AND cursor_updated_at = '2026-07-01T00:00:00Z'
+              AND cursor_issue_uuid = ?::uuid
+              AND consecutive_failures = 0
+              AND last_completed_at IS NOT NULL
+            """, Integer.class, CONNECTION, ISSUE));
+        assertEquals(false, jdbc.queryForObject("""
+            SELECT stale FROM linear_issue_current
+            WHERE connection_id = ?::uuid
+              AND linear_issue_uuid = ?::uuid
+            """, Boolean.class, CONNECTION, ISSUE));
+        mvc.perform(get(
+                    "/api/v1/integrations/linear/connections/{id}/reconciliation-status",
+                    CONNECTION)
+                .with(token("user-arrow")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.latestJobId").value(jobId.toString()))
+            .andExpect(jsonPath("$.latestJobStatus").value("SUCCEEDED"))
+            .andExpect(jsonPath("$.latestAttemptCount").value(1))
+            .andExpect(jsonPath("$.latestPartialErrorCount").value(0));
+        mvc.perform(get(
+                    "/api/v1/integrations/linear/connections/{id}/reconciliation-status",
+                    CONNECTION)
+                .with(token("user-employee")))
+            .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void commitmentDeadLetterReplayIsScopedIdempotentAndKeepsOriginalEvidence()
+        throws Exception {
+        F04TestSupport.FrozenBaseline baseline =
+            F04TestSupport.frozenBaseline(mvc, objectMapper);
+        UUID outboxId = jdbc.queryForObject("""
+            SELECT id FROM commitment_outbox WHERE plan_version_id = ?
+            """, UUID.class, baseline.planVersionId());
+        jdbc.update("""
+            UPDATE commitment_outbox
+            SET status = 'DEAD_LETTER', attempt_count = 5,
+                dead_lettered_at = CURRENT_TIMESTAMP,
+                last_error_code = 'COMMITMENT_PROVIDER_NOT_CONFIGURED'
+            WHERE id = ?
+            """, outboxId);
+
+        mvc.perform(get("/api/v1/delivery/commitment-operations")
+                .queryParam("engagementId", ENGAGEMENT)
+                .with(token("user-engagement-admin")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].outboxId").value(outboxId.toString()))
+            .andExpect(jsonPath("$[0].attemptCount").value(5))
+            .andExpect(jsonPath("$[0].lastErrorCode")
+                .value("COMMITMENT_PROVIDER_NOT_CONFIGURED"))
+            .andExpect(jsonPath("$[0].recipientSnapshot").doesNotExist())
+            .andExpect(jsonPath("$[0].replayCount").value(0));
+        mvc.perform(get("/api/v1/delivery/commitment-operations")
+                .queryParam("engagementId", ENGAGEMENT)
+                .with(token("user-employee")))
+            .andExpect(status().isNotFound());
+
+        String body = "{\"reason\":\"Provider control restored after incident review\"}";
+        JsonNode first = json(mvc.perform(post(
+                    "/api/v1/delivery/commitment-operations/{outboxId}/replays", outboxId)
+                .header("Idempotency-Key", "commitment-dead-letter-replay")
+                .with(token("user-engagement-admin"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.originalOutboxId").value(outboxId.toString()))
+            .andExpect(jsonPath("$.status").value("PENDING"))
+            .andExpect(jsonPath("$.replayNumber").value(1))
+            .andExpect(jsonPath("$.replay").value(false))
+            .andReturn().getResponse().getContentAsString());
+        JsonNode duplicate = json(mvc.perform(post(
+                    "/api/v1/delivery/commitment-operations/{outboxId}/replays", outboxId)
+                .header("Idempotency-Key", "commitment-dead-letter-replay")
+                .with(token("user-engagement-admin"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.replay").value(true))
+            .andReturn().getResponse().getContentAsString());
+        assertEquals(first.path("replayId").asText(), duplicate.path("replayId").asText());
+        mvc.perform(post(
+                    "/api/v1/delivery/commitment-operations/{outboxId}/replays", outboxId)
+                .header("Idempotency-Key", "commitment-dead-letter-replay")
+                .with(token("user-engagement-admin"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"reason\":\"Different command\"}"))
+            .andExpect(status().isConflict());
+        mvc.perform(post(
+                    "/api/v1/delivery/commitment-operations/{outboxId}/replays", outboxId)
+                .header("Idempotency-Key", "commitment-dead-letter-unauthorized")
+                .with(token("user-employee"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+            .andExpect(status().isNotFound());
+
+        UUID replayOutboxId = UUID.fromString(first.path("replayOutboxId").asText());
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*) FROM commitment_outbox
+            WHERE id = ? AND status = 'DEAD_LETTER' AND attempt_count = 5
+            """, Integer.class, outboxId));
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*)
+            FROM commitment_outbox replay
+            JOIN commitment_outbox original ON original.id = ?
+            WHERE replay.id = ? AND replay.status = 'PENDING'
+              AND replay.plan_version_id = original.plan_version_id
+              AND replay.baseline_id = original.baseline_id
+              AND replay.recipient_snapshot = original.recipient_snapshot
+              AND replay.subject_text = original.subject_text
+              AND replay.plain_text = original.plain_text
+              AND replay.html_text = original.html_text
+            """, Integer.class, outboxId, replayOutboxId));
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*) FROM commitment_outbox_replays
+            WHERE original_outbox_id = ? AND replay_outbox_id = ?
+              AND actor_subject = 'user-engagement-admin'
+            """, Integer.class, outboxId, replayOutboxId));
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*) FROM delivery_audit_events
+            WHERE plan_id = ? AND event_type = 'COMMITMENT_REPLAY_QUEUED'
+            """, Integer.class, baseline.planId()));
+    }
 
     @Test
     void reconciliationCommandIsAuthorizedIdempotentAuditedAndTerminal()
@@ -361,7 +588,7 @@ class DeliveryLinearIT {
             WHERE version.plan_id = ?::uuid
             """, Integer.class, planId));
 
-        mvc.perform(post("/api/v1/delivery/plans/{planId}/revisions", planId)
+        JsonNode revised = json(mvc.perform(post("/api/v1/delivery/plans/{planId}/revisions", planId)
                 .with(token("user-arrow"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""
@@ -372,7 +599,21 @@ class DeliveryLinearIT {
             .andExpect(jsonPath("$.state").value("DRAFT"))
             .andExpect(jsonPath("$.priorVersionId")
                 .value(frozen.path("currentVersionId").asText()))
-            .andExpect(jsonPath("$.deliverables[0].deliverableCode").value("DLV-001"));
+            .andExpect(jsonPath("$.deliverables[0].deliverableCode").value("DLV-001"))
+            .andReturn().getResponse().getContentAsString());
+        mvc.perform(get("/api/v1/delivery/plans/{planId}/revision-comparison", planId)
+                .with(token("user-arrow")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.priorVersionId")
+                .value(frozen.path("currentVersionId").asText()))
+            .andExpect(jsonPath("$.currentVersionId")
+                .value(revised.path("currentVersionId").asText()))
+            .andExpect(jsonPath("$.priorVersion").value(1))
+            .andExpect(jsonPath("$.currentVersion").value(2))
+            .andExpect(jsonPath("$.changedPlanFields").isArray())
+            .andExpect(jsonPath("$.addedDeliverableCount").value(0))
+            .andExpect(jsonPath("$.removedDeliverableCount").value(0))
+            .andExpect(jsonPath("$.changedDeliverableCount").value(0));
         assertEquals("FROZEN", jdbc.queryForObject("""
             SELECT state FROM delivery_plan_versions WHERE id = ?::uuid
             """, String.class, frozen.path("currentVersionId").asText()));

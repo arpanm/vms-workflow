@@ -18,6 +18,8 @@ import { Button } from "@/components/ui/button";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider, useSession } from "@/features/auth/session-provider";
+import { ActiveScopeProvider } from "@/features/core-admin/scope-provider";
+import { ActiveScopeSelector } from "@/features/core-admin/scope-selector";
 import { safeDemoMode } from "@/lib/feature-flags";
 import { safeErrorPresentation } from "@/lib/safe-error";
 
@@ -139,8 +141,9 @@ function ApplicationGate() {
 
 function ApplicationShell() {
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
+    <ActiveScopeProvider>
+      <SidebarProvider>
+        <div className="flex min-h-screen w-full bg-background">
         <a
           href="#main-content"
           className="fixed left-3 top-3 z-[100] -translate-y-24 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg transition-transform focus:translate-y-0 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
@@ -154,7 +157,7 @@ function ApplicationShell() {
             className="sticky top-0 z-10 flex h-14 items-center justify-between gap-3 border-b border-border bg-background/80 px-4 backdrop-blur"
             aria-label="Application controls"
           >
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               <SidebarTrigger />
               <div className="hidden flex-col leading-tight lg:flex">
                 <span className="text-[11px] uppercase tracking-wider text-muted-foreground">
@@ -162,6 +165,7 @@ function ApplicationShell() {
                 </span>
                 <span className="text-sm font-medium">Workforce & Delivery Governance</span>
               </div>
+              <ActiveScopeSelector />
             </div>
             <div className="flex items-center gap-2">
               <RoleSwitcher />
@@ -172,8 +176,9 @@ function ApplicationShell() {
             <Outlet />
           </main>
         </div>
-      </div>
-    </SidebarProvider>
+        </div>
+      </SidebarProvider>
+    </ActiveScopeProvider>
   );
 }
 

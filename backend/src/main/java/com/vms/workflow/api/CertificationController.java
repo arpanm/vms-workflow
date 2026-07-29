@@ -1,6 +1,8 @@
 package com.vms.workflow.api;
 
 import com.vms.workflow.api.CertificationDtos.CertificationRequest;
+import com.vms.workflow.api.CertificationDtos.CertificationInboxView;
+import com.vms.workflow.api.CertificationDtos.CertificationOperationsView;
 import com.vms.workflow.api.CertificationDtos.ClarificationRequest;
 import com.vms.workflow.api.CertificationDtos.CloseMonthInput;
 import com.vms.workflow.api.CertificationDtos.AttendanceExceptionInput;
@@ -55,6 +57,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -101,6 +104,27 @@ public class CertificationController {
         @PathVariable UUID monthId
     ) {
         return monthResponse(workflow.workspace(jwt.getSubject(), monthId));
+    }
+
+    @GetMapping("/inbox")
+    @Operation(summary =
+        "List server-scoped certification and confirmation work across visible months")
+    public ResponseEntity<CertificationInboxView> inbox(
+        @AuthenticationPrincipal Jwt jwt,
+        @RequestParam(defaultValue = "50") int limit
+    ) {
+        return ResponseEntity.ok(operations.inbox(jwt.getSubject(), limit));
+    }
+
+    @GetMapping("/operations")
+    @Operation(summary =
+        "Read scoped notification, reminder, expiry and F05 handoff queue health")
+    public ResponseEntity<CertificationOperationsView> operations(
+        @AuthenticationPrincipal Jwt jwt,
+        @RequestParam(defaultValue = "100") int limit
+    ) {
+        return ResponseEntity.ok(operations.operations(
+            jwt.getSubject(), limit));
     }
 
     @PostMapping("/months/{monthId}/submissions")

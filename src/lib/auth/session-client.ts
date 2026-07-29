@@ -7,18 +7,40 @@ export { safeReturnPath } from "../url-safety";
 
 export type AuthenticatedUser = {
   id: string;
+  subject?: string;
   email: string;
   displayName: string;
-  organizationIds?: string[];
-  permissions?: string[];
+  memberships: Array<{
+    organizationId: string;
+    organizationCode: string;
+    organizationName: string;
+    roleCode: string;
+    validFrom: string;
+    validTo?: string | null;
+  }>;
+  organizationIds: string[];
+  permissions: string[];
 };
 
 const authenticatedUserSchema = z.object({
   id: z.string().min(1),
+  subject: z.string().min(1).optional(),
   email: z.string().email(),
   displayName: z.string().min(1),
-  organizationIds: z.array(z.string()).optional(),
-  permissions: z.array(z.string()).optional(),
+  memberships: z
+    .array(
+      z.object({
+        organizationId: z.string().min(1),
+        organizationCode: z.string().default(""),
+        organizationName: z.string().default(""),
+        roleCode: z.string().default(""),
+        validFrom: z.string().default(""),
+        validTo: z.string().nullable().optional(),
+      }),
+    )
+    .default([]),
+  organizationIds: z.array(z.string()).default([]),
+  permissions: z.array(z.string()).default([]),
 });
 
 export const sessionClient = {

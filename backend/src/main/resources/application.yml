@@ -26,6 +26,16 @@ spring:
           jwk-set-uri: ${VMS_OIDC_JWKS_URI}
 
 vms:
+  linear:
+    reconciliation:
+      worker-enabled: ${VMS_LINEAR_RECONCILIATION_WORKER_ENABLED:false}
+      worker-delay: ${VMS_LINEAR_RECONCILIATION_WORKER_DELAY:PT1M}
+      worker-initial-delay: ${VMS_LINEAR_RECONCILIATION_WORKER_INITIAL_DELAY:PT30S}
+      page-size: ${VMS_LINEAR_RECONCILIATION_PAGE_SIZE:100}
+      max-pages-per-run: ${VMS_LINEAR_RECONCILIATION_MAX_PAGES:10}
+      max-attempts: ${VMS_LINEAR_RECONCILIATION_MAX_ATTEMPTS:5}
+      success-interval: ${VMS_LINEAR_RECONCILIATION_SUCCESS_INTERVAL:PT15M}
+      retry-delay: ${VMS_LINEAR_RECONCILIATION_RETRY_DELAY:PT1M}
   delivery:
     commitment:
       worker-enabled: ${VMS_DELIVERY_COMMITMENT_WORKER_ENABLED:false}

@@ -5,6 +5,7 @@ import com.vms.workflow.api.LinearDtos.IssueLinkView;
 import com.vms.workflow.api.LinearDtos.IssueSnapshotView;
 import com.vms.workflow.api.LinearDtos.LinearHealthView;
 import com.vms.workflow.api.LinearDtos.LinearReconciliationRequest;
+import com.vms.workflow.api.LinearDtos.LinearReconciliationStatusView;
 import com.vms.workflow.api.LinearDtos.LinearReconciliationView;
 import com.vms.workflow.api.LinearDtos.LinkIssueRequest;
 import com.vms.workflow.api.LinearDtos.WebhookAcceptedView;
@@ -115,6 +116,25 @@ public class LinearIntegrationController {
     ) {
         return linear.reconcile(
             jwt.getSubject(), connectionId, idempotencyKey, request);
+    }
+
+    @GetMapping("/connections/{connectionId}/reconciliation-status")
+    @Operation(
+        summary = "Read the scoped cursor and retry evidence for scheduled reconciliation",
+        description = "Returns checkpoint and latest terminal job metadata only; "
+            + "provider credentials and raw responses are never exposed."
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200",
+            description = "Scoped checkpoint and latest attempt summary"),
+        @ApiResponse(responseCode = "404",
+            description = "Connection is absent or outside authorized scope")
+    })
+    LinearReconciliationStatusView reconciliationStatus(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID connectionId
+    ) {
+        return linear.reconciliationStatus(jwt.getSubject(), connectionId);
     }
 
     @PostMapping("/deliveries/{deliveryId}/process")

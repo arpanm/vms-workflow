@@ -1,8 +1,10 @@
 package com.vms.workflow.application;
 
 import com.vms.workflow.api.AttendanceDtos.AttendanceDayView;
+import com.vms.workflow.api.AttendanceDtos.AttendanceBreakView;
 import com.vms.workflow.api.AttendanceDtos.AttendanceSnapshotView;
 import com.vms.workflow.api.AttendanceDtos.CloseSnapshotRequest;
+import com.vms.workflow.api.AttendanceDtos.EndBreakRequest;
 import com.vms.workflow.api.AttendanceDtos.PunchRequest;
 import com.vms.workflow.api.AttendanceDtos.PunchView;
 import com.vms.workflow.api.AttendanceDtos.RegularizationRequest;
@@ -10,6 +12,7 @@ import com.vms.workflow.api.AttendanceDtos.RegularizationView;
 import com.vms.workflow.api.AttendanceDtos.RegularizationDecisionRequest;
 import com.vms.workflow.api.AttendanceDtos.RegularizationDecisionView;
 import com.vms.workflow.api.AttendanceDtos.ReopenSnapshotRequest;
+import com.vms.workflow.api.AttendanceDtos.StartBreakRequest;
 import com.vms.workflow.api.DomainConflictException;
 import com.vms.workflow.security.WorkforceAuthorizationService;
 import jakarta.persistence.EntityNotFoundException;
@@ -35,7 +38,8 @@ import java.util.UUID;
 
 @Service
 public class AttendanceService {
-    private static final Set<String> PUNCH_TYPES = Set.of("CHECK_IN", "CHECK_OUT");
+    private static final Set<String> PUNCH_TYPES = Set.of(
+        "CHECK_IN", "CHECK_OUT", "BREAK_START", "BREAK_END");
 
     private final JdbcTemplate jdbc;
     private final WorkforceAuthorizationService authorization;
@@ -55,7 +59,8 @@ public class AttendanceService {
     public PunchView punch(String subject, PunchRequest request) {
         authorization.requireAttendanceSelf(subject, request.employeeId());
         if (!PUNCH_TYPES.contains(request.eventType())) {
-            throw new IllegalArgumentException("eventType must be CHECK_IN or CHECK_OUT.");
+            throw new IllegalArgumentException(
+                "eventType must be CHECK_IN, CHECK_OUT, BREAK_START, or BREAK_END.");
         }
         lockEmployee(request.employeeId());
         List<PunchView> existing = findPunch(request.employeeId(), request.idempotencyKey());
@@ -76,7 +81,8 @@ public class AttendanceService {
                 "Internal punches are unavailable for the effective attendance source mode.");
         }
         OffsetDateTime occurredAt = OffsetDateTime.now(clock);
-        LocalDate workDate = occurredAt.atZoneSameInstant(ZoneId.of(employee.timezone())).toLocalDate();
+        LocalDate workDate = attributedWorkDate(
+            request.employeeId(), occurredAt, employee.timezone());
         UUID eventId = UUID.randomUUID();
         if ("CHECK_IN".equals(request.eventType())) {
             Boolean open = jdbc.queryForObject("""
@@ -87,6 +93,21 @@ public class AttendanceService {
                 """, Boolean.class, request.employeeId());
             if (Boolean.TRUE.equals(open)) {
                 throw new DomainConflictException("An open attendance session already exists.");
+            }
+            ShiftRuntimePolicy shift =
+                shiftRuntimePolicy(request.employeeId(), workDate);
+            if (shift != null && !shift.allowSplitSessions()) {
+                Boolean priorSession = jdbc.queryForObject("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM attendance_sessions
+                        WHERE employee_id = ? AND work_date = ?
+                          AND status IN ('CLOSED', 'OPEN')
+                    )
+                    """, Boolean.class, request.employeeId(), workDate);
+                if (Boolean.TRUE.equals(priorSession)) {
+                    throw new DomainConflictException(
+                        "The effective shift policy does not allow split sessions.");
+                }
             }
             jdbc.update("""
                 INSERT INTO attendance_events
@@ -103,7 +124,7 @@ public class AttendanceService {
             materializeDay(request.employeeId(), workDate);
             audit("ATTENDANCE_EVENT", eventId, request.employeeId(),
                 "CHECK_IN", subject);
-        } else {
+        } else if ("CHECK_OUT".equals(request.eventType())) {
             OpenSession session = jdbc.query("""
                 SELECT id, check_in_at, work_date
                 FROM attendance_sessions
@@ -116,9 +137,36 @@ public class AttendanceService {
             if (session == null) {
                 throw new DomainConflictException("No open attendance session exists.");
             }
+            Boolean openBreak = jdbc.queryForObject("""
+                SELECT EXISTS (
+                    SELECT 1 FROM attendance_breaks
+                    WHERE session_id = ? AND status = 'OPEN'
+                )
+                """, Boolean.class, session.id());
+            if (Boolean.TRUE.equals(openBreak)) {
+                throw new DomainConflictException(
+                    "End the active break before checking out.");
+            }
             occurredAt = normalizeCheckoutInstant(
                 session.checkInAt(), occurredAt);
-            int netMinutes = Math.toIntExact(Duration.between(session.checkInAt(), occurredAt).toMinutes());
+            long elapsedMinutes =
+                Duration.between(session.checkInAt(), occurredAt).toMinutes();
+            ShiftRuntimePolicy shift =
+                shiftRuntimePolicy(request.employeeId(), session.workDate());
+            int maximumSessionMinutes = shift == null
+                ? 36 * 60 : shift.maximumSessionMinutes();
+            if (elapsedMinutes > maximumSessionMinutes) {
+                throw new DomainConflictException(
+                    "Attendance session exceeds the effective shift policy; "
+                        + "submit a regularization.");
+            }
+            Integer breakMinutes = jdbc.queryForObject("""
+                SELECT COALESCE(SUM(minutes), 0)
+                FROM attendance_breaks
+                WHERE session_id = ? AND status = 'CLOSED'
+                """, Integer.class, session.id());
+            int netMinutes = Math.toIntExact(
+                Math.max(0, elapsedMinutes - breakMinutes));
             workDate = session.workDate();
             jdbc.update("""
                 INSERT INTO attendance_events
@@ -135,8 +183,187 @@ public class AttendanceService {
             materializeDay(request.employeeId(), workDate);
             audit("ATTENDANCE_EVENT", eventId, request.employeeId(),
                 "CHECK_OUT", subject);
+        } else {
+            OpenSession session = jdbc.query("""
+                SELECT id, check_in_at, work_date
+                FROM attendance_sessions
+                WHERE employee_id = ? AND status = 'OPEN'
+                """, result -> result.next()
+                    ? new OpenSession(
+                        result.getObject("id", UUID.class),
+                        result.getObject("check_in_at", OffsetDateTime.class),
+                        result.getObject("work_date", LocalDate.class))
+                    : null, request.employeeId());
+            if (session == null) {
+                throw new DomainConflictException(
+                    "A break requires an open attendance session.");
+            }
+            workDate = session.workDate();
+            if ("BREAK_START".equals(request.eventType())) {
+                Boolean openBreak = jdbc.queryForObject("""
+                    SELECT EXISTS (
+                        SELECT 1 FROM attendance_breaks
+                        WHERE employee_id = ? AND status = 'OPEN'
+                    )
+                    """, Boolean.class, request.employeeId());
+                if (Boolean.TRUE.equals(openBreak)) {
+                    throw new DomainConflictException(
+                        "An attendance break is already open.");
+                }
+                jdbc.update("""
+                    INSERT INTO attendance_events
+                        (id, employee_id, event_type, occurred_at, work_date,
+                         source, idempotency_key, recorded_by_subject)
+                    VALUES (?, ?, 'BREAK_START', ?, ?, 'INTERNAL_WEB', ?, ?)
+                    """, eventId, request.employeeId(), occurredAt, workDate,
+                    request.idempotencyKey(), subject);
+                jdbc.update("""
+                    INSERT INTO attendance_breaks
+                        (id, session_id, employee_id, break_start_event_id,
+                         started_at, status)
+                    VALUES (?, ?, ?, ?, ?, 'OPEN')
+                    """, UUID.randomUUID(), session.id(), request.employeeId(),
+                    eventId, occurredAt);
+            } else {
+                OpenBreak openBreak = jdbc.query("""
+                    SELECT id, started_at
+                    FROM attendance_breaks
+                    WHERE employee_id = ? AND session_id = ?
+                      AND status = 'OPEN'
+                    """, result -> result.next()
+                        ? new OpenBreak(
+                            result.getObject("id", UUID.class),
+                            result.getObject("started_at", OffsetDateTime.class))
+                        : null, request.employeeId(), session.id());
+                if (openBreak == null) {
+                    throw new DomainConflictException(
+                        "No open attendance break exists.");
+                }
+                occurredAt = normalizeCheckoutInstant(
+                    openBreak.startedAt(), occurredAt);
+                int minutes = Math.toIntExact(Duration.between(
+                    openBreak.startedAt(), occurredAt).toMinutes());
+                jdbc.update("""
+                    INSERT INTO attendance_events
+                        (id, employee_id, event_type, occurred_at, work_date,
+                         source, idempotency_key, recorded_by_subject)
+                    VALUES (?, ?, 'BREAK_END', ?, ?, 'INTERNAL_WEB', ?, ?)
+                    """, eventId, request.employeeId(), occurredAt, workDate,
+                    request.idempotencyKey(), subject);
+                jdbc.update("""
+                    UPDATE attendance_breaks
+                    SET break_end_event_id = ?, ended_at = ?, minutes = ?,
+                        status = 'CLOSED'
+                    WHERE id = ? AND status = 'OPEN'
+                    """, eventId, occurredAt, minutes, openBreak.id());
+            }
+            audit("ATTENDANCE_EVENT", eventId, request.employeeId(),
+                request.eventType(), subject);
         }
         return findPunch(request.employeeId(), request.idempotencyKey()).getFirst();
+    }
+
+    @Transactional
+    public AttendanceBreakView startBreak(
+        String subject,
+        StartBreakRequest request
+    ) {
+        PunchView event = punch(
+            subject,
+            new PunchRequest(
+                request.employeeId(), "BREAK_START",
+                request.idempotencyKey()));
+        AttendanceBreakView result = attendanceBreakByStartEvent(event.id());
+        if (result == null) {
+            throw new IllegalStateException(
+                "Break start event is missing its session lineage.");
+        }
+        return result;
+    }
+
+    @Transactional
+    public AttendanceBreakView endBreak(
+        String subject,
+        UUID breakId,
+        EndBreakRequest request
+    ) {
+        AttendanceBreakView target = attendanceBreak(breakId);
+        if (target == null) {
+            throw notFound();
+        }
+        authorization.requireAttendanceSelf(subject, target.employeeId());
+        lockEmployee(target.employeeId());
+        target = attendanceBreak(breakId);
+        if (target == null) {
+            throw notFound();
+        }
+        if ("CLOSED".equals(target.status())) {
+            String priorKey = jdbc.queryForObject("""
+                SELECT idempotency_key FROM attendance_events
+                WHERE id = ?
+                """, String.class, target.breakEndEventId());
+            if (!request.idempotencyKey().equals(priorKey)) {
+                throw new DomainConflictException(
+                    "Only an open attendance break can be ended.");
+            }
+            return target;
+        }
+        PunchView event = punch(
+            subject,
+            new PunchRequest(
+                target.employeeId(), "BREAK_END",
+                request.idempotencyKey()));
+        AttendanceBreakView result = attendanceBreakByEndEvent(event.id());
+        if (result == null || !result.id().equals(breakId)) {
+            throw new DomainConflictException(
+                "The break end event does not belong to the requested break.");
+        }
+        return result;
+    }
+
+    @Transactional(readOnly = true)
+    public List<AttendanceBreakView> breaks(
+        String subject,
+        UUID employeeId
+    ) {
+        authorization.requireAttendanceAccess(subject, employeeId);
+        return jdbc.query("""
+            SELECT attendance_break.id, attendance_break.session_id,
+                   attendance_break.employee_id, session.work_date,
+                   attendance_break.break_start_event_id,
+                   attendance_break.break_end_event_id,
+                   attendance_break.started_at, attendance_break.ended_at,
+                   attendance_break.minutes, attendance_break.status
+            FROM attendance_breaks attendance_break
+            JOIN attendance_sessions session
+              ON session.id = attendance_break.session_id
+            WHERE attendance_break.employee_id = ?
+            ORDER BY attendance_break.started_at DESC,
+                     attendance_break.id
+            """, (result, row) -> attendanceBreakView(result), employeeId);
+    }
+
+    private LocalDate attributedWorkDate(
+        UUID employeeId,
+        OffsetDateTime occurredAt,
+        String fallbackTimezone
+    ) {
+        var fallbackLocal = occurredAt.atZoneSameInstant(
+            ZoneId.of(fallbackTimezone));
+        LocalDate localDate = fallbackLocal.toLocalDate();
+        ShiftRuntimePolicy priorShift =
+            shiftRuntimePolicy(employeeId, localDate.minusDays(1));
+        if (priorShift == null || !priorShift.overnight()) {
+            return localDate;
+        }
+        var shiftLocal = occurredAt.atZoneSameInstant(
+            ZoneId.of(priorShift.timezone()));
+        if (shiftLocal.toLocalDate().equals(localDate)
+            && !shiftLocal.toLocalTime()
+                .isAfter(priorShift.overnightCutoffLocalTime())) {
+            return localDate.minusDays(1);
+        }
+        return localDate;
     }
 
     static OffsetDateTime normalizeCheckoutInstant(
@@ -362,7 +589,17 @@ public class AttendanceService {
         if (!existing.isEmpty() && "CLOSED".equals(existing.getFirst().status())) {
             return existing.getFirst();
         }
-        materializeAllocatedDays(month);
+        UUID rosterSnapshotId =
+            currentRosterSnapshotId(request.engagementMonthId());
+        if (rosterSnapshotId == null) {
+            throw new DomainConflictException(
+                "Attendance month requires a finalized complete roster snapshot.");
+        }
+        if (rosterSnapshotIsStale(rosterSnapshotId, month)) {
+            throw new DomainConflictException(
+                "Allocated roster changed after finalization; finalize a new roster version.");
+        }
+        materializeAllocatedDays(rosterSnapshotId);
         Boolean unresolved = jdbc.queryForObject("""
             SELECT EXISTS (
                 SELECT 1
@@ -381,7 +618,16 @@ public class AttendanceService {
             throw new DomainConflictException(
                 "Attendance month has unresolved missing-checkout or source-conflict exceptions.");
         }
-        List<SnapshotDay> days = snapshotDays(month);
+        List<SnapshotDay> days = snapshotDays(month, rosterSnapshotId);
+        Integer expectedRosterDays = jdbc.queryForObject("""
+            SELECT employee_day_count
+            FROM workforce_roster_snapshot_versions
+            WHERE id = ?
+            """, Integer.class, rosterSnapshotId);
+        if (days.size() != expectedRosterDays) {
+            throw new DomainConflictException(
+                "Attendance month is incomplete for the finalized roster snapshot.");
+        }
         String checksum = checksum(days);
         UUID snapshotId = UUID.randomUUID();
         UUID supersedesId = existing.isEmpty() ? null : existing.getFirst().id();
@@ -609,7 +855,13 @@ public class AttendanceService {
         }
         CalendarExpectation calendar = jdbc.query("""
             SELECT COALESCE(h.classification, w.classification) AS classification,
-                   COALESCE(h.expected_minutes, w.expected_minutes) AS expected_minutes
+                   CASE
+                     WHEN h.id IS NOT NULL THEN h.expected_minutes
+                     WHEN w.classification = 'WORKING'
+                       THEN COALESCE(shift_policy.expected_net_minutes,
+                                     w.expected_minutes)
+                     ELSE w.expected_minutes
+                   END AS expected_minutes
             FROM employee_calendar_assignments a
             JOIN working_calendar_weekdays w
               ON w.calendar_version_id = a.calendar_version_id
@@ -617,12 +869,22 @@ public class AttendanceService {
             LEFT JOIN calendar_holidays h
               ON h.calendar_version_id = a.calendar_version_id
              AND h.holiday_date = ?
+            LEFT JOIN employee_shift_assignments shift_assignment
+              ON shift_assignment.employee_id = a.employee_id
+             AND shift_assignment.valid_from <= ?
+             AND (
+               shift_assignment.valid_to IS NULL
+               OR shift_assignment.valid_to >= ?
+             )
+            LEFT JOIN workforce_shift_policy_versions shift_policy
+              ON shift_policy.id = shift_assignment.shift_policy_version_id
             WHERE a.employee_id = ?
               AND a.valid_from <= ?
               AND (a.valid_to IS NULL OR a.valid_to >= ?)
             """, rs -> rs.next()
                 ? new CalendarExpectation(rs.getString("classification"), rs.getInt("expected_minutes"))
-                : null, workDate, workDate, employeeId, workDate, workDate);
+                : null, workDate, workDate, workDate, workDate, employeeId,
+            workDate, workDate);
         return calendar == null ? new CalendarExpectation("WORKING", 540) : calendar;
     }
 
@@ -637,7 +899,8 @@ public class AttendanceService {
                       AND certification.status = 'CERTIFIED'
                      THEN TRUE ELSE FALSE
                    END AS capability_certified,
-                   COALESCE(calendar.timezone, 'Asia/Kolkata') AS timezone,
+                   COALESCE(shift_policy.timezone, calendar.timezone,
+                            'Asia/Kolkata') AS timezone,
                    COALESCE(calendar.missing_checkout_cutoff_local_time, TIME '23:59')
                        AS missing_checkout_cutoff
             FROM employees emp
@@ -653,6 +916,15 @@ public class AttendanceService {
               AND assignment.valid_from <= ?
               AND (assignment.valid_to IS NULL OR assignment.valid_to >= ?)
             LEFT JOIN working_calendar_versions calendar ON calendar.id = assignment.calendar_version_id
+            LEFT JOIN employee_shift_assignments shift_assignment
+              ON shift_assignment.employee_id = emp.id
+             AND shift_assignment.valid_from <= ?
+             AND (
+               shift_assignment.valid_to IS NULL
+               OR shift_assignment.valid_to >= ?
+             )
+            LEFT JOIN workforce_shift_policy_versions shift_policy
+              ON shift_policy.id = shift_assignment.shift_policy_version_id
             WHERE emp.id = ?
             """, rs -> rs.next()
                 ? new EmployeeAttendanceState(rs.getString("employment_status"),
@@ -661,11 +933,45 @@ public class AttendanceService {
                     rs.getBoolean("capability_certified"),
                     rs.getString("timezone"),
                     rs.getObject("missing_checkout_cutoff", LocalTime.class))
-                : null, workDate, workDate, workDate, workDate, workDate, workDate, employeeId);
+                : null, workDate, workDate, workDate, workDate, workDate,
+            workDate, workDate, workDate, employeeId);
         if (state == null) {
             throw notFound();
         }
         return state;
+    }
+
+    private ShiftRuntimePolicy shiftRuntimePolicy(
+        UUID employeeId,
+        LocalDate workDate
+    ) {
+        return jdbc.query("""
+            SELECT policy.timezone, policy.scheduled_start_local_time,
+                   policy.scheduled_end_local_time,
+                   policy.overnight_cutoff_local_time,
+                   policy.maximum_session_minutes,
+                   policy.allow_split_sessions
+            FROM employee_shift_assignments assignment
+            JOIN workforce_shift_policy_versions policy
+              ON policy.id = assignment.shift_policy_version_id
+            WHERE assignment.employee_id = ?
+              AND assignment.valid_from <= ?
+              AND (
+                assignment.valid_to IS NULL
+                OR assignment.valid_to >= ?
+              )
+            """, result -> result.next()
+                ? new ShiftRuntimePolicy(
+                    result.getString("timezone"),
+                    result.getObject(
+                        "scheduled_start_local_time", LocalTime.class),
+                    result.getObject(
+                        "scheduled_end_local_time", LocalTime.class),
+                    result.getObject(
+                        "overnight_cutoff_local_time", LocalTime.class),
+                    result.getInt("maximum_session_minutes"),
+                    result.getBoolean("allow_split_sessions"))
+                : null, employeeId, workDate, workDate);
     }
 
     private void validateEffectiveSourceCapability(EmployeeAttendanceState state) {
@@ -726,6 +1032,70 @@ public class AttendanceService {
                 value.exceptionCode(), calculation.exceptionCode());
     }
 
+    private AttendanceBreakView attendanceBreak(UUID breakId) {
+        return jdbc.query("""
+            SELECT attendance_break.id, attendance_break.session_id,
+                   attendance_break.employee_id, session.work_date,
+                   attendance_break.break_start_event_id,
+                   attendance_break.break_end_event_id,
+                   attendance_break.started_at, attendance_break.ended_at,
+                   attendance_break.minutes, attendance_break.status
+            FROM attendance_breaks attendance_break
+            JOIN attendance_sessions session
+              ON session.id = attendance_break.session_id
+            WHERE attendance_break.id = ?
+            """, result -> result.next()
+                ? attendanceBreakView(result) : null, breakId);
+    }
+
+    private AttendanceBreakView attendanceBreakByStartEvent(UUID eventId) {
+        return jdbc.query("""
+            SELECT attendance_break.id, attendance_break.session_id,
+                   attendance_break.employee_id, session.work_date,
+                   attendance_break.break_start_event_id,
+                   attendance_break.break_end_event_id,
+                   attendance_break.started_at, attendance_break.ended_at,
+                   attendance_break.minutes, attendance_break.status
+            FROM attendance_breaks attendance_break
+            JOIN attendance_sessions session
+              ON session.id = attendance_break.session_id
+            WHERE attendance_break.break_start_event_id = ?
+            """, result -> result.next()
+                ? attendanceBreakView(result) : null, eventId);
+    }
+
+    private AttendanceBreakView attendanceBreakByEndEvent(UUID eventId) {
+        return jdbc.query("""
+            SELECT attendance_break.id, attendance_break.session_id,
+                   attendance_break.employee_id, session.work_date,
+                   attendance_break.break_start_event_id,
+                   attendance_break.break_end_event_id,
+                   attendance_break.started_at, attendance_break.ended_at,
+                   attendance_break.minutes, attendance_break.status
+            FROM attendance_breaks attendance_break
+            JOIN attendance_sessions session
+              ON session.id = attendance_break.session_id
+            WHERE attendance_break.break_end_event_id = ?
+            """, result -> result.next()
+                ? attendanceBreakView(result) : null, eventId);
+    }
+
+    private AttendanceBreakView attendanceBreakView(
+        java.sql.ResultSet result
+    ) throws java.sql.SQLException {
+        return new AttendanceBreakView(
+            result.getObject("id", UUID.class),
+            result.getObject("session_id", UUID.class),
+            result.getObject("employee_id", UUID.class),
+            result.getObject("work_date", LocalDate.class),
+            result.getObject("break_start_event_id", UUID.class),
+            result.getObject("break_end_event_id", UUID.class),
+            result.getObject("started_at", OffsetDateTime.class),
+            result.getObject("ended_at", OffsetDateTime.class),
+            result.getObject("minutes", Integer.class),
+            result.getString("status"));
+    }
+
     private List<PunchView> findPunch(UUID employeeId, String idempotencyKey) {
         return jdbc.query("""
             SELECT event.id, event.employee_id, event.event_type, event.occurred_at,
@@ -733,8 +1103,13 @@ public class AttendanceService {
                    session.id AS session_id, session.status AS session_status,
                    session.net_minutes
             FROM attendance_events event
+            LEFT JOIN attendance_breaks attendance_break
+              ON attendance_break.break_start_event_id = event.id
+              OR attendance_break.break_end_event_id = event.id
             LEFT JOIN attendance_sessions session
-              ON session.check_in_event_id = event.id OR session.check_out_event_id = event.id
+              ON session.check_in_event_id = event.id
+              OR session.check_out_event_id = event.id
+              OR session.id = attendance_break.session_id
             WHERE event.employee_id = ? AND event.idempotency_key = ?
             """, (rs, rowNum) -> new PunchView(
                 rs.getObject("id", UUID.class),
@@ -796,42 +1171,37 @@ public class AttendanceService {
         return result;
     }
 
-    private void materializeAllocatedDays(MonthScope month) {
+    private void materializeAllocatedDays(UUID rosterSnapshotId) {
         List<EmployeeDay> allocatedDays = jdbc.query("""
-            SELECT DISTINCT allocation.employee_id, day.work_date::date AS work_date
-            FROM employee_project_allocations allocation
-            CROSS JOIN LATERAL generate_series(
-                GREATEST(allocation.valid_from, ?::date),
-                LEAST(COALESCE(allocation.valid_to, (?::date - 1)), (?::date - 1)),
-                INTERVAL '1 day'
-            ) AS day(work_date)
-            WHERE allocation.engagement_id = ?
-              AND allocation.status IN ('PLANNED', 'ACTIVE')
-              AND allocation.valid_from < ?
-              AND (allocation.valid_to IS NULL OR allocation.valid_to >= ?)
-            ORDER BY allocation.employee_id, work_date
+            SELECT DISTINCT employee_id, work_date
+            FROM workforce_roster_snapshot_days
+            WHERE snapshot_id = ?
+            ORDER BY employee_id, work_date
             """, (rs, rowNum) -> new EmployeeDay(
                 rs.getObject("employee_id", UUID.class),
                 rs.getObject("work_date", LocalDate.class)
-            ), month.monthStart(), month.monthStart().plusMonths(1),
-            month.monthStart().plusMonths(1), month.engagementId(),
-            month.monthStart().plusMonths(1), month.monthStart());
+            ), rosterSnapshotId);
         allocatedDays.forEach(day -> materializeDay(day.employeeId(), day.workDate()));
     }
 
-    private List<SnapshotDay> snapshotDays(MonthScope month) {
+    private List<SnapshotDay> snapshotDays(
+        MonthScope month,
+        UUID rosterSnapshotId
+    ) {
         return jdbc.query("""
-            SELECT DISTINCT ON (d.employee_id, d.work_date)
+            SELECT
                    d.id, d.employee_id, d.work_date, d.final_status, d.net_minutes, d.source_mode
             FROM attendance_days d
-            JOIN employee_project_allocations a ON a.employee_id = d.employee_id
-              AND a.engagement_id = ?
-              AND a.status IN ('PLANNED', 'ACTIVE')
-              AND a.valid_from <= d.work_date
-              AND (a.valid_to IS NULL OR a.valid_to >= d.work_date)
+            JOIN (
+                SELECT DISTINCT employee_id, work_date
+                FROM workforce_roster_snapshot_days
+                WHERE snapshot_id = ?
+            ) roster
+              ON roster.employee_id = d.employee_id
+             AND roster.work_date = d.work_date
             WHERE d.is_current
               AND d.work_date >= ? AND d.work_date < ?
-            ORDER BY d.employee_id, d.work_date, d.id
+            ORDER BY d.employee_id, d.work_date
             """, (rs, rowNum) -> new SnapshotDay(
                 rs.getObject("id", UUID.class),
                 rs.getObject("employee_id", UUID.class),
@@ -839,7 +1209,77 @@ public class AttendanceService {
                 rs.getString("final_status"),
                 rs.getInt("net_minutes"),
                 rs.getString("source_mode")
-            ), month.engagementId(), month.monthStart(), month.monthStart().plusMonths(1));
+            ), rosterSnapshotId, month.monthStart(),
+            month.monthStart().plusMonths(1));
+    }
+
+    private UUID currentRosterSnapshotId(UUID engagementMonthId) {
+        return jdbc.query("""
+            SELECT snapshot.id
+            FROM workforce_roster_snapshot_versions snapshot
+            WHERE snapshot.engagement_month_id = ?
+              AND NOT EXISTS (
+                SELECT 1
+                FROM workforce_roster_snapshot_versions newer
+                WHERE newer.supersedes_id = snapshot.id
+              )
+            """, result -> result.next()
+                ? result.getObject(1, UUID.class) : null,
+            engagementMonthId);
+    }
+
+    private boolean rosterSnapshotIsStale(
+        UUID rosterSnapshotId,
+        MonthScope month
+    ) {
+        Boolean stale = jdbc.queryForObject("""
+            SELECT
+              EXISTS (
+                SELECT 1
+                FROM workforce_roster_snapshot_days roster
+                JOIN employee_project_allocations allocation
+                  ON allocation.id = roster.project_allocation_id
+                WHERE roster.snapshot_id = ?
+                  AND (
+                    allocation.status NOT IN ('PLANNED', 'ACTIVE')
+                    OR allocation.valid_from > roster.work_date
+                    OR (
+                      allocation.valid_to IS NOT NULL
+                      AND allocation.valid_to < roster.work_date
+                    )
+                  )
+              )
+              OR EXISTS (
+                SELECT 1
+                FROM employee_project_allocations allocation
+                CROSS JOIN LATERAL generate_series(
+                    GREATEST(allocation.valid_from, ?::date),
+                    LEAST(
+                      COALESCE(allocation.valid_to, (?::date - 1)),
+                      (?::date - 1)
+                    ),
+                    INTERVAL '1 day'
+                ) AS day(work_date)
+                WHERE allocation.engagement_id = ?
+                  AND allocation.status IN ('PLANNED', 'ACTIVE')
+                  AND allocation.valid_from < ?
+                  AND (
+                    allocation.valid_to IS NULL
+                    OR allocation.valid_to >= ?
+                  )
+                  AND NOT EXISTS (
+                    SELECT 1
+                    FROM workforce_roster_snapshot_days roster
+                    WHERE roster.snapshot_id = ?
+                      AND roster.project_allocation_id = allocation.id
+                      AND roster.work_date = day.work_date::date
+                  )
+              )
+            """, Boolean.class, rosterSnapshotId, month.monthStart(),
+            month.monthStart().plusMonths(1), month.monthStart().plusMonths(1),
+            month.engagementId(), month.monthStart().plusMonths(1),
+            month.monthStart(), rosterSnapshotId);
+        return Boolean.TRUE.equals(stale);
     }
 
     private void insertSnapshotDays(UUID snapshotId, List<SnapshotDay> days) {
@@ -969,7 +1409,23 @@ public class AttendanceService {
     ) {
     }
 
+    private record ShiftRuntimePolicy(
+        String timezone,
+        LocalTime scheduledStartLocalTime,
+        LocalTime scheduledEndLocalTime,
+        LocalTime overnightCutoffLocalTime,
+        int maximumSessionMinutes,
+        boolean allowSplitSessions
+    ) {
+        boolean overnight() {
+            return scheduledStartLocalTime.isAfter(scheduledEndLocalTime);
+        }
+    }
+
     private record OpenSession(UUID id, OffsetDateTime checkInAt, LocalDate workDate) {
+    }
+
+    private record OpenBreak(UUID id, OffsetDateTime startedAt) {
     }
 
     private record RegularizationTarget(

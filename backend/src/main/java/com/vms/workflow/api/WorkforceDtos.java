@@ -135,7 +135,8 @@ public final class WorkforceDtos {
         String reason,
         String status,
         String idempotencyKey,
-        OffsetDateTime createdAt
+        OffsetDateTime createdAt,
+        long version
     ) {
     }
 }

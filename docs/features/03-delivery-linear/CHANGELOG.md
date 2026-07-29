@@ -15,3 +15,15 @@
 
 Related records: [FIXES.md](FIXES.md), [TEST_AUTOMATION.md](TEST_AUTOMATION.md)
 and [POST_FIX_REVIEW.md](POST_FIX_REVIEW.md).
+
+## 2026-07-29 — Delegation and cursor-reconciliation completion
+
+- Bound delivery approval to shared-core, effective-dated delegations while
+  retaining the configured authority holder, acting subject and delegation ID.
+- Added V38 durable reconciliation checkpoints and immutable page-attempt
+  evidence with bounded cursor pagination and retry/dead-letter state.
+- Added a provider-neutral reconciliation adapter, disabled-by-default
+  scheduler, explicit GraphQL partial-error semantics, and scoped status API.
+- Added focused Testcontainers coverage for delegated approval and successful
+  cursor/checkpoint evidence. Live Linear OAuth/GraphQL/webhook and real mail
+  acceptance remain explicitly external.

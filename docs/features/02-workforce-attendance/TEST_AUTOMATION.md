@@ -1,5 +1,34 @@
 # F02 Backend Test Automation
 
+## 2026-07-29 completion evidence
+
+`WorkforceAdministrationIT` adds three fresh-schema Testcontainers cases for
+calendar publication with holidays, exact balance-command replay/conflict,
+deliverable engagement/date/percentage bounds, manager-only leave and
+regularization inboxes, governed leave approval/cancellation ledger movement,
+bounded CSV validation/apply and durable break pairs.
+
+```text
+mvn -B -f backend/pom.xml -Dtest=NoSuchTest \
+  -Dsurefire.failIfNoSpecifiedTests=false \
+  -Dit.test=WorkforceAdministrationIT verify
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+BUILD SUCCESS
+
+npm run typecheck
+npm run lint -- --quiet
+npm run test -- --run src/features/workforce/api.test.ts \
+  src/features/workforce/presentation.test.ts
+2 files, 11 tests passed
+
+npx playwright test --project=workforce-chromium --grep E2E-F02-008
+1 passed
+```
+
+The permanent `E2E-F02-008` journey exercises alias, deliverable allocation,
+policy, calendar holiday, balance command, leave decision, regularization and
+CSV manager flows through intercepted API contracts.
+
 `WorkforceAttendanceIT` uses Spring Boot, MockMvc, Flyway and Testcontainers
 PostgreSQL 18. Its test-only fixtures are isolated in
 `backend/src/test/resources/db/testdata/V1001__workforce_attendance_test_fixtures.sql`.
@@ -76,3 +105,12 @@ provider/Java/PostgreSQL evidence.
 
 See [TEST_CASES.md](TEST_CASES.md), [TEST_REVIEW.md](TEST_REVIEW.md) and
 [FIXES.md](FIXES.md).
+
+## Shift/roster focused coverage — 2026-07-29
+
+`WorkforceAdministrationIT` proves the initial missing-shift blocker, overnight
+policy publication, effective assignment, full 30-day readiness, immutable
+snapshot creation, checksum presence and idempotent same-content finalization.
+`WorkforceAttendanceIT` remains the focused regression for split sessions,
+break deduction, day calculation and close/reopen lineage. `E2E-F02-008`
+automates manager publication, assignment, readiness review and finalization.

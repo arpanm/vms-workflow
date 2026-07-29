@@ -26,6 +26,11 @@ Covered:
 - wrong-tenant/object reads and unauthorized replay are non-disclosing;
 - generated OpenAPI contains F03 routes while secret reference values and
   webhook secret configuration are absent.
+- delegated approval retains the configured authority holder, distinct acting
+  subject and shared-core delegation evidence;
+- cursor reconciliation applies a bounded recorded-provider page, advances the
+  compound checkpoint and stores immutable attempt/checksum evidence; the
+  scoped status API does not disclose cross-role state.
 
 Targeted command and result:
 
@@ -57,10 +62,10 @@ BUILD SUCCESS
 - no-deliverables exception, cross-project dependency exception and exhaustive
   cycle/allocation/date cases;
 - production mail adapter attempts, retry/dead-letter/replay/callback behavior;
-- live Linear OAuth/PKCE, GraphQL partial-error/rate-limit/pagination behavior,
+- live Linear OAuth/PKCE, real GraphQL rate-limit/header behavior,
   registration, revocation and reconnect;
-- scheduled delta/nightly/month-end reconciliation, queue crash recovery,
-  quarantine and bounded retry/dead-letter worker;
+- exhaustive injected partial-error, queue-crash, quarantine and retry/
+  dead-letter matrices beyond the implemented bounded scheduled cursor worker;
 - exhaustive Swagger audience/access and database least-privilege-role tests;
 - full-stack Playwright/product-owner acceptance and external tenant-authorized
   `T-MSG-005`/`T-LIN-013`.

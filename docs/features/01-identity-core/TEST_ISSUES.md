@@ -29,3 +29,14 @@
 | F01-BE-TR-008 | Medium | No CORS/preflight, CSRF, or session-statelessness test fixes the intended browser security model. | Assert same-origin/no-CORS behavior or an exact allowlist; if cookies are introduced, add CSRF positive/negative tests. |
 | F01-BE-TR-009 | Medium | No regression test proves the legacy collection/table allowlist cannot be bypassed despite identifier concatenation. | Try unknown/encoded collection names and verify 404/400 with no SQL execution; retain bound organization parameters. |
 | F01-BE-TR-010 | Low | Maven reports Mockito dynamic agent self-attachment warnings on Java 25; future JDKs will disallow this by default. | Configure the supported Mockito agent mechanism and keep the Java 25 build warning-free. |
+## 2026-07-29 closure
+
+All local F01 product test issues are closed. The final two fixture defects
+were test-only: Northstar was inserted after V34 and therefore required an
+explicit foreign configuration row, and PostgreSQL SQLSTATE `55000` maps to a
+general Spring data-access runtime exception rather than
+`DataIntegrityViolationException`. Both assertions were corrected without
+weakening the database controls.
+
+The remaining controlled-environment identity-provider scenarios are tracked
+as external acceptance work, not local test failures.

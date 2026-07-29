@@ -14,6 +14,11 @@ type RecordedRequest = {
 
 type HealthScenario = "NOT_CONFIGURED" | "ACTION_REQUIRED";
 
+type DeliveryMockOptions = {
+  healthScenario?: HealthScenario;
+  commitmentOperations?: boolean;
+};
+
 const ids = {
   organization: "10000000-0000-0000-0000-000000000001",
   engagement: "20000000-0000-0000-0000-000000000001",
@@ -31,6 +36,7 @@ const ids = {
   inaccessibleLink: "90000000-0000-0000-0000-000000000002",
   issue: "a0000000-0000-0000-0000-000000000001",
   inaccessibleIssue: "a0000000-0000-0000-0000-000000000002",
+  commitmentOutbox: "b0000000-0000-0000-0000-000000000003",
 };
 
 const checksum = "sha256:5a71e9f03e79d6f9f03-exact-plan-v1";
@@ -162,6 +168,8 @@ function frozenPlan() {
       {
         id: "e0000000-0000-0000-0000-000000000001",
         approverSubject: "approver@reliance.example",
+        actingSubject: "approver@reliance.example",
+        delegationId: null,
         decision: "APPROVE",
         signedChecksum: checksum,
         comment: "Reviewed exact checksum.",
@@ -199,7 +207,7 @@ function json(route: Route, body: unknown, status = 200) {
 
 export async function mockDeliveryApi(
   page: Page,
-  options: { healthScenario?: HealthScenario } = {},
+  options: DeliveryMockOptions = {},
 ) {
   const mutations: RecordedMutation[] = [];
   const requests: RecordedRequest[] = [];
@@ -233,7 +241,12 @@ export async function mockDeliveryApi(
         email: "planner@arrowfoundry.example",
         displayName: "Delivery Planner",
         organizationIds: [ids.organization],
-        permissions: ["catalog.read", "delivery.read", "delivery.write"],
+        permissions: [
+          "catalog.read",
+          "delivery.read",
+          "delivery.write",
+          ...(options.commitmentOperations ? ["delivery.commitment.replay"] : []),
+        ],
       });
       return;
     }
@@ -293,6 +306,32 @@ export async function mockDeliveryApi(
       await json(route, created, 201);
       return;
     }
+    const revisionComparison = path.match(
+      /^\/api\/v1\/delivery\/plans\/([^/]+)\/revision-comparison$/,
+    );
+    if (revisionComparison && method === "GET") {
+      const planId = revisionComparison[1];
+      const isRevision = planId === ids.revisionPlan;
+      await json(route, {
+        planId,
+        priorVersionId: isRevision ? frozen.currentVersionId : null,
+        currentVersionId:
+          planId === ids.draftPlan
+            ? draft.currentVersionId
+            : planId === ids.frozenPlan
+              ? frozen.currentVersionId
+              : planId === ids.createdPlan
+                ? created.currentVersionId
+                : revision.currentVersionId,
+        priorVersion: isRevision ? frozen.version : 0,
+        currentVersion: isRevision ? revision.version : 1,
+        changedPlanFields: isRevision ? ["summary"] : [],
+        addedDeliverableCount: 0,
+        removedDeliverableCount: 0,
+        changedDeliverableCount: isRevision ? 1 : 0,
+      });
+      return;
+    }
     if (path === `/api/v1/delivery/plans/${ids.draftPlan}`) {
       await json(route, draft);
       return;
@@ -332,6 +371,8 @@ export async function mockDeliveryApi(
           {
             id: "e0000000-0000-0000-0000-000000000002",
             approverSubject: "approver@reliance.example",
+            actingSubject: "approver@reliance.example",
+            delegationId: null,
             decision: body.decision,
             signedChecksum: checksum,
             comment: body.comment ?? null,
@@ -458,6 +499,60 @@ export async function mockDeliveryApi(
           ? "WEBHOOK_REAUTH_REQUIRED; reference LIN-204."
           : "PROVIDER_NOT_CONFIGURED",
       });
+      return;
+    }
+    if (path === "/api/v1/delivery/commitment-operations" && method === "GET") {
+      await json(route, [
+        {
+          outboxId: ids.commitmentOutbox,
+          planId: ids.frozenPlan,
+          planVersionId: ids.frozenPlan,
+          planVersion: 1,
+          messageType: "INITIAL",
+          attemptCount: 5,
+          lastErrorCode: "COMMITMENT_PROVIDER_NOT_CONFIGURED",
+          deadLetteredAt: "2026-08-26T08:20:00Z",
+          createdAt: "2026-08-25T09:00:00Z",
+          replayCount: 0,
+        },
+      ]);
+      return;
+    }
+    if (
+      path === `/api/v1/integrations/linear/connections/${ids.connection}/reconciliations` &&
+      method === "POST"
+    ) {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      mutations.push({ method, path, body });
+      await json(route, {
+        jobId: "c0000000-0000-0000-0000-000000000003",
+        connectionId: ids.connection,
+        jobStatus: body.outcome === "AVAILABLE" ? "SUCCEEDED" : "FAILED",
+        connectionStatus: body.outcome === "AVAILABLE" ? "CONNECTED" : "ACTION_REQUIRED",
+        staleIssueCount: body.outcome === "AVAILABLE" ? 0 : 2,
+        recordedAt: "2026-08-26T10:00:00Z",
+        errorCode: body.errorCode ?? null,
+        commandChecksum: "a".repeat(64),
+        correlationId: "d0000000-0000-0000-0000-000000000003",
+        causationId: "e0000000-0000-0000-0000-000000000003",
+        replay: false,
+      }, 201);
+      return;
+    }
+    if (
+      path === `/api/v1/delivery/commitment-operations/${ids.commitmentOutbox}/replays` &&
+      method === "POST"
+    ) {
+      const body = request.postDataJSON() as Record<string, unknown>;
+      mutations.push({ method, path, body });
+      await json(route, {
+        replayId: "f0000000-0000-0000-0000-000000000003",
+        originalOutboxId: ids.commitmentOutbox,
+        replayOutboxId: "a1000000-0000-0000-0000-000000000003",
+        status: "PENDING",
+        replayNumber: 1,
+        replay: false,
+      }, 201);
       return;
     }
 

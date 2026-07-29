@@ -97,6 +97,46 @@ VALUES
      '00000000-0000-0000-0000-000000000801',
      '00000000-0000-0000-0000-000000000901', '2026-01-01');
 
+-- Historical finalized roster fixture. It deliberately predates shift-policy
+-- assignment rollout so readiness tests can still prove the missing-shift
+-- blocker while attendance snapshot regression tests retain immutable June
+-- roster evidence.
+INSERT INTO workforce_roster_snapshot_versions
+    (id, engagement_month_id, version, checksum, employee_count,
+     employee_day_count, finalized_by_subject, reason)
+VALUES
+    ('00000000-0000-0000-0000-000000000905',
+     '00000000-0000-0000-0000-000000000601',
+     1,
+     '0000000000000000000000000000000000000000000000000000000000000000',
+     1, 30, 'test-fixture', 'Historical roster before shift policy rollout');
+
+INSERT INTO workforce_roster_snapshot_days
+    (snapshot_id, employee_id, work_date, project_allocation_id, project_id,
+     allocation_percent, timezone, expected_classification, expected_minutes)
+SELECT
+    '00000000-0000-0000-0000-000000000905',
+    '00000000-0000-0000-0000-000000000801',
+    day.work_date::date,
+    '00000000-0000-0000-0000-000000000831',
+    '00000000-0000-0000-0000-000000000501',
+    50,
+    'Asia/Kolkata',
+    CASE
+      WHEN EXTRACT(ISODOW FROM day.work_date::date) IN (6, 7)
+        THEN 'WEEKLY_OFF'
+      ELSE 'WORKING'
+    END,
+    CASE
+      WHEN EXTRACT(ISODOW FROM day.work_date::date) IN (6, 7) THEN 0
+      ELSE 540
+    END
+FROM generate_series(
+    DATE '2026-06-01',
+    DATE '2026-06-30',
+    INTERVAL '1 day'
+) AS day(work_date);
+
 INSERT INTO employee_date_overrides
     (id, employee_id, override_date, classification, expected_minutes,
      reason, created_by_subject)

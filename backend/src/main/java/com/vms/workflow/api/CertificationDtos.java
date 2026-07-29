@@ -236,6 +236,76 @@ public final class CertificationDtos {
     ) {
     }
 
+    public record CertificationInboxItemView(
+        UUID monthId,
+        UUID engagementId,
+        String engagementCode,
+        String engagementName,
+        LocalDate monthStartDate,
+        String monthLabel,
+        String lifecycleState,
+        long monthVersion,
+        String submissionStatus,
+        int deliverableCount,
+        int terminalDecisionCount,
+        int assignedReviewCount,
+        int pendingInboundReviewCount,
+        String confirmationState,
+        OffsetDateTime confirmationDueAt,
+        String readinessStatus,
+        boolean overdue,
+        String nextAction,
+        String actionPath
+    ) {
+    }
+
+    public record CertificationInboxView(
+        OffsetDateTime generatedAt,
+        int total,
+        int actionRequired,
+        int overdue,
+        List<CertificationInboxItemView> items
+    ) {
+    }
+
+    public record CertificationQueueSummaryView(
+        String queue,
+        int pending,
+        int claimed,
+        int failed,
+        int deadLetter,
+        int completed,
+        int cancelled,
+        OffsetDateTime oldestActionableAt
+    ) {
+    }
+
+    public record CertificationOperationItemView(
+        UUID id,
+        UUID monthId,
+        long monthVersion,
+        String monthLabel,
+        String engagementCode,
+        String queue,
+        String workType,
+        String status,
+        int attemptCount,
+        OffsetDateTime dueAt,
+        OffsetDateTime lastAttemptAt,
+        String safeErrorCode,
+        UUID correlationId,
+        boolean replayAllowed
+    ) {
+    }
+
+    public record CertificationOperationsView(
+        OffsetDateTime generatedAt,
+        String providerConfiguration,
+        List<CertificationQueueSummaryView> queues,
+        List<CertificationOperationItemView> actionableItems
+    ) {
+    }
+
     public record PolicyVersionInput(
         @Min(0) long expectedMonthVersion,
         boolean attendanceRequired,

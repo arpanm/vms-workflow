@@ -325,7 +325,8 @@ public class WorkforceService {
         authorization.requireEmployeeRead(subject, employeeId);
         return jdbc.query("""
             SELECT id, employee_id, leave_type_id, start_date, end_date, requested_units,
-                   paid_units, lwp_units, reason, status, idempotency_key, created_at
+                   paid_units, lwp_units, reason, status, idempotency_key,
+                   created_at, version
             FROM leave_requests
             WHERE employee_id = ?
             ORDER BY created_at DESC
@@ -338,7 +339,8 @@ public class WorkforceService {
         lockEmployee(employeeId);
         List<LeaveRequestView> existing = jdbc.query("""
             SELECT id, employee_id, leave_type_id, start_date, end_date, requested_units,
-                   paid_units, lwp_units, reason, status, idempotency_key, created_at
+                   paid_units, lwp_units, reason, status, idempotency_key,
+                   created_at, version
             FROM leave_requests
             WHERE employee_id = ? AND idempotency_key = ?
             """, (rs, rowNum) -> leaveRequestView(rs), employeeId, request.idempotencyKey());
@@ -376,6 +378,33 @@ public class WorkforceService {
         if (type == null) {
             throw new IllegalArgumentException("Leave type is not available for the employee.");
         }
+        LeavePolicy policy = jdbc.query("""
+            SELECT policy.approval_required,
+                   policy.maximum_units_per_request,
+                   policy.excess_to_lwp
+            FROM employees employee
+            JOIN leave_policy_versions policy
+              ON policy.organization_id = employee.organization_id
+             AND policy.leave_type_id = ?
+             AND policy.status = 'PUBLISHED'
+             AND policy.valid_from <= ?
+             AND (policy.valid_to IS NULL OR policy.valid_to >= ?)
+            WHERE employee.id = ?
+            ORDER BY policy.valid_from DESC, policy.version DESC
+            LIMIT 1
+            """, result -> result.next()
+                ? new LeavePolicy(
+                    result.getBoolean("approval_required"),
+                    result.getBigDecimal("maximum_units_per_request"),
+                    result.getBoolean("excess_to_lwp"))
+                : new LeavePolicy(false, null, true),
+            request.leaveTypeId(), request.startDate(), request.startDate(),
+            employeeId);
+        if (policy.maximumUnitsPerRequest() != null
+            && request.units().compareTo(policy.maximumUnitsPerRequest()) > 0) {
+            throw new IllegalArgumentException(
+                "Requested leave units exceed the effective policy maximum.");
+        }
         List<LocalDate> eligibleDates = eligibleLeaveDates(
             employeeId, request.startDate(), request.endDate());
         validateLeaveUnits(request, type.minimumIncrement(), eligibleDates.size());
@@ -393,16 +422,23 @@ public class WorkforceService {
             paidUnits = request.units().min(balance.max(BigDecimal.ZERO));
         }
         BigDecimal lwpUnits = request.units().subtract(paidUnits);
+        if (lwpUnits.signum() > 0 && !policy.excessToLwp()) {
+            throw new DomainConflictException(
+                "Insufficient paid balance and the effective policy disallows excess-to-LWP.");
+        }
+        String status = policy.approvalRequired() ? "SUBMITTED" : "APPROVED";
         UUID id = UUID.randomUUID();
         jdbc.update("""
             INSERT INTO leave_requests
                 (id, employee_id, leave_type_id, start_date, end_date, requested_units,
                  paid_units, lwp_units, reason, status, idempotency_key, created_by_subject)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'APPROVED', ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, id, employeeId, request.leaveTypeId(), request.startDate(), request.endDate(),
-            request.units(), paidUnits, lwpUnits, request.reason(), request.idempotencyKey(), subject);
+            request.units(), paidUnits, lwpUnits, request.reason(), status,
+            request.idempotencyKey(), subject);
         insertLeaveRequestDays(id, request, paidUnits, eligibleDates);
-        if (paidUnits.signum() > 0 && type.balanceTracked()) {
+        if ("APPROVED".equals(status)
+            && paidUnits.signum() > 0 && type.balanceTracked()) {
             jdbc.update("""
                 INSERT INTO leave_balance_ledger
                     (id, employee_id, leave_type_id, entry_type, quantity, effective_date,
@@ -556,7 +592,8 @@ public class WorkforceService {
             rs.getString("reason"),
             rs.getString("status"),
             rs.getString("idempotency_key"),
-            rs.getObject("created_at", OffsetDateTime.class)
+            rs.getObject("created_at", OffsetDateTime.class),
+            rs.getLong("version")
         );
     }
 
@@ -627,6 +664,13 @@ public class WorkforceService {
         boolean paid,
         boolean balanceTracked,
         BigDecimal minimumIncrement
+    ) {
+    }
+
+    private record LeavePolicy(
+        boolean approvalRequired,
+        BigDecimal maximumUnitsPerRequest,
+        boolean excessToLwp
     ) {
     }
 }

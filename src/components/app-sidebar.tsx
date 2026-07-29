@@ -20,6 +20,9 @@ import {
   FileBarChart,
   ScanSearch,
   DatabaseBackup,
+  ContactRound,
+  GitPullRequestArrow,
+  CalendarSync,
 } from "lucide-react";
 
 import {
@@ -35,8 +38,8 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { featureFlags } from "@/lib/feature-flags";
-import type { Role } from "@/lib/role-store";
-import { useRole } from "@/lib/use-role";
+import { useActiveScope } from "@/features/core-admin/scope-provider";
+import type { PermissionRequirement } from "@/features/core-admin/permissions";
 
 const nav: Array<{
   title: string;
@@ -46,7 +49,7 @@ const nav: Array<{
   legacy: boolean;
   workforce: boolean;
   delivery: boolean;
-  financeRoles?: Role[];
+  permission?: PermissionRequirement;
 }> = [
   {
     title: "Dashboard",
@@ -56,7 +59,6 @@ const nav: Array<{
     legacy: false,
     workforce: false,
     delivery: false,
-    financeRoles: undefined,
   },
   {
     title: "Engagements",
@@ -66,6 +68,7 @@ const nav: Array<{
     legacy: true,
     workforce: false,
     delivery: false,
+    permission: "catalog.read",
   },
   {
     title: "Employees",
@@ -75,6 +78,7 @@ const nav: Array<{
     legacy: false,
     workforce: true,
     delivery: false,
+    permission: ["workforce.read", "employee.read"],
   },
   {
     title: "Today",
@@ -84,6 +88,7 @@ const nav: Array<{
     legacy: false,
     workforce: true,
     delivery: false,
+    permission: ["attendance.write", "attendance.self.checkin", "attendance.read"],
   },
   {
     title: "Leave",
@@ -93,6 +98,7 @@ const nav: Array<{
     legacy: false,
     workforce: true,
     delivery: false,
+    permission: ["workforce.read", "leave.self.apply", "leave.read"],
   },
   {
     title: "Regularizations",
@@ -102,6 +108,7 @@ const nav: Array<{
     legacy: false,
     workforce: true,
     delivery: false,
+    permission: ["workforce.read", "regularization.self.apply", "regularization.read"],
   },
   {
     title: "Month status",
@@ -111,6 +118,7 @@ const nav: Array<{
     legacy: false,
     workforce: true,
     delivery: false,
+    permission: ["workforce.read", "attendance.close", "attendance.read"],
   },
   {
     title: "Delivery plans",
@@ -120,6 +128,7 @@ const nav: Array<{
     legacy: false,
     workforce: false,
     delivery: true,
+    permission: ["delivery.read", "deliverable.plan.create"],
   },
   {
     title: "Linear health",
@@ -129,6 +138,7 @@ const nav: Array<{
     legacy: false,
     workforce: false,
     delivery: true,
+    permission: ["delivery.read", "integration.read_health"],
   },
   {
     title: "Certification",
@@ -138,6 +148,7 @@ const nav: Array<{
     legacy: false,
     workforce: false,
     delivery: false,
+    permission: ["certification.read", "deliverable.delivery.certify"],
   },
   {
     title: "Confirmation",
@@ -147,6 +158,7 @@ const nav: Array<{
     legacy: false,
     workforce: false,
     delivery: false,
+    permission: ["certification.read", "confirmation.request"],
   },
   {
     title: "Requirements",
@@ -156,6 +168,7 @@ const nav: Array<{
     legacy: true,
     workforce: false,
     delivery: false,
+    permission: "catalog.read",
   },
   {
     title: "Monthly Scope Engine",
@@ -165,6 +178,7 @@ const nav: Array<{
     legacy: true,
     workforce: false,
     delivery: false,
+    permission: "catalog.read",
   },
   {
     title: "Approvals",
@@ -174,6 +188,7 @@ const nav: Array<{
     legacy: true,
     workforce: false,
     delivery: false,
+    permission: "catalog.read",
   },
   {
     title: "UAT",
@@ -183,6 +198,7 @@ const nav: Array<{
     legacy: true,
     workforce: false,
     delivery: false,
+    permission: "catalog.read",
   },
   {
     title: "Finance workspace",
@@ -192,7 +208,7 @@ const nav: Array<{
     legacy: false,
     workforce: false,
     delivery: false,
-    financeRoles: ["pmo", "vendor_pm", "finance"],
+    permission: ["finance.read", "INVOICE_VIEW", "invoice.upload", "invoice.review"],
   },
   {
     title: "Procurement",
@@ -202,7 +218,7 @@ const nav: Array<{
     legacy: false,
     workforce: false,
     delivery: false,
-    financeRoles: ["pmo", "approver", "procurement", "finance"],
+    permission: ["finance.read", "PROCUREMENT_REVIEW", "invoice.review"],
   },
   {
     title: "Finance reports",
@@ -212,7 +228,7 @@ const nav: Array<{
     legacy: false,
     workforce: false,
     delivery: false,
-    financeRoles: ["pmo", "biz_lead", "approver", "procurement", "finance"],
+    permission: ["finance.read", "REPORT_VIEW", "finance.report.read"],
   },
   {
     title: "Historical migration",
@@ -222,7 +238,57 @@ const nav: Array<{
     legacy: false,
     workforce: false,
     delivery: false,
-    financeRoles: ["pmo"],
+    permission: ["migration.read", "migration.execute"],
+  },
+  {
+    title: "Engagement administration",
+    url: "/administration/engagements",
+    icon: Building2,
+    group: "Administration",
+    legacy: false,
+    workforce: false,
+    delivery: false,
+    permission: ["catalog.read", "engagement.read"],
+  },
+  {
+    title: "Contact groups",
+    url: "/administration/contact-groups",
+    icon: ContactRound,
+    group: "Administration",
+    legacy: false,
+    workforce: false,
+    delivery: false,
+    permission: ["contacts.manage", "engagement.configure"],
+  },
+  {
+    title: "Approval inbox",
+    url: "/administration/approval-requests",
+    icon: ShieldCheck,
+    group: "Administration",
+    legacy: false,
+    workforce: false,
+    delivery: false,
+    permission: ["approval.request.create", "approval.request.act"],
+  },
+  {
+    title: "Policies & delegations",
+    url: "/administration/approval-policies",
+    icon: GitPullRequestArrow,
+    group: "Administration",
+    legacy: false,
+    workforce: false,
+    delivery: false,
+    permission: ["approval.policy.manage", "delegation.manage"],
+  },
+  {
+    title: "Month governance",
+    url: "/administration/months",
+    icon: CalendarSync,
+    group: "Administration",
+    legacy: false,
+    workforce: false,
+    delivery: false,
+    permission: ["month.transition", "catalog.read"],
   },
 ];
 
@@ -230,9 +296,16 @@ export function AppSidebar() {
   const { state, isMobile, setOpenMobile } = useSidebar();
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const [role] = useRole();
+  const { can } = useActiveScope();
 
-  const groups = ["Overview", "Workforce", "Delivery", "Governance", "Finance"] as const;
+  const groups = [
+    "Overview",
+    "Workforce",
+    "Delivery",
+    "Governance",
+    "Finance",
+    "Administration",
+  ] as const;
 
   return (
     <Sidebar collapsible="icon">
@@ -263,7 +336,7 @@ export function AppSidebar() {
                       (!n.legacy || featureFlags.legacyFixedCost) &&
                       (!n.workforce || featureFlags.workforceGovernance) &&
                       (!n.delivery || featureFlags.linear) &&
-                      (!n.financeRoles || n.financeRoles.includes(role)),
+                      (!n.permission || can(n.permission)),
                   )
                   .map((item) => {
                     const active = path === item.url || path.startsWith(`${item.url}/`);

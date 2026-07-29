@@ -17,3 +17,24 @@
 - Made base server configuration fail closed and declared JWT bearer security
   in generated OpenAPI.
 - Kept the production OIDC/BFF selection as an explicit release blocker rather than inventing credentials/provider behavior.
+## 2026-07-29 — local F01 product completion
+
+- Added V34 identity/core administration, canonical role completion and
+  least-privilege runtime grants.
+- Added engagement configuration, contact group, approval policy, delegation,
+  governed reopen request/action and month transition APIs.
+- Added exact-project approval eligibility, authority-identity quorum,
+  request/action idempotency, direct/delegated self-approval and immutable
+  evidence controls.
+- Added immutable policy revisions with non-overlapping future-effective
+  handoff that preserves the current effective policy, immutable
+  request electorate snapshots, server-derived month evidence and atomic final
+  approval-to-reopen dispatch with database mutation backstops.
+- Derived `ALL` quorum from the request-time electorate and enforced
+  policy-required nonblank action evidence through Java/API/UI contracts.
+- Added effective permissions, current-scope and permission-aware React
+  administration/navigation behavior.
+- Expanded PostgreSQL integration coverage and permanent F01 regression catalog
+  entries for forged evidence, eligibility drift, action replay, delegated
+  self-approval, policy revision and direct SQL bypass.
+- Kept provider-backed OIDC/BFF/provisioning acceptance explicitly external.

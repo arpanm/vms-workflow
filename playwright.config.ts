@@ -138,6 +138,15 @@ export default defineConfig({
       },
     },
     {
+      name: "f01-core-admin-chromium",
+      testMatch: /core-admin\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: "http://127.0.0.1:4173",
+        timezoneId: "Asia/Kolkata",
+      },
+    },
+    {
       name: "workforce-chromium",
       testMatch: /workforce\.spec\.ts/,
       use: {

@@ -60,6 +60,38 @@ const apiResponses: Record<string, unknown> = {
     organizationIds: ["org-arrowfoundry"],
     permissions: ["catalog.read"],
   },
+  "/api/v1/organizations": [
+    {
+      id: "org-reliance",
+      code: "RELIANCE",
+      displayName: "Reliance Intelligence",
+    },
+  ],
+  "/api/v1/engagements": [
+    {
+      id: "eng-reliance",
+      engagementCode: "AF-RIL",
+      name: "ArrowFoundry × Reliance",
+      clientOrganizationId: "org-reliance",
+      vendorOrganizationId: "org-arrowfoundry",
+      procurementOrganizationId: null,
+      engagementModel: "DEDICATED_RESOURCE_MONTHLY",
+      startDate: "2026-06-01",
+      endDate: null,
+      status: "ACTIVE",
+    },
+  ],
+  "/api/v1/engagement-months": [
+    {
+      id: "month-reliance-june",
+      engagementId: "eng-reliance",
+      monthStartDate: "2026-06-01",
+      state: "ACTIVE",
+      riskStatus: "ON_TRACK",
+      historicalFlag: false,
+      governanceVersion: 1,
+    },
+  ],
   "/api/v1/legacy/engagements": [engagement],
   "/api/v1/legacy/requirements": requirements,
   "/api/v1/legacy/approvals": [

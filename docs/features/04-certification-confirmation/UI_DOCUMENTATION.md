@@ -4,10 +4,10 @@
 
 | Route | User flow |
 | --- | --- |
-| `/certification` | Enter an authorized engagement month. |
+| `/certification` | Server-scoped cross-month work inbox for vendor drafts, assigned certification decisions, summaries, and direct month access. |
 | `/certification/$monthId` | Vendor draft: outcomes, criterion evidence references, declaration, save/submit, lock, and clarification timeline. |
 | `/certification/$monthId/review` | Assigned product-owner inbox: compare frozen baseline, vendor result and evidence; certify/clarify/carry-forward; generate explicit summary. |
-| `/confirmation` | Enter confirmation governance for an authorized month. |
+| `/confirmation` | Cross-month confirmation work plus durable notification/reminder/expiry/F05-handoff health. Authorized operators can replay only failed configured notification work after entering a reason; the retained intent is exact-month-version bound. |
 | `/confirmation/$monthId` | Five-pillar readiness, blockers/owners/CTAs, exact recipient/quorum/due preview, request lineage, inbound safe metadata, notification status, and reopen impact. |
 | `/confirmation/requests/$requestId` | Eligible in-app response: exact scope/diff, action validation, audit history, terminal/replay/expiry state. |
 

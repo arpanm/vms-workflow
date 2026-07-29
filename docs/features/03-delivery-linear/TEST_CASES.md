@@ -13,6 +13,7 @@
 - `T-PLAN-006` — Frozen/approved versions reject in-place mutation; revision clones stable deliverable lineage, requires reason/impact, displays additions/removals/field diff, needs new quorum and preserves original versus effective baseline metrics.
 - `T-PLAN-007` — Dependency cycles are rejected; internal/external/Linear dependencies retain owner, target resolution date and blocking classification; a permitted cross-project dependency remains visible.
 - `T-PLAN-008` — Effective-dated employee assignment requires active allocation or an authorized warning/exception, is snapshotted, and a Linear assignee suggestion never silently creates an assignment.
+- `T-PLAN-009` — An active shared-core delegation can act only for a configured authority holder and exact `delivery.plan.approve` scope; the immutable approval records authority holder, acting subject, delegation ID/expiry and separation-of-duties outcome. Expired, revoked, cross-engagement and project-mismatched delegations are hidden as not found.
 
 ## Commitment communication
 
@@ -37,6 +38,7 @@
 - `T-LIN-011` — Custom state preserves provider ID/name/type/category and is mapped only through versioned configured rules, yielding `UNKNOWN` rather than name guessing when unmapped.
 - `T-LIN-012` — Historical import stores retrieval source/checksum and labels current API-only data `CURRENT_STATE_ONLY`; it does not label it a historical month-end snapshot absent source event history/export.
 - `T-LIN-013` — **External acceptance:** approved Linear OAuth app/app actor completes OAuth/PKCE, least-privilege scope, authorized GraphQL resolution and registered signed webhook against the tenant workspace; revoke/reconnect and webhook test are documented.
+- `T-LIN-014` — A scheduled/provider-neutral delta run reads only a configured maximum page size, advances the compound cursor after a clean page, stores immutable per-attempt counts/checksum, resumes after interruption, and exposes only scoped checkpoint/job summaries. A partial GraphQL response records its errors and does not advance the cursor.
 
 ## Security, persistence and API
 

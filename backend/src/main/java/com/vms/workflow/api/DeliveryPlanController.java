@@ -4,6 +4,7 @@ import com.vms.workflow.api.DeliveryDtos.ApprovalRequest;
 import com.vms.workflow.api.DeliveryDtos.CreatePlanRequest;
 import com.vms.workflow.api.DeliveryDtos.PlanSummaryView;
 import com.vms.workflow.api.DeliveryDtos.PlanView;
+import com.vms.workflow.api.DeliveryDtos.RevisionComparisonView;
 import com.vms.workflow.api.DeliveryDtos.RevisionRequest;
 import com.vms.workflow.application.DeliveryPlanningService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,6 +44,15 @@ public class DeliveryPlanController {
     @Operation(summary = "Read a nested delivery plan with local Linear evidence")
     PlanView plan(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID planId) {
         return delivery.plan(jwt.getSubject(), planId);
+    }
+
+    @GetMapping("/plans/{planId}/revision-comparison")
+    @Operation(summary = "Compare the current delivery revision to its immutable predecessor")
+    RevisionComparisonView revisionComparison(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID planId
+    ) {
+        return delivery.revisionComparison(jwt.getSubject(), planId);
     }
 
     @PostMapping("/plans")

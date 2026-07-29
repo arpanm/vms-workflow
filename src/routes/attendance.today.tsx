@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { format } from "date-fns";
-import { Clock3, LogIn, LogOut, TriangleAlert } from "lucide-react";
+import { Clock3, Coffee, LogIn, LogOut, Play, TriangleAlert } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
@@ -151,6 +151,28 @@ function TodayCard({ employeeId }: { employeeId: string }) {
                 onClick={() => punch.mutate("CHECK_OUT")}
               >
                 <LogOut className="mr-2 h-4 w-4" /> Check out
+              </Button>
+              <Button
+                variant="outline"
+                disabled={
+                  readOnly ||
+                  punch.isPending ||
+                  action.action !== "CHECK_OUT"
+                }
+                onClick={() => punch.mutate("BREAK_START")}
+              >
+                <Coffee className="mr-2 h-4 w-4" /> Start break
+              </Button>
+              <Button
+                variant="outline"
+                disabled={
+                  readOnly ||
+                  punch.isPending ||
+                  action.action !== "CHECK_OUT"
+                }
+                onClick={() => punch.mutate("BREAK_END")}
+              >
+                <Play className="mr-2 h-4 w-4" /> End break
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">

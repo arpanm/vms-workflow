@@ -32,3 +32,14 @@
 | F01-BE-CR-012 | Medium | No CORS policy exists, so the supported deployment is implicitly same-origin even though the frontend accepts a separate API base URL. CSRF is disabled at `SecurityConfig.java:26`, which is suitable only while the API remains stateless bearer-only. | Document/enforce same-origin or configure a strict origin allowlist. If a cookie/BFF session is added, enable CSRF protection before any mutation endpoint. | Open architecture decision. |
 | F01-BE-CR-013 | Low | The SQL in `LegacyQueryService.java:56-63` concatenates a table identifier, but the value comes only from the immutable allowlist at lines 17-23 and organization IDs remain bound parameters. The controller path is also regex-constrained. | Retain both allowlists and add a regression test; do not accept arbitrary identifiers later. | No SQL-injection defect found in current code. |
 | F01-BE-CR-014 | Low | `pom.xml` has no SBOM, dependency vulnerability, convergence, static-analysis, or coverage gate; `verify` therefore gives no dependency-risk verdict. `postgres:18-alpine` is also a floating tag (`compose.yaml:3`). | Add pinned/reviewed images and CI dependency/SBOM/static-analysis checks with an explicit triage policy. | Open hardening item. |
+## 2026-07-29 status
+
+The historical F01 backend blockers in this file are closed by V2/V3 and V34:
+canonical role/permission assignments are effective-dated and scoped;
+controllers require declared permissions; published configuration/policy
+records and approval/transition evidence are immutable; PostgreSQL runtime
+grants are explicit; and tenant/project denial is exercised against a
+Flyway-migrated database.
+
+No local F01 implementation issue remains open. Approved identity-provider,
+provisioning and deployed acceptance evidence remains external.

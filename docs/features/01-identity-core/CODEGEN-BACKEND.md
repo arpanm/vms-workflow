@@ -190,3 +190,28 @@ JwtDecoderIT: 3 tests
 Tests run: 14, Failures: 0, Errors: 0, Skipped: 0
 BUILD SUCCESS
 ```
+## 2026-07-29 local product completion
+
+V34 and the executable Java contract close the previously deferred F01
+administration surface:
+
+- versioned engagement configuration, contact groups, approval policies and
+  effective-dated delegations;
+- governed reopen requests with server-derived month evidence, immutable
+  stage-electorate snapshots, ordered stages, N-of-M quorum, delegated
+  self-approval enforcement, exact-project eligibility, bounded delegation,
+  actor-scoped action idempotency and underlying-authority vote deduplication;
+- stable-identity policy revision/publication with immutable version
+  supersession, plus atomic approved-request-to-month-reopen dispatch and SQL
+  mutation backstops;
+- guarded engagement-month transitions with optimistic versions, effective
+  configuration snapshots and append-only history;
+- canonical role completion, effective permissions in `/api/v1/me`, and
+  owner/runtime/public database privilege separation;
+- executable `/api/v1/core/**` controllers and DTOs published through
+  `/v3/api-docs`.
+
+`CoreAdministrationIT` is the executable backend specification. Its final
+focused verify migrated V1–V34 plus V1000–V1005 on PostgreSQL 18.4 and passed
+17/17 cases, including request-time `ALL` quorum, future revision continuity
+and captured evidence enforcement.

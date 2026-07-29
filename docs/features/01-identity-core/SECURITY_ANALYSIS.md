@@ -36,3 +36,38 @@ The migration removes the historical direct Supabase trust boundary and does not
 | F01-BE-SA-012 | Low | Maven `verify` performs no vulnerability/SBOM/static analysis, and the PostgreSQL Compose image is not digest-pinned. A successful build is not dependency-risk evidence. | Add CI software-composition analysis, SBOM generation, update policy, and pinned image provenance. |
 
 The backend improves confidentiality over the historical browser-direct database design, but Phase 1 must remain closed until F01-BE-SA-001 through F01-BE-SA-005 are resolved and exercised against real JWT validation plus Testcontainers PostgreSQL.
+## Final security posture — 2026-07-29
+
+- JWT subject/audience and active principal are server-authoritative.
+- Organization, engagement and project permissions are resolved from active,
+  effective-dated memberships and assignments.
+- Cross-scope identifiers produce uniform denial/not-found behavior.
+- Published configurations/policies and approval/transition/audit evidence
+  reject update/delete; public function execution is revoked.
+- Delegation is bounded by both users' active membership, the delegator's
+  effective authority, scope, action, time window and stage policy.
+- Approval actions bind actor subject, current stage, exact request project and
+  original authority holder; one authority cannot contribute multiple quorum
+  votes through delegates.
+- Self-approval compares the requester with the original authority holder, so
+  acting through a delegate does not bypass separation of duties.
+- Request creation derives month type/scope/version/hash and required
+  permission on the server; callers cannot forge generic evidence fields.
+- Immutable per-request stage snapshots prevent later role, membership or
+  contact-group drift from changing an in-flight electorate or quorum; `ALL`
+  is derived from every request-time eligible authority.
+- Captured evidence-required policy rejects blank action evidence before
+  mutation.
+- Future-effective policy revisions preserve the currently effective
+  authorization window and use a non-overlapping handoff.
+- Actor-scoped action idempotency prevents retry duplication and rejects
+  attempts to reuse a key with changed decision/delegation content.
+- Runtime grants and triggers reject direct request state mutation and reject a
+  `REOPEN_REQUESTED` → `REOPENED` month update without the matching approved
+  request; final approval performs both changes in one transaction.
+- `PLATFORM_ADMIN`, `SUPPORT_OPERATOR` and `SERVICE_ACCOUNT` receive no
+  implicit business-approval authority.
+
+Residual risk is external identity operations: provider tenant configuration,
+MFA, invitation/provisioning, BFF cookie controls and signing-key rotation must
+be accepted in a controlled environment.
