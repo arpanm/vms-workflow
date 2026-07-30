@@ -2,8 +2,9 @@
 
 ## Final integrated reconciliation — 2026-07-30
 
-The documented hardening surface applies through production migrations V1–V43
-(V42 repeated-reopen; V43 durable migration). Local system 7/7 and schema
+The documented hardening surface applies through production migrations V1–V44
+(V42 repeated-reopen; V43 durable migration; V44 checksum-safe trigger-function
+hardening). Local product system 7/7, repeatable startup 2/2 and schema
 validation pass. Production identity/provider approval remains external, and
 focused recovery evidence does not imply clean full-suite Maven/browser runs.
 

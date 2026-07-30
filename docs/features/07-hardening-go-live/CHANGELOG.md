@@ -8,8 +8,10 @@
   `vms_workflow_local_v44`, preserving the prior database and its history.
 - Added validated `VMS_LOCAL_DATABASE` override and propagation to the runtime
   environment file.
-- Verified `npm run dev:all` through all 50 migrations and both Spring/Vite
-  readiness probes while PostgreSQL and JWKS used automatically selected ports.
+- Verified `npm run dev:all` twice: the first run applied all 50 migrations and
+  the retained-history restart validated them with no migration required.
+  Spring/Vite reached readiness both times while PostgreSQL and JWKS used
+  automatically selected ports.
 
 ## 2026-07-30 — V42/V43 final evidence reconciliation
 

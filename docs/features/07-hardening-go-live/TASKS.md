@@ -2,8 +2,9 @@
 
 ## Final integrated reconciliation — 2026-07-30
 
-The production migration chain is V1–V43: V42 is the repeated-reopen invariant
-and V43 the durable migration queue. Local system 7/7, self-test 9/9
+The production migration chain is V1–V44: V42 is the repeated-reopen invariant,
+V43 is the durable migration queue and V44 additively hardens the immutable
+V39/V40 functions. Local product system 7/7, repeatable startup 2/2, self-test 9/9
 (45.037 s), operations (15 runbooks/6 alerts), 43 migration schemas, rollout
 schema and the eight-feature SDLC check pass. Full Maven executed 340 with
 2 failures + 1 error; four exact recovery tests pass. Full browser is 287/292;
