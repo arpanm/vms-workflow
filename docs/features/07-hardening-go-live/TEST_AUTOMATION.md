@@ -1,5 +1,14 @@
 # F07 — Test Automation
 
+## Final integrated reconciliation — 2026-07-30
+
+Current automation passes system 7/7, self-test 9/9 (45.037 s), operations
+15-runbook/6-alert validation, all 43 migration schemas, rollout schema and the
+eight-feature SDLC model-separation check. The release-schema wrapper itself is
+not claimed as passed: sandbox bind failed `EPERM` on `127.0.0.1`, and its
+silent escalated retry was aborted after 467 s; the underlying gates pass.
+Maven/browser aggregate failures and focused recoveries remain separate.
+
 F07 uses separate lanes because intercepted browser contracts, local
 Java/PostgreSQL integration and production acceptance prove different things.
 
@@ -20,8 +29,9 @@ Java/PostgreSQL integration and production acceptance prove different things.
 
 The review-control self-test rejects an incorrect schema/type, a 40-character
 Git tree object used as `reviewedThroughCommit`, a reviewed commit outside the
-validated release ancestry, a missing structured closure dimension and a
-runbook fragment without an explicit anchor. Current focused results:
+validated release ancestry, an ancestor-only review offered for a release
+decision, a missing structured closure dimension and a runbook fragment
+without an explicit anchor. Current focused results:
 `f07:self-test` **9/9 passed** and `f07:ops:check` **1/1 passed**.
 
 The GitHub workflow wraps each command in structured evidence, binds it to
@@ -76,7 +86,12 @@ case that searches success, retry and error responses, captured logs and
 persisted security telemetry for the full restricted corpus. E2E-06 and E2E-09
 passed the four-case real finance-system lane.
 
-## Final working-tree execution ledger
+## Preserved execution ledger and current-candidate boundary
+
+The counts below are preserved earlier evidence. They predate V39/V40 and must
+not be presented as current-candidate provenance. The current release-control
+self-test passes 9/9; current complete frontend/Maven/browser/system,
+24-hour-soak, recovery and artifact lanes remain to be executed and bound.
 
 | Lane | Result |
 |---|---|

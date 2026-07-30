@@ -1,5 +1,60 @@
 # F07 — Changelog
 
+## 2026-07-30 — V42/V43 final evidence reconciliation
+
+- Recorded V42 as the repeated-reopen invariant and V43 as the durable
+  migration queue.
+- Preserved full Maven 340 (2 failures + 1 error) and browser 287/292, followed
+  separately by four Maven and five browser recovery passes.
+- Recorded system 7/7, self 9/9 and green operations/migration/rollout/SDLC
+  gates, plus the release-schema environmental wrapper limitation.
+- Kept F07-T057, F07-T066/T067, F07-T070, clean commit and external production
+  approvals open.
+
+## 2026-07-30 — role guidance codegen
+
+- Added an in-application role guide and safe-support workspace for employee,
+  vendor HR/admin, vendor delivery, product owner, Procurement, integration
+  administration, governance/reopen and migration personas.
+- Added the cross-linked operator/user guide at
+  `docs/ROLE_GUIDES_AND_SUPPORT.md`; final verification remains in the
+  consolidated regression lane.
+
+## 2026-07-30 — current V1–V42 ordered verification
+
+- Added V42's effective-pending reopen invariant: unresolved requests remain
+  exclusive, while an immutable request with an append-only decision permits a
+  later governed correction.
+- E2E-05 now traverses governed reopen, approval, recertification, inbound
+  confirmation and invalidation resolution.
+- Fresh ordered F07 system verification passes 7/7 with zero skipped, flaky or
+  unexpected tests.
+
+## 2026-07-30 — current-release evidence integrity reconciliation
+
+- Fixed the clean-worktree self-test: it now creates and removes an explicit
+  untracked marker before asserting that clean provenance rejects dirty state.
+  The current self-test passes 9/9.
+- Made release evaluation require `reviewedThroughCommit` to equal the
+  candidate release commit. Ancestor review remains valid historical evidence
+  but cannot authorize a later release.
+- Preserved the first current F07 E2E-01 failure: V37 correctly rejected
+  attendance close without a finalized complete roster. The system setup now
+  publishes a governed shift, assigns both allocated employees, checks
+  readiness and finalizes the immutable roster before month close. E2E-01
+  passes on fresh V1–V40.
+- The ordered rerun then passed E2E-02/03/04 and exposed E2E-05 inheriting
+  E2E-04's terminal request/F05 handoff. Its separate scenario now explicitly
+  supersedes the prior terminal request through the PostgreSQL transition
+  guard. The confirming rerun remains pending because unrelated concurrent
+  backend edits temporarily broke compilation.
+- Reconciled the task and test catalogs through production migration V40.
+  Implemented/tested controls are distinguished from the still-unrun local
+  24-hour soak, recovery-boundary drill, current artifacts/provenance, complete
+  regression, contextual guide verification and exact-release review.
+- Production-like capacity/DR, provider, identity, legal, accessibility, UAT
+  and named approval gates remain external; no evidence was synthesized.
+
 ## 2026-07-30 — review-evidence validator hardening
 
 - Advanced review evidence to the current reviewed commit and typed schema

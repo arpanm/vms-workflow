@@ -46,3 +46,11 @@ The post-fix implementation is materially stronger. It now has a typed F04 contr
 - Database guards prevent generic history deletes and invalid lifecycle transitions. The migration remains additive and preserves F02–F04 source tables.
 
 See [POST_FIX_ISSUES-BACKEND.md](POST_FIX_ISSUES-BACKEND.md) for required fixes and tests.
+
+## Final evidence addendum — 2026-07-30
+
+Export leases now fence completion and allow safe expired-claim recovery.
+Exception handling uses policy-declared rules and appends immutable exact-bound
+readiness lineage. Exact Finance recovery passed **1/1** and local-system
+finance passed **4/4**. No clean aggregate is claimed; performance/DR,
+F07-T057 and external G4 remain separate gates.

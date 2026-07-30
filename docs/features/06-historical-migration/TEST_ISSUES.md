@@ -1,6 +1,25 @@
 # F06 Historical Migration — Required Test Issues
 
+## Final integrated reconciliation — 2026-07-30
+
+No focused F06 failure remains: system 6/6, migration/OpenAPI recovery 1/1 and
+accessibility 3/3 pass. The integrated Maven 340 row still records 2 failures
+and 1 error, and browser records 287/292; focused recoveries are not clean
+aggregate reruns. Production scale/cutover/DR evidence remains external.
+
 ## Current disposition
+
+The 30 July completion audit supersedes the blanket local-complete statement.
+Retro outcome/lifecycle, row workbench, stable-code and correlation gaps are
+implemented in V41/V43 and the migration API/UI. The local code and test
+artifacts for durable async execution, exact 100k bounds, active-reference
+CSV/XLSX, executable OpenAPI parity, accessibility and imported
+consumed-package correction routing are complete. Their consolidated final
+regression result is intentionally recorded by the root regression run rather
+than by per-change test loops.
+
+Historical lists below remain raised evidence; V18–V20/V41-closed entries are
+not current blockers.
 
 The real Spring/Flyway/PostgreSQL workflow suite now covers contract,
 authorization, idempotent upload, duplicate-before-domain-apply, rejected-only
@@ -12,7 +31,7 @@ dual approval, commit/domain visibility, audit/rollback, safe error export,
 reprocess and retro creation. Exact final counts are recorded after the final
 regression rather than inferred here.
 
-Production scanner/provider, 100k-row capacity and controlled-environment
+Production scanner/provider, controlled-environment 100k capacity and
 acceptance remain explicit `ACTION_REQUIRED` gates; local fixtures do not
 silently close them.
 

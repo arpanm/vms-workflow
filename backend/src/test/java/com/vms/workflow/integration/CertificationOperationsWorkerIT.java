@@ -36,7 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.springframework.http.MediaType;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow_certification_operations_worker_it",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",

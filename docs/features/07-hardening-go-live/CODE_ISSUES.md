@@ -1,5 +1,13 @@
 # F07 — Code Review Issues
 
+## Final integrated reconciliation — 2026-07-30
+
+No new local product-code issue is asserted by the focused recovery runs.
+Outstanding local work is evidence production: F07-T057, F07-T066/T067,
+F07-T070 and a clean commit. The failed Maven/browser aggregate rows and the
+environmentally blocked release-schema wrapper remain explicit; external
+release is `NO-GO / ACTION_REQUIRED`.
+
 ## Disposition rules
 
 - `RESOLVED_IN_CODE` means a concrete remediation exists and has focused

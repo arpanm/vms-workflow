@@ -39,6 +39,10 @@ findings and current code dispositions are preserved in
 
 ## Current verification boundary
 
+The recorded independent security review closes code through `c2d8dfb`.
+Current V39/V40 and release-control changes are not silently inherited by that
+review and require exact-candidate re-review.
+
 The local security-relevant evidence is green for 73 unit + 45 integration
 tests, the 73 + 2 capacity lane, the 7/7 F07 system lane, the 4/4 finance
 system lane, the 6/6 migration system lane and the 274/274 browser matrix.

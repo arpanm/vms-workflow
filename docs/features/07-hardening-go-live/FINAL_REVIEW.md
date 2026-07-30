@@ -1,6 +1,16 @@
 # F07 — Final Review Status
 
-**Current local decision:** `LOCAL_ENGINEERING_PASS / COMMIT_EVIDENCE_PENDING`
+## Final integrated reconciliation — 2026-07-30
+
+**Local implementation:** complete through V43. **Green focused/static
+evidence:** system 7/7, self 9/9, operations 15 runbooks/6 alerts, 43 migration
+schemas, rollout and SDLC. **Preserved aggregate evidence:** Maven 340 with
+2 failures + 1 error then four focused recovery passes; browser 287/292 then
+5/5 recovery. **Wrapper:** release-schema unverified due to `EPERM` and an
+aborted 467 s silent retry. **Release:** `NO-GO / ACTION_REQUIRED`.
+
+**Current local decision:** `LOCAL_IMPLEMENTATION_PRESENT /
+CURRENT_COMMIT_EVIDENCE_AND_REVIEW_PENDING`
 
 **Current production decision:** `NO-GO / ACTION_REQUIRED`
 
@@ -15,11 +25,13 @@ backup/restore harnesses.
 Independent backend and operations reviews found substantive P0/P1 issues. The
 current code contains remediations documented in [FIXES.md](FIXES.md).
 Focused backend, capacity, local-system, static, browser and definitive complete
-Maven evidence is green. Final product and post-supply-remediation Terra
-reviews closed with no open P0–P3 finding. Commit-bound release evidence is not
+Maven evidence is preserved from earlier commits. The recorded product and
+post-supply-remediation Terra reviews close findings through `c2d8dfb`, not the
+current V1–V42 release candidate. Current-commit complete regression,
+operational evidence, artifact provenance and exact-release re-review are not
 yet recorded.
 
-## Evidence available now
+## Preserved evidence available now
 
 - pre-final backend gate: **73 unit + 45 integration**, all passing;
 - capacity gate: **73 unit + 2 capacity**, all passing; dashboard 101ms,
@@ -35,7 +47,9 @@ yet recorded.
 - frontend exact result: typecheck pass; lint 0 errors/6 non-blocking Fast
   Refresh warnings; Vitest 24 files/92 tests; build pass with 3,006 modules and
   a 586.90 kB largest-chunk optimization advisory; diff-check pass;
-- production Flyway schema: **V1–V38**; V1000+ remains test-fixture-only;
+- current production Flyway schema: **V1–V42**; the R3/R4 and supply bundles
+  were recorded against the earlier V1–V33 chain. V1000+ remains
+  test-fixture-only;
 - complete Maven verification R3: **PASS — 73 unit + 217 integration
   (290/290)**, zero failures/errors/skips, BUILD SUCCESS in 03:21;
 - complete Maven verification R4 on digest-pinned Chainguard PostgreSQL 18.4:
@@ -49,8 +63,9 @@ yet recorded.
   worker database correction passes in R3.
 - final independent Terra product review and supply-remediation re-review:
   **CLOSED**, no open P0–P3 finding.
-- release-control self-test: **PASS — 9/9**, including differentiated
-  85-task/76-test traceability and the five-dimension review evidence control.
+- current release-control self-test: **PASS — 9/9**, including differentiated
+  85-task/76-test traceability, deterministic clean/dirty provenance testing
+  and an exact-release review-evidence control.
 
 The machine-readable [review evidence](review-evidence.json) records the exact
 reviewed-through commit and scope boundary. Later commit binding, rehearsal,
@@ -58,8 +73,10 @@ soak and external evidence remain separate gates and are not inferred from
 that review result.
 
 The record now uses typed schema `f07-review-evidence-v2`. Its validator
-requires the reviewed SHA to resolve to a Git commit object and be an ancestor
-of the release being checked. It also validates one structured local closure
+requires the reviewed SHA to resolve to a Git commit object. Historical review
+records may identify an ancestor, but a release decision now requires the
+reviewed SHA to equal the candidate release commit. It also validates one
+structured local closure
 disposition per review dimension and exact traceability runbook anchors;
 Markdown keywords and SHA-shaped strings are not accepted as proof.
 
@@ -68,17 +85,23 @@ acceptance.
 
 ## Required local closure
 
-1. Preserve R2/R3/R4 and the exact remediated supply-chain rerun in
-   commit-bound evidence.
-2. Execute commit-bound migration compatibility, supply-chain, backup/restore
-   and rollback/release evidence against the exact local commit.
-3. Keep the release verdict fail-closed for every missing/failed/expired or
+1. Complete the current V1–V40 frontend, Maven, browser and local-system
+   regression and preserve both failures and reruns.
+2. Execute the real local 24-hour soak, recovery-boundary/restore drill,
+   current artifact build/provenance, migration compatibility, supply-chain
+   and rollback evidence against the exact clean candidate commit.
+3. Run the five-dimension independent review against that exact candidate
+   commit; an ancestor-only review cannot authorize release.
+4. Complete contextual/user guidance verification and reconcile the status
+   ledgers to the candidate commit.
+5. Keep the release verdict fail-closed for every missing/failed/expired or
    external record.
 
 ## External release gates
 
 Production still requires real identity/BFF, provider/scanner/storage/email,
-secret-management, observability/on-call, capacity/soak, accessibility, legal/
+secret-management, observability/on-call, production-like capacity/headroom,
+accessibility, legal/
 privacy, backup/PITR/DR, UAT/training/Procurement and named approval evidence.
 The repository must not simulate those approvals.
 

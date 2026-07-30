@@ -1,6 +1,19 @@
 # F06 — Migration Center User Guide
 
+## Final integrated reconciliation — 2026-07-30
+
+The documented UI includes tenant CSV/XLSX templates, row/conflict handling,
+durable job progress, retro outcomes and consumed-package correction routing.
+Focused accessibility passes 3/3 and the migration system flow passes 6/6.
+Production rehearsal and representative-user approval remain external.
+
 Open **Governance → Historical migration** as a scoped migration lead.
+
+The row workbench pages redacted rows, filters state and offers explicit
+keep-existing, reject or versioned-supersede decisions for conflicts. The
+historical inbox records approve/reject/cancel at authenticated current time,
+shows Procurement delivery separately, and displays month readiness blockers
+before certification, confirmation and confirmed transitions.
 
 1. Download the exact template and follow the displayed dependency order.
 2. Select the template, scope, source type/confidence and CSV. Upload creates a

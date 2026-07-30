@@ -1,5 +1,13 @@
 # F07 — Hardening and Go-live Test Catalog
 
+## Final integrated reconciliation — 2026-07-30
+
+Preserved final split evidence: Maven 74 unit + 266 integration = 340 executed,
+2 failures + 1 error; exact Finance 1/1, Migration 1/1 and Capacity 2/2
+recovery passes (four tests). Browser 287/292; exact recovery 5/5. System 7/7,
+self-test 9/9 and operations/migration/rollout schemas pass. No clean 340/340
+or 292/292 aggregate claim is made.
+
 **Requirements:** PRD 14, 16, 20 and 22; RQ-033–RQ-035
 **Test data rule:** synthetic multi-tenant data only; no production secrets,
 salary, rate or markup data.
@@ -13,18 +21,23 @@ evidence manifest.
 
 ## Current execution status
 
+The table distinguishes preserved evidence from the evidence required for the
+current V1–V42 release candidate. A preserved pass is useful regression history
+but is not current-commit provenance.
+
 | Evidence group | Current result | Case disposition |
 |---|---|---|
-| Frontend/static | **PASS** | Typecheck; lint 0 errors/6 non-blocking Fast Refresh warnings; Vitest 24 files/92 tests; build 3,006 modules with largest chunk 586.90 kB advisory; diff-check. |
-| Focused backend pre-final | **PASS — 73 unit + 45 integration** | Supporting evidence for the hardening, tenant, worker, provider and lineage cases; it is not a substitute for the complete Maven gate. |
-| F07 local-system E2E | **PASS — 7/7** | E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-07 and E2E-10 pass through local Vite/Spring Security/Flyway V1–V38/PostgreSQL boundaries. |
-| F07 release-control self-test | **PASS — 9/9** | Release, migration, rollout, DR, supply, operations, CI, differentiated traceability and five-dimension review controls pass. |
+| Frontend/static | **PRESERVED PASS; current full lane pending** | The recorded typecheck/lint/92-test/build result predates the V39/V40/current harness changes. |
+| Focused backend pre-final | **PRESERVED PASS — 73 unit + 45 integration** | Supporting historical evidence; it is not the current V1–V40 complete Maven gate. |
+| F07 local-system E2E | **CURRENT PARTIAL — E2E-01/02/03/04 pass; rerun blocked** | E2E-01 now creates shift assignments, proves readiness and finalizes the immutable roster before closing attendance. The same run exposed E2E-05 shared-scenario state after E2E-04; its setup now explicitly supersedes the prior terminal request through the PostgreSQL transition guard. A later unrelated concurrent backend compilation failure prevented the confirming rerun. |
+| F07 release-control self-test | **CURRENT PASS — 9/9** | The current harness passes release, migration, rollout, DR, supply, operations, CI, traceability and review controls. It now deterministically creates an untracked fixture for the dirty-tree assertion and rejects ancestor-only review evidence for a release decision. |
 | F05 finance local-system E2E | **PASS — 4/4** | E2E-06 and E2E-09 are covered; production Procurement, identity and provider acceptance remain external. |
 | F06 migration local-system E2E | **PASS — 6/6** | E2E-08 is covered; production scanner/storage and source-owner rehearsal remain external. |
 | Capacity | **PASS — 73 unit + 2 capacity** | F07-PERF-001/002 local thresholds pass: dashboard 101ms, check-in p95 404ms, replay p95 69ms, 10k search p95 2ms and 300k report p95 9ms. This is not production-like headroom or the ≥24-hour soak case. |
 | Browser regression | **PASS — 274/274** | F07-A11Y-001/002/003 and the complete browser-contract regression pass across the configured Chromium, Firefox, WebKit, Android and iOS projects. |
-| Complete Maven verification | **PASS — 73 unit + 217 integration (290/290)** | Definitive R3: zero failures/errors/skips, BUILD SUCCESS in 03:21. |
-| Independent final review | **PASS / CLOSED** | Terra final review closed with no P0–P3 finding. |
+| Complete Maven verification | **PRESERVED PASS — 73 unit + 217 integration (290/290)** | Definitive R3 is historical V1–V33 evidence. Current V1–V42 complete verification is pending. |
+| Independent final review | **PRESERVED THROUGH `c2d8dfb`; current release review pending** | The recorded Terra review is retained, but the release gate now requires `reviewedThroughCommit` to equal the candidate release commit. |
+| Local soak/recovery/artifact evidence | **NOT RUN FOR CURRENT RELEASE** | F07-PERF-006, F07-DR-002/003, T-DR-001, current artifact provenance and rollback/recovery execution remain local closure work. |
 | External cases | **ACTION_REQUIRED / NO-GO** | Every `*-EXT-*`, provider/legal/identity/production/soak/DR/manual-accessibility/UAT/approval case remains open. |
 
 Failure history is preserved: the first complete browser matrix passed 268 and

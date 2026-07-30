@@ -126,3 +126,48 @@ export type RetroRequestInput = {
   originalActorUnavailable: boolean;
   delegationEvidenceReference?: string;
 };
+
+export type MigrationRow = {
+  id: string;
+  rowNumber: number;
+  state: string;
+  sourceType: string;
+  confidence: string;
+  representedAt: string | null;
+  recordedAt: string;
+  naturalKeyHash: string;
+  limitations: string | null;
+  findings: Array<{
+    severity: string;
+    code: string;
+    field: string | null;
+    message: string;
+  }>;
+};
+
+export type RetroRequest = {
+  id: string;
+  engagementMonthId: string;
+  requestType: RetroRequestInput["requestType"];
+  state: "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
+  representedMonth: string;
+  reason: string;
+  requestedBy: string;
+  decidedBy: string | null;
+  decisionAt: string | null;
+  decisionReason: string | null;
+  procurementNotificationState: string;
+  version: number;
+  createdAt: string;
+};
+
+export type MonthReadiness = {
+  monthId: string;
+  engagementId: string;
+  state: string;
+  version: number;
+  completedJobs: number;
+  pendingRetroRequests: number;
+  blockers: string[];
+  ready: boolean;
+};

@@ -171,6 +171,7 @@ export async function validateReviewEvidence(options = {}) {
     findings.push("reviewedThroughCommit must be an exact commit");
   } else {
     const commit = evidence.reviewedThroughCommit;
+    const validatedRelease = options.headRef ?? "HEAD";
     const object = run("git", ["cat-file", "-e", `${commit}^{commit}`]);
     if (object.status !== 0) {
       findings.push("reviewedThroughCommit must resolve to a Git commit object");
@@ -179,12 +180,27 @@ export async function validateReviewEvidence(options = {}) {
         "merge-base",
         "--is-ancestor",
         commit,
-        options.headRef ?? "HEAD",
+        validatedRelease,
       ]);
       if (ancestor.status !== 0) {
         findings.push(
           "reviewedThroughCommit must be an ancestor of the validated release",
         );
+      }
+      if (options.requireExactHead) {
+        const resolvedRelease = run("git", [
+          "rev-parse",
+          "--verify",
+          `${validatedRelease}^{commit}`,
+        ]);
+        if (
+          resolvedRelease.status !== 0 ||
+          resolvedRelease.stdout.trim() !== commit
+        ) {
+          findings.push(
+            "reviewedThroughCommit must equal the validated release commit",
+          );
+        }
       }
     }
   }

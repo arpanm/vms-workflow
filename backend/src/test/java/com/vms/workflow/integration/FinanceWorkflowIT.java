@@ -19,6 +19,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -26,6 +27,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.HashSet;
+import java.util.HexFormat;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
@@ -50,7 +52,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         FinanceWorkflowIT.ClockTestConfiguration.class
     },
     properties = {
-    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow_finance_workflow_it",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",
@@ -647,27 +649,147 @@ class FinanceWorkflowIT {
             WHERE id = ?
             """, Integer.class, quarantinedArtifact));
 
-        UUID blockedRuleId = UUID.randomUUID();
+        JsonNode naturalBlocked = json(mvc.perform(post(
+                    "/api/v1/finance/invoices/{id}/readiness-runs",
+                    quarantineInvoiceId)
+                .with(token("user-arrow"))
+                .header("If-Match", quarantined.path("version").asText())
+                .header("Idempotency-Key", "quarantine-readiness")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"expectedVersion":%d}
+                    """.formatted(quarantined.path("version").asLong())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.state").value("EVIDENCE_PENDING"))
+            .andExpect(jsonPath("$.readiness.eligibleForSubmission")
+                .value(false))
+            .andReturn().getResponse().getContentAsString());
+        UUID naturalReadinessId = UUID.fromString(naturalBlocked
+            .path("readiness").path("runId").asText());
+        assertEquals(1, count("""
+            SELECT count(*)
+            FROM invoice_readiness_results result
+            JOIN invoice_readiness_runs run ON run.id = result.readiness_run_id
+            WHERE run.id = ?
+              AND result.rule_code = 'INVOICE_DOCUMENT'
+              AND result.result = 'BLOCKED_MISSING_EVIDENCE'
+              AND result.source_object_type = 'INVOICE_ARTIFACT'
+              AND result.source_object_id = ?
+            """, naturalReadinessId, quarantinedArtifact));
+
+        UUID blockedReadinessId = UUID.randomUUID();
+        String lineageMarker = UUID.randomUUID().toString();
+        String blockedInputManifest = jdbc.queryForObject("""
+            SELECT (
+                input_manifest
+                || jsonb_build_object('integrationTestLineage', ?)
+            )::text
+            FROM invoice_readiness_runs
+            WHERE id = ?
+            """, String.class, lineageMarker, fixture.readinessId());
+        String blockedInputHash = HexFormat.of().formatHex(
+            MessageDigest.getInstance("SHA-256").digest(
+                blockedInputManifest.getBytes(StandardCharsets.UTF_8)));
         jdbc.update("""
-            INSERT INTO invoice_readiness_results(
-                id, readiness_run_id, rule_code, result, severity,
-                owner_label, source_object_type, source_object_id,
-                source_version, source_hash, freshness_at, remediation_cta
-            ) VALUES (?, ?, 'TEST_DISCLOSED_RULE',
-                      'BLOCKED_MISSING_EVIDENCE', 'BLOCKING',
-                      'Synthetic evidence owner', 'TEST_FIXTURE', ?,
-                      'v1', repeat('c', 64), CURRENT_TIMESTAMP,
-                      'Resolve or accept with dual Procurement authority')
-            """, blockedRuleId, fixture.readinessId(), blockedRuleId);
+            UPDATE invoice_readiness_runs
+            SET current_result = FALSE,
+                eligible = FALSE,
+                invalidated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND current_result
+            """, fixture.readinessId());
+        jdbc.update("""
+            INSERT INTO invoice_readiness_runs (
+                id, invoice_id, invoice_version, package_version_id, handoff_id,
+                input_manifest, input_hash, policy_version, overall_status,
+                eligible, current_result, evaluated_by_subject, evaluated_at,
+                invalidated_at, correlation_id
+            )
+            SELECT ?, invoice_id, invoice_version, package_version_id, handoff_id,
+                   CAST(? AS jsonb), ?, policy_version,
+                   'BLOCKED_MISSING_EVIDENCE', FALSE, TRUE,
+                   'integration-test-readiness-lineage', CURRENT_TIMESTAMP,
+                   NULL, ?
+            FROM invoice_readiness_runs
+            WHERE id = ?
+            """, blockedReadinessId, blockedInputManifest, blockedInputHash,
+            UUID.randomUUID(), fixture.readinessId());
+        jdbc.update("""
+            INSERT INTO invoice_readiness_results (
+                id, readiness_run_id, rule_code, result, severity, owner_label,
+                source_object_type, source_object_id, source_version,
+                source_hash, freshness_at, remediation_cta
+            )
+            SELECT gen_random_uuid(), ?, rule_code,
+                   CASE
+                       WHEN rule_code IN (
+                           'INVOICE_DOCUMENT', 'VERIFIED_CONFIRMATION'
+                       ) THEN 'BLOCKED_MISSING_EVIDENCE'
+                       ELSE result
+                   END,
+                   CASE
+                       WHEN rule_code IN (
+                           'INVOICE_DOCUMENT', 'VERIFIED_CONFIRMATION'
+                       ) THEN 'BLOCKING'
+                       ELSE severity
+                   END,
+                   owner_label, source_object_type, source_object_id,
+                   source_version, source_hash, freshness_at,
+                   CASE
+                       WHEN rule_code = 'VERIFIED_CONFIRMATION'
+                       THEN 'Resolve or accept with dual Procurement authority'
+                       ELSE remediation_cta
+                   END
+            FROM invoice_readiness_results
+            WHERE readiness_run_id = ?
+            """, blockedReadinessId, fixture.readinessId());
+        UUID documentRuleId = jdbc.queryForObject("""
+            SELECT id FROM invoice_readiness_results
+            WHERE readiness_run_id = ? AND rule_code = 'INVOICE_DOCUMENT'
+            """, UUID.class, blockedReadinessId);
+        UUID blockedRuleId = jdbc.queryForObject("""
+            SELECT id FROM invoice_readiness_results
+            WHERE readiness_run_id = ?
+              AND rule_code = 'VERIFIED_CONFIRMATION'
+            """, UUID.class, blockedReadinessId);
         jdbc.update("""
             UPDATE invoices
             SET status = 'EVIDENCE_PENDING',
+                current_readiness_run_id = ?,
                 optimistic_version = optimistic_version + 1,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
-            """, fixture.invoiceId());
+            """, blockedReadinessId, fixture.invoiceId());
         long blockedInvoiceVersion = fixture.invoiceVersion() + 1;
 
+        mvc.perform(post(
+                    "/api/v1/finance/procurement/invoices/{id}/exceptions",
+                    fixture.invoiceId())
+                .with(token("user-procurement"))
+                .header("If-Match", String.valueOf(blockedInvoiceVersion))
+                .header("Idempotency-Key", "nonwaivable-document-exception")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "expectedVersion":%d,
+                      "ruleId":"%s",
+                      "readinessRunId":"%s",
+                      "packageId":"%s",
+                      "packageVersion":1,
+                      "rationale":"Must not waive document integrity",
+                      "validUntil":"%s"
+                    }
+                    """.formatted(
+                        blockedInvoiceVersion, documentRuleId,
+                        blockedReadinessId, fixture.packageId(),
+                        OffsetDateTime.now().plusDays(3).withNano(0))))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code")
+                .value("READINESS_RULE_NOT_EXCEPTIONABLE"));
+
+        // The governed exception lineage below uses a policy-declared business
+        // readiness rule on the submitted primary invoice. Package generation
+        // remains restricted to scan-passed artifacts, while document and
+        // package-integrity rules are explicitly non-waivable.
         String exceptionBody = """
             {
               "expectedVersion":%d,
@@ -688,7 +810,7 @@ class FinanceWorkflowIT {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(exceptionBody.formatted(
                     blockedInvoiceVersion, blockedRuleId,
-                    fixture.readinessId(), fixture.packageId(),
+                    blockedReadinessId, fixture.packageId(),
                     OffsetDateTime.now().plusDays(3).withNano(0))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.exceptionStatus")
@@ -714,7 +836,7 @@ class FinanceWorkflowIT {
             }
             """.formatted(
                 pendingInvoiceVersion, fixture.invoiceId(), blockedRuleId,
-                fixture.readinessId(), fixture.packageId(), policyVersionId,
+                blockedReadinessId, fixture.packageId(), policyVersionId,
                 pending.path("policyVersion").asInt());
 
         mvc.perform(post(
@@ -801,7 +923,7 @@ class FinanceWorkflowIT {
         UUID exceptionReadinessId = jdbc.queryForObject("""
             SELECT current_readiness_run_id FROM invoices WHERE id = ?
             """, UUID.class, fixture.invoiceId());
-        assertNotEquals(fixture.readinessId(), exceptionReadinessId);
+        assertNotEquals(blockedReadinessId, exceptionReadinessId);
         assertEquals(1, count("""
             SELECT count(*)
             FROM invoice_readiness_runs current_run

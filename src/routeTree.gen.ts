@@ -16,6 +16,7 @@ import { Route as InvoicesRouteImport } from './routes/invoices'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as RequirementsRouteImport } from './routes/requirements'
 import { Route as ScopeRouteImport } from './routes/scope'
+import { Route as SupportRouteImport } from './routes/support'
 import { Route as UatRouteImport } from './routes/uat'
 import { Route as AdministrationApprovalPoliciesRouteImport } from './routes/administration.approval-policies'
 import { Route as AdministrationContactGroupsRouteImport } from './routes/administration.contact-groups'
@@ -80,6 +81,11 @@ const RequirementsRoute = RequirementsRouteImport.update({
 const ScopeRoute = ScopeRouteImport.update({
   id: '/scope',
   path: '/scope',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UatRoute = UatRouteImport.update({
@@ -252,6 +258,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
+  '/support': typeof SupportRoute
   '/uat': typeof UatRoute
   '/administration/approval-policies': typeof AdministrationApprovalPoliciesRoute
   '/administration/contact-groups': typeof AdministrationContactGroupsRoute
@@ -291,6 +298,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
+  '/support': typeof SupportRoute
   '/uat': typeof UatRoute
   '/administration/approval-policies': typeof AdministrationApprovalPoliciesRoute
   '/administration/contact-groups': typeof AdministrationContactGroupsRoute
@@ -330,6 +338,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/requirements': typeof RequirementsRoute
   '/scope': typeof ScopeRoute
+  '/support': typeof SupportRoute
   '/uat': typeof UatRoute
   '/administration/approval-policies': typeof AdministrationApprovalPoliciesRoute
   '/administration/contact-groups': typeof AdministrationContactGroupsRoute
@@ -371,6 +380,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/requirements'
     | '/scope'
+    | '/support'
     | '/uat'
     | '/administration/approval-policies'
     | '/administration/contact-groups'
@@ -410,6 +420,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/requirements'
     | '/scope'
+    | '/support'
     | '/uat'
     | '/administration/approval-policies'
     | '/administration/contact-groups'
@@ -448,6 +459,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/requirements'
     | '/scope'
+    | '/support'
     | '/uat'
     | '/administration/approval-policies'
     | '/administration/contact-groups'
@@ -488,6 +500,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   RequirementsRoute: typeof RequirementsRoute
   ScopeRoute: typeof ScopeRoute
+  SupportRoute: typeof SupportRoute
   UatRoute: typeof UatRoute
   AdministrationApprovalPoliciesRoute: typeof AdministrationApprovalPoliciesRoute
   AdministrationContactGroupsRoute: typeof AdministrationContactGroupsRoute
@@ -566,6 +579,13 @@ declare module '@tanstack/react-router' {
       path: '/scope'
       fullPath: '/scope'
       preLoaderRoute: typeof ScopeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/uat': {
@@ -813,6 +833,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   RequirementsRoute: RequirementsRoute,
   ScopeRoute: ScopeRoute,
+  SupportRoute: SupportRoute,
   UatRoute: UatRoute,
   AdministrationApprovalPoliciesRoute: AdministrationApprovalPoliciesRoute,
   AdministrationContactGroupsRoute: AdministrationContactGroupsRoute,

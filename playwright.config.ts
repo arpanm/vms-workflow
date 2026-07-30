@@ -182,7 +182,7 @@ export default defineConfig({
     },
     {
       name: "f06-migration-chromium",
-      testMatch: /migration\.spec\.ts/,
+      testMatch: /migration(?:-(?:accessibility|package-correction))?\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         baseURL: "http://127.0.0.1:4173",

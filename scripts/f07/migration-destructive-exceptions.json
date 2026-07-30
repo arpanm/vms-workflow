@@ -11,6 +11,18 @@
       "reason": "Historical append-only migration replaces the prior uniqueness index immediately with effective-dated validity constraints.",
       "reviewedBy": "independent-database-reviewer",
       "sha256": "df0fbf81be53e8e6f0190449365a45d7d9d2735bc9ea431e57e6d4bb500174bb"
+    },
+    {
+      "approvedAt": "2026-07-30T00:00:00Z",
+      "expiresAt": "2099-01-01T00:00:00Z",
+      "migration": "V42__effective_pending_reopen_invariant.sql",
+      "operations": [
+        "DROP_OBJECT"
+      ],
+      "owner": "certification-schema-owner",
+      "reason": "The obsolete partial index treats immutable decided reopen requests as permanently pending. V42 drops only that index and replaces it in the same migration with an effective-status trigger that preserves deterministic uniqueness semantics.",
+      "reviewedBy": "independent-database-reviewer",
+      "sha256": "d2973c227791fb055f4e7070bf542cfe9bcba516de9bddb224af69b0fd22f2e6"
     }
   ],
   "schemaVersion": 1

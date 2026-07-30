@@ -50,3 +50,11 @@ Approved private storage/scanner/renderer, production OIDC/grants, retention and
 legal approval, backup/restore infrastructure, Procurement sign-off and AP/ERP
 acceptance remain external. They are not substitutes for the local P0/P1 fixes
 above and must remain `ACTION_REQUIRED` until independently evidenced.
+
+## Final status addendum — 2026-07-30
+
+The local exception-policy/immutable-lineage and live-lease recovery issues are
+resolved and exercised: exact Finance **1/1**, finance system **4/4**. Aggregate
+Maven remains 340 executed with 2 failures and 1 error; aggregate browser
+remains **287/292** with exact recovery **5/5**. Performance/scale, controlled
+DR, F07-T057 and every G4 item above remain open.

@@ -1,5 +1,13 @@
 # F06 Historical Migration — Final Independent Closure Review
 
+## Final integrated reconciliation — 2026-07-30
+
+**Local code:** complete through V41/V43. **Focused evidence:** migration
+system 6/6, migration/OpenAPI recovery 1/1, accessibility 3/3. **Aggregate
+evidence:** Maven 340 retained 2 failures + 1 error; browser retained 287/292,
+with recovery recorded separately. **Release:** external
+`NO-GO / ACTION_REQUIRED`.
+
 > **Historical pre-fix review.** The decision and matrix below intentionally
 > preserve the independent review result before remediation. A post-fix closure
 > section will be appended only after the complete F06 backend, frontend,

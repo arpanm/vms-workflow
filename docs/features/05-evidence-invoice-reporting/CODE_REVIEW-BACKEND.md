@@ -62,3 +62,13 @@ The implementation establishes a useful server-side starting point, but it does 
 2. Implement typed F04 contract consumption/invalidation outbox, storage/scan/render/export workers and the complete share/revoke model (F05-BE-007 through F05-BE-011).
 3. Correct invoice representation, role-derived capability payloads, reporting contracts, query lifecycle and pagination.
 4. Re-run the F05 API, migration, cross-tenant, idempotency/concurrency and Playwright E2E cases in `TEST_CASES.md`; this review must be repeated after fixes.
+
+## Superseding evidence addendum — 2026-07-30
+
+The historical findings above remain for traceability. Current implementation
+uses a versioned business-rule exception allowlist, non-waivable document/
+manifest integrity rules, append-only exception readiness lineage and
+live-lease export recovery. Exact Finance recovery passed **1/1** and the local
+finance system lane passed **4/4**. The integrated Maven aggregate was not
+clean (340 executed, 2 failures, 1 error); performance/DR, F07-T057 and G4 are
+not closed by the focused recovery.

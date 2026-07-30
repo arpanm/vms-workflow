@@ -29,12 +29,12 @@ async function completePlanForm(page: Page) {
   await field(page, "ArrowFoundry owner subject").fill("delivery.owner@arrowfoundry.example");
   await field(page, "Target completion date").fill("2026-09-25");
   await field(page, "Evidence expectations (comma-separated)").fill("test report, release note");
-  await field(page, "Assigned employee ID").fill(deliveryFixture.ids.employee);
-  await field(page, "Assignment effective from").fill("2026-09-01");
+  await field(page, "Assigned employee ID 1").fill(deliveryFixture.ids.employee);
+  await field(page, "Assignment 1 effective from").fill("2026-09-01");
   await field(page, "Risks and assumptions (enter None when applicable)").fill("None");
-  await field(page, "Acceptance criterion").fill("The evidence package matches the exact plan.");
-  await field(page, "Criterion validation method").fill("Browser and API contract regression");
-  await field(page, "Criterion expected result").fill("Checksum and content match.");
+  await field(page, "Acceptance criterion 1").fill("The evidence package matches the exact plan.");
+  await field(page, "Criterion 1 validation method").fill("Browser and API contract regression");
+  await field(page, "Criterion 1 expected result").fill("Checksum and content match.");
   await page.getByRole("checkbox", { name: "Explicitly declare no dependencies" }).check();
 }
 

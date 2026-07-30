@@ -36,6 +36,23 @@ class MigrationCsvParserTest {
     }
 
     @Test
+    void acceptsExactlyOneHundredThousandDataRowsAndRejectsTheNext()
+        throws Exception {
+        StringBuilder csv = new StringBuilder("value\n");
+        for (int row = 0; row < 100_000; row++) {
+            csv.append(row).append('\n');
+        }
+        assertEquals(100_001,
+            parser.parse(new StringReader(csv.toString()), 100_000).size());
+        csv.append("overflow\n");
+        IllegalArgumentException failure = assertThrows(
+            IllegalArgumentException.class,
+            () -> parser.parse(
+                new StringReader(csv.toString()), 100_000));
+        assertEquals("FILE_ROW_LIMIT_EXCEEDED", failure.getMessage());
+    }
+
+    @Test
     void registryContainsEveryPhysicalTemplateInStableDependencyOrder()
         throws Exception {
         MigrationTemplateRegistry registry = new MigrationTemplateRegistry();

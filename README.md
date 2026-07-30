@@ -23,9 +23,9 @@ issues and external-only gates is
 | F02 workforce/attendance | V35/V37 employee and serialized allocation lifecycle, governed workforce administration, overnight/split sessions, exact roster snapshots and month close with manager/self React flows | [F02 tasks](docs/features/02-workforce-attendance/TASKS.md), [fixes](docs/features/02-workforce-attendance/FIXES.md), [API](docs/features/02-workforce-attendance/API_DOCUMENTATION.md), [UI guide](docs/features/02-workforce-attendance/UI_DOCUMENTATION.md) |
 | F03 Delivery and Linear | V36/V38/V39 editable repeatable delivery drafts, revision/replay operations, delegated approval lineage and bounded cursor reconciliation with operator UI | [F03 tasks](docs/features/03-delivery-linear/TASKS.md), [codegen](docs/features/03-delivery-linear/CODEGEN.md), [API](docs/features/03-delivery-linear/API_DOCUMENTATION.md), [UI](docs/features/03-delivery-linear/UI_DOCUMENTATION.md) |
 | F04 Certification and confirmation | Provider-neutral Java/PostgreSQL + React vertical includes V40 private governed uploads/scans, exact-version withdrawal, cross-month inboxes and operations health; live provider/deployment gates remain external | [F04 tasks](docs/features/04-certification-confirmation/TASKS.md), [evidence](docs/features/04-certification-confirmation/CODEGEN.md), [API](docs/features/04-certification-confirmation/API_DOCUMENTATION.md), [UI](docs/features/04-certification-confirmation/UI_DOCUMENTATION.md) |
-| F05 evidence, invoice and reporting | Locally quality-gated, including 4/4 isolated system cases and exact E2E-06/E2E-09 evidence; performance/scale and external release gates remain ACTION_REQUIRED | [F05 status](docs/FEATURE_STATUS.md), [F05 E2E catalog](docs/testing/E2E_REGRESSION_CASES.md), [F05 closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md) |
-| F06 historical migration | Locally quality-gated: 172/172 backend, 90/90 Vitest, 74/74 combined Playwright and 6/6 real local system journeys; production scanner/storage/capacity/rehearsal gates remain ACTION_REQUIRED | [F06 status](docs/FEATURE_STATUS.md), [tasks](docs/features/06-historical-migration/TASKS.md), [tests](docs/features/06-historical-migration/TEST_CASES.md), [review](docs/features/06-historical-migration/FINAL_REVIEW.md), [API](docs/features/06-historical-migration/API_DOCUMENTATION.md), [UI](docs/features/06-historical-migration/UI_DOCUMENTATION.md) |
-| F07 hardening/go-live | V1–V33 local lanes pass: frontend 92/92 + static/build, Maven R3/R4 290/290, focused backend 73+45, capacity 73+2, systems 7/7 + 4/4 + 6/6, browser 274/274 and exact supply-chain zero findings; Terra reviews closed and clean migration/supply evidence is bound to `eda3eb8`. External production gates remain NO-GO/ACTION_REQUIRED. | [status](docs/FEATURE_STATUS.md), [pending work](docs/PENDING_WORK.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md), [testing guide](docs/testing/README.md), [tasks](docs/features/07-hardening-go-live/TASKS.md), [tests](docs/features/07-hardening-go-live/TEST_CASES.md), [automation](docs/features/07-hardening-go-live/TEST_AUTOMATION.md), [review status](docs/features/07-hardening-go-live/FINAL_REVIEW.md), [open issues](docs/features/07-hardening-go-live/FINAL_ISSUES.md) |
+| F05 evidence, invoice and reporting | Fresh focused evidence: natural scanner-readiness 1/1, committed package concurrency 2/2, accessibility 3/3 and isolated system 4/4; performance/scale and external release gates remain ACTION_REQUIRED | [F05 status](docs/FEATURE_STATUS.md), [F05 E2E catalog](docs/testing/E2E_REGRESSION_CASES.md), [F05 closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md) |
+| F06 historical migration | V41/V43 local code is complete, including retro outcomes, durable async/100k boundaries, tenant CSV/XLSX, OpenAPI/a11y and consumed-package correction routing; focused recovery and system evidence pass | [F06 status](docs/FEATURE_STATUS.md), [tasks](docs/features/06-historical-migration/TASKS.md), [tests](docs/features/06-historical-migration/TEST_CASES.md), [test issues](docs/features/06-historical-migration/TEST_ISSUES.md), [API](docs/features/06-historical-migration/API_DOCUMENTATION.md), [UI](docs/features/06-historical-migration/UI_DOCUMENTATION.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md) |
+| F07 hardening/go-live | Current production chain is V1–V43 (V42 repeated-reopen invariant; V43 durable migration queue); ordered system verification passes 7/7. External production gates remain NO-GO/ACTION_REQUIRED. | [status](docs/FEATURE_STATUS.md), [pending work](docs/PENDING_WORK.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md), [testing guide](docs/testing/README.md), [tasks](docs/features/07-hardening-go-live/TASKS.md), [tests](docs/features/07-hardening-go-live/TEST_CASES.md), [automation](docs/features/07-hardening-go-live/TEST_AUTOMATION.md), [review status](docs/features/07-hardening-go-live/FINAL_REVIEW.md), [open issues](docs/features/07-hardening-go-live/FINAL_ISSUES.md) |
 
 Production release remains blocked until the identity/BFF decision and staging
 tenant-isolation gate are complete. Local feature development uses explicit
@@ -113,22 +113,25 @@ npm run e2e
 npm run regression
 ```
 
-The production Flyway chain is V1–V40 in the integrated worktree. F07 focused backend evidence passes 73
-unit plus 45 integration tests; its capacity lane passes 73 + 2, the
-F07/finance/migration system lanes pass 7/7, 4/4 and 6/6, and the complete
-browser matrix passes 274/274. Definitive complete Maven R3 passes 73 unit +
-217 integration (290/290), zero failures/errors/skips, in 03:21. The earlier
-R2 215/217 integration result and its Docker pauses remain preserved; assigning
-the delivery-worker IT its own database removed the cross-suite state.
-Maven R4 repeats 290/290 in 02:48 on digest-pinned Chainguard PostgreSQL 18.4,
-and the exact remediated supply-chain gate passes every report, both release
-artifacts and the database image with zero findings.
-Final frontend checks pass typecheck, lint (0 errors/6 Fast Refresh warnings),
-Vitest (24 files/92 tests), production build (3,006 modules; 586.90 kB
-largest-chunk optimization advisory) and diff-check. Final Terra product and
-supply-remediation reviews closed with no open P0–P3 finding. Current F01
-focused evidence passes 73 unit + 17 integration, 15 focused Vitest, 9/9 F01
-Playwright and 7/7 demo regression cases.
+The production Flyway chain is V1–V43: V42 enforces the repeated-reopen
+invariant and V43 provides the durable asynchronous migration queue. The final
+full Maven attempt executed 74 unit plus 266 integration tests (340 total) and
+ended with 2 failures and 1 error. Exact recovery selectors then passed Finance
+1/1, Migration 1/1 and Capacity 2/2; this is recovery evidence, not a claim
+that a clean 340/340 aggregate run occurred. The full browser attempt passed
+287/292; its exact recovery slice passed 5/5, likewise without claiming a clean
+full 292/292 run.
+
+Current frontend evidence passes typecheck, lint with 0 errors and 13 warnings
+(6 Fast Refresh and 7 existing hook-dependency warnings), Vitest 28 files and
+120/120 tests in 804 ms, and production build (3,042 modules, 2.80 s) with only
+the existing >500 kB chunk advisory. Current system lanes pass F05 finance 4/4,
+F06 migration 6/6 and F07 7/7. Static/harness evidence passes F07 self-test 9/9
+(45.037 s), operations checks (15 runbooks and 6 alerts), all 43 migration
+schemas, rollout schema, the eight-feature SDLC model-separation check and
+`git diff --check`. The `f07:release:schema` wrapper itself is not claimed as
+passing: sandbox bind failed with `EPERM` on `127.0.0.1`, and an escalated retry
+produced no output and was aborted after 467 seconds; its underlying gates pass.
 
 `npm run regression` combines frontend checks, Maven/Testcontainers
 PostgreSQL integration and Playwright Chromium browser-contract tests. The
@@ -167,6 +170,7 @@ OIDC provider or deployed full-stack environment. See the
 - [Rollback and recovery](docs/operations/ROLLBACK.md)
 - [Detailed feature status and open issues](docs/FEATURE_STATUS.md)
 - [Consolidated pending work across every feature](docs/PENDING_WORK.md)
+- [Role-specific user and support guides](docs/ROLE_GUIDES_AND_SUPPORT.md)
 - [End-to-end regression case catalog](docs/testing/E2E_REGRESSION_CASES.md)
 - [Testing and Playwright guide](docs/testing/README.md)
 - [F01 API documentation](docs/features/01-identity-core/API_DOCUMENTATION.md)

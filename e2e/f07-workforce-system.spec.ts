@@ -9,6 +9,7 @@ const engagementId = "00000000-0000-0000-0000-000000000401";
 const projectId = "00000000-0000-0000-0000-000000000501";
 const leaveTypeId = "00000000-0000-0000-0000-000000000921";
 const calendarId = "00000000-0000-0000-0000-000000000901";
+const fixtureEmployeeId = "00000000-0000-0000-0000-000000000801";
 const browserTokenKey = "__vms_system_e2e_access_token";
 const postgresContainer = requiredEnvironment("VMS_E2E_POSTGRES_CONTAINER");
 
@@ -170,6 +171,66 @@ test("[E2E-01] new employee reaches exact closed monthly attendance evidence in 
     decision: "APPROVE",
     adjustedNetMinutes: 540,
   });
+
+  const shiftPolicy = await json(await request.post(
+    `/api/v1/workforce/organizations/${organizationId}/shift-policies`,
+    {
+      headers: authorization(tokens.vendor),
+      data: {
+        code: "E2E01-DAY",
+        name: "E2E-01 governed day shift",
+        timezone: "Asia/Kolkata",
+        validFrom: "2026-07-01",
+        validTo: "2026-07-31",
+        scheduledStartLocalTime: "09:00:00",
+        scheduledEndLocalTime: "18:30:00",
+        overnightCutoffLocalTime: "07:00:00",
+        expectedNetMinutes: 540,
+        maximumSessionMinutes: 720,
+        allowSplitSessions: true,
+        minimumBreakMinutes: 30,
+      },
+    },
+  ), 201);
+  for (const employeeId of [fixtureEmployeeId, createdEmployeeId]) {
+    await json(await request.post(
+      `/api/v1/workforce/employees/${employeeId}/shift-assignments`,
+      {
+        headers: authorization(tokens.vendor),
+        data: {
+          shiftPolicyVersionId: shiftPolicy.id,
+          validFrom: "2026-07-01",
+          validTo: "2026-07-31",
+        },
+      },
+    ), 201);
+  }
+  const rosterReadiness = await json(await request.get(
+    `/api/v1/workforce/engagement-months/${monthId}/roster-readiness`,
+    { headers: authorization(tokens.vendor) },
+  ), 200);
+  expect(rosterReadiness).toMatchObject({
+    ready: true,
+    allocatedEmployeeCount: 2,
+    missingCalendarDayCount: 0,
+    missingShiftDayCount: 0,
+    missingEmployeeVersionDayCount: 0,
+    missingSourceModeDayCount: 0,
+  });
+  const roster = await json(await request.post(
+    `/api/v1/workforce/engagement-months/${monthId}/roster-snapshots`,
+    {
+      headers: authorization(tokens.vendor),
+      data: {
+        reason: "E2E-01 verified complete allocation, calendar, source and shift coverage",
+      },
+    },
+  ), 201);
+  expect(roster).toMatchObject({
+    status: "FINALIZED",
+    employeeCount: 2,
+  });
+  expect(roster.checksum).toMatch(/^[0-9a-f]{64}$/);
 
   const snapshot = await json(await request.post(
     "/api/v1/attendance/month-snapshots",

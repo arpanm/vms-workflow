@@ -37,6 +37,9 @@ The full exit gate is not met. See [TEST_CASES.md](TEST_CASES.md),
 - [x] Enforce the configured maximum session and split-session policy.
 - [x] Evaluate complete allocation/calendar/shift/employee/source coverage for
   every employee-day and return bounded diagnostic details plus exact counts.
+  Readiness also rejects incomplete seven-day calendar templates, non-effective
+  or superseded shift versions, employees outside active/enabled employment
+  windows, and effective allocation totals above 100 percent.
 - [x] Create immutable, checksummed, superseding roster snapshots and make
   attendance close materialize and validate exactly that finalized roster.
 - [x] Add manager UI for shift publication, assignment, roster readiness and
@@ -45,3 +48,20 @@ The full exit gate is not met. See [TEST_CASES.md](TEST_CASES.md),
 External-only gates are live greytHR tenant credentials/certification,
 provider reconciliation evidence, production identity configuration and
 controlled staging/operational sign-off.
+
+## Final local reconciliation — 2026-07-30
+
+- [x] The requested local F02 roster, shift, attendance, leave,
+  regularization, administration, API, UI and PostgreSQL implementation is
+  complete in the worktree.
+- [x] Static frontend tests passed 120/120 and the relevant system lanes passed
+  6/6 and 7/7.
+- [x] The consolidated browser run passed 287/292; all five affected
+  browser/project combinations then passed focused recovery.
+- [x] The consolidated Maven run executed 340 tests with two failures and one
+  error; the affected backend tests passed focused recovery after their fixes.
+- [ ] Live greytHR, controlled identity, deployed grants and staging/production
+  acceptance remain external gates.
+
+These results are cumulative evidence, not a claim that one final full Maven
+and browser invocation was entirely green after the focused fixes.

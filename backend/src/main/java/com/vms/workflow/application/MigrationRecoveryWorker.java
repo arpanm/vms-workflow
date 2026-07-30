@@ -90,12 +90,14 @@ public final class MigrationRecoveryWorker {
                 AND job.retry_count < ?
                 AND (job.lease_until IS NULL
                      OR job.lease_until < CURRENT_TIMESTAMP)
-                AND job.updated_at
+                AND (
+                  job.async_requested_at IS NOT NULL
+                  OR job.updated_at
                     < CURRENT_TIMESTAMP - make_interval(secs => ?)
+                )
                 AND (
                   job.state IN ('SCANNING', 'PARSING', 'VALIDATING', 'FAILED')
-                  OR (job.state = 'UPLOADED'
-                      AND source.scan_status = 'PENDING')
+                  OR job.state = 'UPLOADED'
                 )
               ORDER BY job.updated_at, job.id
               FOR UPDATE OF job SKIP LOCKED
@@ -132,9 +134,14 @@ public final class MigrationRecoveryWorker {
                 END,
                 lease_owner = NULL,
                 lease_until = NULL,
+                async_requested_at = CASE
+                  WHEN retry_count + 1 >= ? THEN NULL
+                  ELSE async_requested_at
+                END,
                 version = version + 1
             WHERE id = ? AND lease_owner = ?
-            """, MAX_RETRIES, MAX_RETRIES, claim.id(), workerId);
+            """, MAX_RETRIES, MAX_RETRIES, MAX_RETRIES,
+            claim.id(), workerId);
         if (updated != 1) {
             LOGGER.warn(
                 "Migration recovery failure could not release job {} because "

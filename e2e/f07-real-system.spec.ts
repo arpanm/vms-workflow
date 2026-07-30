@@ -44,6 +44,10 @@ test("[E2E-07] post-close correction regenerates exact snapshot, confirmation, p
     SELECT id FROM monthly_certification_summaries
     WHERE engagement_month_id = '${monthId}'::uuid AND status = 'CURRENT';
   `);
+  const originalSummaryVersion = Number(queryDatabase(`
+    SELECT version FROM monthly_certification_summaries
+    WHERE id = '${originalSummaryId}'::uuid;
+  `));
   const originalRequestId = queryDatabase(`
     SELECT id FROM business_confirmation_requests
     WHERE engagement_month_id = '${monthId}'::uuid AND status = 'CONFIRMED'
@@ -222,7 +226,9 @@ test("[E2E-07] post-close correction regenerates exact snapshot, confirmation, p
   expect(reopened.lifecycleState).toBe("REOPEN_REQUESTED");
   const reopenRequestId = queryDatabase(`
     SELECT id FROM month_reopen_requests
-    WHERE engagement_month_id = '${monthId}'::uuid AND status = 'REQUESTED';
+    WHERE engagement_month_id = '${monthId}'::uuid AND status = 'REQUESTED'
+    ORDER BY requested_at DESC
+    LIMIT 1;
   `);
   const invalidationId = queryDatabase(`
     SELECT id FROM certification_invalidations
@@ -349,7 +355,7 @@ test("[E2E-07] post-close correction regenerates exact snapshot, confirmation, p
   ), 201);
   const correctedSummaryId = String(summarized.summary.id);
   expect(summarized.summary).toMatchObject({
-    version: 2,
+    version: originalSummaryVersion + 1,
   });
   expect(queryDatabase(`
     SELECT supersedes_id FROM monthly_certification_summaries

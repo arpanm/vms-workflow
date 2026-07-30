@@ -22,8 +22,41 @@ below records the implemented local slice and the material remaining boundary.
 | 003 | Scoped quorum, self-approval guard, atomic freeze/baseline, revision clone, immutable evidence and the `GET /delivery/plans/{planId}/revision-comparison` API/UI are implemented; v3 checksums bind revision context. V38 binds an active shared-core delegation to the configured authority holder while retaining the distinct acting subject and exact delegation ID. | Live identity-provider acceptance remains an environment gate. |
 | 004–005 | V28/V32 and `DeliveryCommitmentOperationsWorker` provide recipient snapshots, immutable rendered content, claim/lease, retry and dead-letter behavior through a configured adapter. | A real mail provider, contact-group authorization and live send are externally blocked. |
 | 006, 008–010 | Recorded/provider-neutral issue links, current projections, snapshots, signed webhook queue handling, health and an idempotent reconciliation command ledger are implemented and integration tested. V38 adds ordered `updatedAt`/UUID cursor pagination, bounded pages, scheduled due checkpoints, retry/dead-letter state, immutable per-attempt checksums, and explicit GraphQL data-plus-errors failure handling behind `LinearReconciliationAdapter`. | No live Linear OAuth/GraphQL adapter is configured; tenant acceptance remains external. |
-| 011–012 | Secured Java endpoints, OpenAPI operations, plan builder/review, revision comparison, delegated approval input/evidence, issue evidence and integration-health UI are present. Reconciliation checkpoint/job summaries are exposed through a secret-redacted, engagement-scoped OpenAPI operation. | Full accessibility/Playwright coverage remains open. |
-| 013–014 | `DeliveryLinearIT` and `DeliveryCommitmentOperationsWorkerIT` cover the local planning/revision/reconciliation and transport paths; API/frontend contract tests cover the added endpoints. | Exhaustive least-privilege, OpenAPI/Swagger access, failure injection and operator-runbook acceptance remain open. |
+| 011–012 | Secured Java endpoints, OpenAPI operations, plan builder/review, revision comparison, delegated approval input/evidence, issue evidence and integration-health UI are present. Reconciliation checkpoint/job summaries are exposed through a secret-redacted, engagement-scoped OpenAPI operation. Browser contract, accessibility and compatibility automation is present and the final focused recovery is green. | Controlled-identity deployed acceptance remains external. |
+| 013–014 | `DeliveryLinearIT`, `DeliveryCommitmentOperationsWorkerIT`, `DatabaseRoleGuardTest`, `DeliveryCommitmentWorkerProfileTest` and the OpenAPI assertions cover delegated authority, cursor pagination/checkpoints, GraphQL partial failure, retry/dead-letter, runtime/worker least privilege and secret-redacted Swagger contracts. Operator procedures are recorded in the F03 runbook. | Live provider failure drills and deployed identity/grant acceptance remain external. |
+
+### Local codegen reconciliation
+
+- [x] Shared-core delegation persists and validates authority holder, acting
+  subject and exact delegation ID for plan approvals.
+- [x] Scheduled reconciliation uses ordered `(updatedAt, issue UUID)` cursor
+  pagination, bounded pages, durable checkpoints, checksummed attempts and
+  retry/dead-letter state.
+- [x] Recorded-adapter artifacts cover GraphQL data-plus-errors, provider
+  outage, replay and partial-page failure outcomes.
+- [x] Runtime/worker least privilege and secret-redacted OpenAPI contracts have
+  dedicated code and test artifacts.
+- [ ] Live OAuth/webhook/GraphQL, provider failure drills and deployed grants
+  remain externally gated.
+
+### Final local status and evidence — 2026-07-30
+
+- [x] `F03-TASK-001`–`F03-TASK-014` are complete for the provider-neutral
+  local product boundary, including Java/PostgreSQL services, React flows,
+  OpenAPI, immutable communication/reconciliation operations and automation.
+- [x] Static frontend tests passed 120/120; system lanes passed 4/4, 6/6 and
+  7/7.
+- [x] The consolidated browser matrix passed 287/292. The three F03 delivery
+  failures and two migration accessibility failures were corrected, and the
+  exact affected combinations passed a focused 5/5 recovery.
+- [x] The consolidated Maven suite ran 340 tests with two failures and one
+  error. The affected backend cases passed focused recovery after remediation.
+- [ ] Live Linear OAuth/GraphQL/webhook registration, real commitment-email
+  delivery, controlled identity, deployed grants and provider failure drills
+  remain external acceptance work.
+
+The evidence is intentionally cumulative. It does not claim one fully green
+post-fix execution of the complete Maven and Playwright suites.
 
 - [ ] **F03-TASK-001 — Delivery schema and Flyway baseline** *(locally implementable; PRD 02, 07 §2–4, 13, 22).* Add append-only reviewed Flyway migrations for plan/version, deliverable/version, acceptance criterion, dependency, effective-dated employee assignment, approval, exception, checksum, baseline, Linear link/current/event/snapshot, connection/job/webhook-delivery, outbox/email-attempt and audit records. Enforce one engagement month, stable deliverable-code lineage, unique `(deliverable_version_id, linear_issue_uuid)`, delivery/event dedupe, foreign keys, tenant/engagement scope, optimistic versions and no destructive deletion after evidence use.
 - [ ] **F03-TASK-002 — Plan and deliverable domain services** *(locally implementable; PRD 02, 03, 07 §2–4, 13, 22).* Implement explicit state transitions `DRAFT → READY_FOR_REVIEW → PENDING_APPROVAL → APPROVED → FROZEN → SUPERSEDED`, with terminal submission states and revision-by-clone only. Validate all mandatory deliverable fields, independently testable criteria, dependency/risk declarations, valid allocations/target dates, active owners/approvers/contact groups, cycle detection, link exception authority, and no-deliverables exception approval. Compute canonical checksum and audit every consequential action.

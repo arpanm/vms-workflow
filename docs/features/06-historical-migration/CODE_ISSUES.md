@@ -1,5 +1,12 @@
 # F06 Historical Migration — Code Issues
 
+## Final integrated reconciliation — 2026-07-30
+
+The reviewed local F06 implementation issues are closed through V43. Current
+focused evidence passes system 6/6 and migration/OpenAPI recovery 1/1. Do not
+erase the integrated Maven 340 (2 failures + 1 error) or browser 287/292 rows.
+External source-owner, provider, scale, cutover and DR gates remain open.
+
 ## Post-codegen disposition
 
 - P0 items 1–3 are remediated: the browser/server DTO contract is aligned and

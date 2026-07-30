@@ -1,5 +1,12 @@
 # F06 — Test Automation
 
+## Final integrated reconciliation — 2026-07-30
+
+The V43 migration-system automation passes 6/6, with focused
+migration/OpenAPI recovery 1/1 and accessibility 3/3. Preserve the failed
+Maven 340 (2 failures + 1 error) and browser 287/292 rows alongside their
+focused recovery evidence; neither aggregate was rerun clean.
+
 The detailed source is [TEST_CASES.md](TEST_CASES.md). Local lanes are:
 
 - Java unit tests for registry hashes, CSV quoting/BOM/newlines, prohibited

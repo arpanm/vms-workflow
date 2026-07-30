@@ -23,6 +23,7 @@ import {
   ContactRound,
   GitPullRequestArrow,
   CalendarSync,
+  CircleHelp,
 } from "lucide-react";
 
 import {
@@ -289,6 +290,15 @@ const nav: Array<{
     workforce: false,
     delivery: false,
     permission: ["month.transition", "catalog.read"],
+  },
+  {
+    title: "Role guides & support",
+    url: "/support",
+    icon: CircleHelp,
+    group: "Overview",
+    legacy: false,
+    workforce: false,
+    delivery: false,
   },
 ];
 

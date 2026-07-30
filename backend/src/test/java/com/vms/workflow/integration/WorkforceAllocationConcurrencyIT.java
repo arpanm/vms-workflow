@@ -16,7 +16,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow_workforce_allocation_concurrency_it",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",

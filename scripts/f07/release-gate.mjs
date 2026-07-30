@@ -31,7 +31,10 @@ import {
 } from "./machine-reports.mjs";
 import { validateOperationalDocument } from "./operational-report.mjs";
 import { commandOutputProvesSuccess } from "./command-evidence.mjs";
-import { validateTraceability } from "./traceability.mjs";
+import {
+  validateReviewEvidence,
+  validateTraceability,
+} from "./traceability.mjs";
 
 const allowedResults = new Set([
   "PASS",
@@ -944,6 +947,21 @@ export async function evaluateRelease(manifestPath, options = {}) {
     for (const record of records) {
       await validateRecord(record, manifest.release?.commit, state.now, state);
     }
+  }
+  try {
+    const review = await validateReviewEvidence({
+      headRef: manifest.release?.commit,
+      requireExactHead: true,
+    });
+    if (review.result !== "PASS") {
+      state.blockers.push(
+        ...review.findings.map((finding) => `review evidence: ${finding}`),
+      );
+    }
+  } catch (error) {
+    state.blockers.push(
+      `review evidence cannot be validated: ${safeError(error)}`,
+    );
   }
   try {
     const registry =

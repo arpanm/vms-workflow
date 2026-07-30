@@ -90,6 +90,9 @@ test("[E2E-F06-SYS-002] real upload scans, validates and produces exact pre-comm
     templateVersion: "1",
     mode: "DRY_RUN",
     partialCommit: false,
+    sourceType: "APPROVED_SPREADSHEET",
+    confidence: "HIGH",
+    sourceDescription: "Real-system governed employee migration",
   });
   const uploaded = await json(
     await request.post("/api/v1/migrations/jobs", {
@@ -286,6 +289,9 @@ test("[E2E-F06-SYS-005] safe error export and rejected-row reprocess retain only
     templateVersion: "1",
     mode: "DRY_RUN",
     partialCommit: true,
+    sourceType: "APPROVED_SPREADSHEET",
+    confidence: "HIGH",
+    sourceDescription: "Real-system partial employee migration",
   });
   const parent = await json(
     await request.post("/api/v1/migrations/jobs", {
@@ -426,7 +432,7 @@ test("[E2E-F06-SYS-006] real retro request records current authenticated time", 
       },
       data: {
         engagementId,
-        engagementMonthId: "00000000-0000-0000-0000-000000000602",
+        engagementMonthId: "00000000-0000-0000-0000-000000000601",
         requestType: "CONFIRMATION",
         representedMonth: "2026-06-01",
         reason: "Original historical actor unavailable",

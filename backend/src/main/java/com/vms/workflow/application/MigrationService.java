@@ -23,6 +23,8 @@ import java.nio.charset.CodingErrorAction;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.Instant;
@@ -87,6 +89,7 @@ public class MigrationService {
     private final MigrationDomainAdapter domainAdapter;
     private final FinancePageCursorCodec cursors;
     private final MigrationMetrics metrics;
+    private final MigrationTemplateWorkbookRenderer workbookRenderer;
     private final int retentionDays;
 
     public MigrationService(
@@ -99,6 +102,7 @@ public class MigrationService {
         MigrationDomainAdapter domainAdapter,
         FinancePageCursorCodec cursors,
         MigrationMetrics metrics,
+        MigrationTemplateWorkbookRenderer workbookRenderer,
         @Value("${vms.migration.retention-days:2555}") int retentionDays
     ) {
         this.jdbc = jdbc;
@@ -110,6 +114,7 @@ public class MigrationService {
         this.domainAdapter = domainAdapter;
         this.cursors = cursors;
         this.metrics = metrics;
+        this.workbookRenderer = workbookRenderer;
         this.retentionDays = Math.max(1, retentionDays);
     }
 
@@ -170,9 +175,31 @@ public class MigrationService {
         UUID engagementId,
         String templateCode
     ) {
+        return sample(subject, engagementId, templateCode, "CSV");
+    }
+
+    public Download sample(
+        String subject,
+        UUID engagementId,
+        String templateCode,
+        String format
+    ) {
         authorization.requireEngagement(subject, engagementId, "migration.read");
         MigrationTemplateRegistry.Template template =
             templates.require(templateCode);
+        if ("XLSX".equalsIgnoreCase(format)) {
+            String filename = template.filename().replaceFirst(
+                "\\.csv$", ".xlsx");
+            return new Download(
+                filename,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                workbookRenderer.render(template,
+                    activeTemplateReferences(engagementId)));
+        }
+        if (!"CSV".equalsIgnoreCase(format)) {
+            throw new IllegalArgumentException(
+                "Template format must be CSV or XLSX.");
+        }
         return new Download(
             template.filename(), "text/csv; charset=UTF-8",
             templates.safeSample(templateCode));
@@ -245,12 +272,14 @@ public class MigrationService {
               (id, source_file_id, engagement_id, organization_id,
                engagement_month_id, template_code, template_version, mode,
                state, partial_commit, parent_job_id, prior_job_id,
-               requested_by_subject)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'UPLOADED', ?, ?, ?, ?)
+               requested_by_subject, declared_source_type,
+               declared_confidence, source_description)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'UPLOADED', ?, ?, ?, ?, ?, ?, ?)
             """, jobId, sourceId, input.engagementId(), input.organizationId(),
             input.engagementMonthId(), template.code(), template.version(),
             input.mode(), input.partialCommit(), input.parentJobId(),
-            input.priorJobId(), subject);
+            input.priorJobId(), subject, input.sourceType(),
+            input.confidence(), input.sourceDescription());
         MigrationMalwareScanner.Verdict verdict =
             scanner.inspect(bytes, hash);
         metrics.recordScan(verdict.status().name());
@@ -411,6 +440,57 @@ public class MigrationService {
         authorization.requireJob(subject, jobId, "migration.validate");
         return validateInternal(
             subject, jobId, expectedVersion, idempotencyKey, null);
+    }
+
+    /**
+     * Persists an immediate worker request without parsing on the HTTP thread.
+     * The existing job lease, checkpoints and bounded retry/dead-letter fields
+     * make execution resumable and safe across process termination.
+     */
+    @Transactional
+    public Map<String, Object> queueValidation(
+        String subject,
+        UUID jobId,
+        long expectedVersion,
+        String idempotencyKey
+    ) {
+        authorization.requireJob(subject, jobId, "migration.validate");
+        JobContext job = lockedJob(jobId);
+        if (idempotencyKey.equals(jdbc.queryForObject("""
+            SELECT COALESCE(async_idempotency_key, '')
+            FROM migration_jobs WHERE id = ?
+            """, String.class, jobId))) {
+            return Map.of(
+                "jobId", jobId,
+                "state", job.state(),
+                "executionState", "QUEUED",
+                "version", job.version());
+        }
+        requireVersion(job, expectedVersion);
+        if (!Set.of("UPLOADED", "FAILED").contains(job.state())) {
+            throw conflict("JOB_ASYNC_EXECUTION_NOT_ALLOWED", job);
+        }
+        int changed = jdbc.update("""
+            UPDATE migration_jobs
+            SET async_requested_at = CURRENT_TIMESTAMP,
+                async_requested_by = ?,
+                async_idempotency_key = ?,
+                dead_lettered_at = NULL,
+                version = version + 1
+            WHERE id = ? AND version = ?
+              AND (lease_until IS NULL OR lease_until < CURRENT_TIMESTAMP)
+            """, subject, idempotencyKey, jobId, expectedVersion);
+        if (changed != 1) {
+            throw new DomainConflictException(
+                "MIGRATION_EXECUTION_ALREADY_LEASED",
+                "The migration is already queued or executing.",
+                context(jobId).version());
+        }
+        return Map.of(
+            "jobId", jobId,
+            "state", job.state(),
+            "executionState", "QUEUED",
+            "version", expectedVersion + 1);
     }
 
     private Map<String, Object> validateInternal(
@@ -676,6 +756,68 @@ public class MigrationService {
             "hasMore", hasMore,
             "nextRow", hasMore
                 ? items.getLast().get("rowNumber") : 0);
+    }
+
+    public Map<String, Object> correctionPlan(
+        String subject,
+        UUID jobId
+    ) {
+        authorization.requireJob(subject, jobId, "migration.read");
+        JobContext job = context(jobId);
+        if (job.monthId() == null) {
+            return Map.of(
+                "jobId", jobId,
+                "required", false,
+                "reason", "NO_HISTORICAL_MONTH");
+        }
+        List<Map<String, Object>> packages = jdbc.query("""
+            SELECT id, version, status, supersedes_id, generated_at
+            FROM evidence_package_versions
+            WHERE engagement_month_id = ?
+            ORDER BY version
+            """, (rs, ignored) -> {
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("id", rs.getObject(1, UUID.class));
+                item.put("version", rs.getInt(2));
+                item.put("status", rs.getString(3));
+                item.put("supersedesId", rs.getObject(4, UUID.class));
+                item.put("generatedAt",
+                    rs.getObject(5, OffsetDateTime.class));
+                return Collections.unmodifiableMap(item);
+            }, job.monthId());
+        Map<String, Object> reopen = jdbc.query("""
+            SELECT id, effective_status, requested_at, effective_decided_at
+            FROM effective_month_reopen_requests
+            WHERE engagement_month_id = ?
+            ORDER BY requested_at DESC
+            LIMIT 1
+            """, rs -> {
+                if (!rs.next()) {
+                    return null;
+                }
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("id", rs.getObject(1, UUID.class));
+                item.put("status", rs.getString(2));
+                item.put("requestedAt",
+                    rs.getObject(3, OffsetDateTime.class));
+                item.put("decidedAt",
+                    rs.getObject(4, OffsetDateTime.class));
+                return Collections.unmodifiableMap(item);
+            }, job.monthId());
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("jobId", jobId);
+        result.put("monthId", job.monthId());
+        result.put("required", !packages.isEmpty());
+        result.put("requiredAction", packages.isEmpty()
+            ? "NONE" : "F04_REOPEN_THEN_F05_NEW_PACKAGE_VERSION");
+        result.put("reopenApi",
+            "/api/v1/certification/months/" + job.monthId()
+                + "/reopen-requests");
+        result.put("packageApi",
+            "/api/v1/finance/months/" + job.monthId() + "/packages");
+        result.put("packages", packages);
+        result.put("latestReopen", reopen);
+        return Collections.unmodifiableMap(result);
     }
 
     @Transactional
@@ -1022,7 +1164,21 @@ public class MigrationService {
             ON CONFLICT (actor_subject, idempotency_key) DO NOTHING
             """, UUID.randomUUID(), jobId, reason, subject, job.version(),
             idempotencyKey);
-        transition(jobId, job.version(), "CANCELLED");
+        int cancelled = jdbc.update("""
+            UPDATE migration_jobs
+            SET state = 'CANCELLED',
+                async_requested_at = NULL,
+                version = version + 1
+            WHERE id = ? AND version = ?
+            """, jobId, job.version());
+        if (cancelled != 1) {
+            Long current = jdbc.queryForObject("""
+                SELECT version FROM migration_jobs WHERE id = ?
+                """, Long.class, jobId);
+            throw new DomainConflictException(
+                "ETAG_MISMATCH", "The migration job version is stale.",
+                current);
+        }
         return job(subject, jobId);
     }
 
@@ -1079,6 +1235,7 @@ public class MigrationService {
         int released = jdbc.update("""
             UPDATE migration_jobs
             SET lease_owner = NULL, lease_until = NULL,
+                async_requested_at = NULL,
                 version = version + 1
             WHERE id = ? AND lease_owner = ?
             """, jobId, leaseOwner);
@@ -1595,6 +1752,16 @@ public class MigrationService {
             || input.representedMonth().getDayOfMonth() != 1) {
             throw new IllegalArgumentException("Historical month is invalid.");
         }
+        if (!Boolean.TRUE.equals(jdbc.queryForObject("""
+            SELECT EXISTS (
+              SELECT 1 FROM engagement_months
+              WHERE id = ? AND engagement_id = ?
+                AND month_start_date = ?)
+            """, Boolean.class, input.engagementMonthId(),
+            input.engagementId(), input.representedMonth()))) {
+            throw new IllegalArgumentException(
+                "Historical request month does not match the governed scope.");
+        }
         if (input.originalActorUnavailable()
             && (input.delegationEvidenceReference() == null
                 || input.delegationEvidenceReference().isBlank())) {
@@ -1648,6 +1815,261 @@ public class MigrationService {
                 value.put("version", rs.getLong(10));
                 return Collections.unmodifiableMap(value);
             }, id);
+    }
+
+    public Map<String, Object> retroRequests(
+        String subject,
+        UUID engagementId,
+        String state,
+        int limit
+    ) {
+        authorization.requireEngagement(
+            subject, engagementId, "migration.read");
+        String normalizedState = state == null || state.isBlank()
+            ? null : state.toUpperCase(Locale.ROOT);
+        if (normalizedState != null && !Set.of(
+            "PENDING", "APPROVED", "REJECTED", "CANCELLED")
+            .contains(normalizedState)) {
+            throw new IllegalArgumentException("Retro request state is invalid.");
+        }
+        List<Map<String, Object>> items = jdbc.query("""
+            SELECT retro.id, retro.engagement_month_id,
+                   retro.request_type, retro.state,
+                   retro.represented_month, retro.reason,
+                   retro.original_actor_unavailable,
+                   retro.delegation_evidence_reference,
+                   retro.procurement_notification_state,
+                   retro.requested_by_subject,
+                   retro.decided_by_subject, retro.decision_at,
+                   retro.decision_reason, retro.version,
+                   retro.created_at
+            FROM migration_retro_requests retro
+            WHERE retro.engagement_id = ?
+              AND (CAST(? AS VARCHAR) IS NULL
+                   OR retro.state = CAST(? AS VARCHAR))
+            ORDER BY retro.created_at DESC, retro.id DESC
+            LIMIT ?
+            """, (rs, ignored) -> retroResult(rs),
+            engagementId, normalizedState, normalizedState,
+            Math.max(1, Math.min(100, limit)));
+        return Map.of("items", items, "count", items.size());
+    }
+
+    @Transactional
+    public Map<String, Object> decideRetro(
+        String subject,
+        UUID requestId,
+        MigrationDtos.RetroDecisionInput input,
+        String idempotencyKey
+    ) {
+        RetroContext context = lockedRetro(requestId);
+        MigrationAuthorizationService.ApprovalAuthority authority =
+            authorization.requireApprovalAuthority(
+                subject, context.engagementId());
+        if (subject.equals(context.requestedBy())) {
+            throw new DomainConflictException(
+                "MIGRATION_RETRO_SOD_VIOLATION",
+                "The requester cannot decide their own historical request.");
+        }
+        Map<String, Object> replay = replayRetroAction(subject, idempotencyKey);
+        if (replay != null) {
+            return replay;
+        }
+        requireRetroVersion(context, input.expectedVersion());
+        if (!"PENDING".equals(context.state())) {
+            throw new DomainConflictException(
+                "MIGRATION_RETRO_ALREADY_DECIDED",
+                "Only a pending historical request can be decided.",
+                context.version());
+        }
+        UUID actionId = UUID.randomUUID();
+        UUID correlationId = CorrelationIdFilter.currentOrNew();
+        long nextVersion = context.version() + 1;
+        jdbc.update("""
+            INSERT INTO migration_retro_actions
+              (id, request_id, request_version, action, actor_subject,
+               actor_role, reason, correlation_id, idempotency_key)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, actionId, requestId, nextVersion, input.decision(), subject,
+            authority.assignmentRole(), input.reason(), correlationId,
+            idempotencyKey);
+        int requestChanged = jdbc.update("""
+            UPDATE migration_retro_requests
+            SET state = ?, decided_by_subject = ?, decision_at = CURRENT_TIMESTAMP,
+                decision_reason = ?, version = ?, procurement_notification_state =
+                  'ACTION_REQUIRED'
+            WHERE id = ? AND state = 'PENDING' AND version = ?
+            """, input.decision(), subject, input.reason(), nextVersion,
+            requestId, context.version());
+        if (requestChanged != 1) {
+            throw new DomainConflictException(
+                "VERSION_CONFLICT",
+                "Historical request changed during decision.",
+                lockedRetro(requestId).version());
+        }
+        if ("APPROVED".equals(input.decision())) {
+            if (advanceMonthForRetro(
+                    context, subject, input.reason(), correlationId) != 1) {
+                throw new DomainConflictException(
+                    "HISTORICAL_READINESS_BLOCKED",
+                    "The historical month is not in the ordered source state required by this approval.");
+            }
+        }
+        enqueueRetroNotification(
+            context, requestId, nextVersion,
+            "HISTORICAL_RETRO_OUTCOME_RECORDED",
+            "Historical " + context.requestType().toLowerCase(Locale.ROOT)
+                + " outcome for " + context.representedMonth(),
+            input.decision() + ": " + input.reason(), correlationId);
+        outbox("MIGRATION_RETRO_REQUEST", requestId,
+            "HISTORICAL_RETRO_OUTCOME_RECORDED",
+            "retro-outcome:" + actionId,
+            Map.of("requestId", requestId, "actionId", actionId,
+                "decision", input.decision(), "recordedAtPolicy",
+                "CURRENT_AUTHENTICATED_TIME"));
+        return retroById(requestId);
+    }
+
+    @Transactional
+    public Map<String, Object> cancelRetro(
+        String subject,
+        UUID requestId,
+        MigrationDtos.ReasonInput input,
+        String idempotencyKey
+    ) {
+        RetroContext context = lockedRetro(requestId);
+        authorization.requireEngagement(
+            subject, context.engagementId(), "migration.retro");
+        Map<String, Object> replay = replayRetroAction(subject, idempotencyKey);
+        if (replay != null) {
+            return replay;
+        }
+        requireRetroVersion(context, input.expectedVersion());
+        if (!"PENDING".equals(context.state())) {
+            throw new DomainConflictException(
+                "MIGRATION_RETRO_ALREADY_DECIDED",
+                "Only a pending historical request can be cancelled.",
+                context.version());
+        }
+        UUID actionId = UUID.randomUUID();
+        UUID correlationId = CorrelationIdFilter.currentOrNew();
+        long nextVersion = context.version() + 1;
+        jdbc.update("""
+            INSERT INTO migration_retro_actions
+              (id, request_id, request_version, action, actor_subject,
+               actor_role, reason, correlation_id, idempotency_key)
+            VALUES (?, ?, ?, 'CANCELLED', ?, 'REQUEST_MANAGER', ?, ?, ?)
+            """, actionId, requestId, nextVersion, subject, input.reason(),
+            correlationId, idempotencyKey);
+        jdbc.update("""
+            UPDATE migration_retro_requests
+            SET state = 'CANCELLED', decided_by_subject = ?,
+                decision_at = CURRENT_TIMESTAMP, decision_reason = ?,
+                version = ?, procurement_notification_state = 'ACTION_REQUIRED'
+            WHERE id = ? AND state = 'PENDING' AND version = ?
+            """, subject, input.reason(), nextVersion, requestId,
+            context.version());
+        enqueueRetroNotification(
+            context, requestId, nextVersion, "HISTORICAL_RETRO_CANCELLED",
+            "Historical request cancelled for " + context.representedMonth(),
+            input.reason(), correlationId);
+        outbox("MIGRATION_RETRO_REQUEST", requestId,
+            "HISTORICAL_RETRO_CANCELLED", "retro-cancel:" + actionId,
+            Map.of("requestId", requestId, "actionId", actionId));
+        return retroById(requestId);
+    }
+
+    public Map<String, Object> monthReadiness(String subject, UUID monthId) {
+        MonthContext month = monthContext(monthId);
+        authorization.requireEngagement(
+            subject, month.engagementId(), "migration.read");
+        int completedJobs = jdbc.queryForObject("""
+            SELECT count(*) FROM migration_jobs
+            WHERE engagement_month_id = ?
+              AND state IN ('COMPLETED', 'COMPLETED_WITH_ERRORS')
+            """, Integer.class, monthId);
+        int pendingRequests = jdbc.queryForObject("""
+            SELECT count(*) FROM migration_retro_requests
+            WHERE engagement_month_id = ? AND state = 'PENDING'
+            """, Integer.class, monthId);
+        List<String> blockers = new ArrayList<>();
+        if (completedJobs == 0) {
+            blockers.add("NO_COMMITTED_HISTORICAL_BATCH");
+        }
+        if (pendingRequests > 0) {
+            blockers.add("RETRO_DECISIONS_PENDING");
+        }
+        return Map.of(
+            "monthId", monthId,
+            "engagementId", month.engagementId(),
+            "state", month.state(),
+            "version", month.version(),
+            "completedJobs", completedJobs,
+            "pendingRetroRequests", pendingRequests,
+            "blockers", blockers,
+            "ready", blockers.isEmpty());
+    }
+
+    @Transactional
+    public Map<String, Object> transitionMonth(
+        String subject,
+        UUID monthId,
+        MigrationDtos.MonthTransitionInput input,
+        String idempotencyKey
+    ) {
+        MonthContext month = monthContext(monthId);
+        authorization.requireEngagement(
+            subject, month.engagementId(), "migration.approve");
+        String replayKey = "historical-month:" + monthId + ":"
+            + input.targetState() + ":" + idempotencyKey;
+        if (Boolean.TRUE.equals(jdbc.queryForObject("""
+            SELECT EXISTS (
+              SELECT 1 FROM migration_outbox_events WHERE event_key = ?)
+            """, Boolean.class, replayKey))) {
+            return monthReadiness(subject, monthId);
+        }
+        if (month.version() != input.expectedVersion()) {
+            throw new DomainConflictException(
+                "VERSION_CONFLICT", "Historical month version is stale.",
+                month.version());
+        }
+        boolean evidence = switch (input.targetState()) {
+            case "HISTORICAL_PENDING_CERTIFICATION" ->
+                hasCompletedMigration(monthId);
+            case "HISTORICAL_PENDING_CONFIRMATION" ->
+                hasApprovedRetro(monthId, "CERTIFICATION")
+                    || hasCommittedTemplate(monthId,
+                        "10_delivery_certifications");
+            case "CONFIRMED" ->
+                hasApprovedRetro(monthId, "CONFIRMATION")
+                    || hasCommittedTemplate(monthId,
+                        "11_business_confirmations");
+            default -> false;
+        };
+        if (!orderedHistoricalTransition(
+                month.state(), input.targetState()) || !evidence) {
+            throw new DomainConflictException(
+                "HISTORICAL_READINESS_BLOCKED",
+                "The target state requires the immediately preceding historical state and bound completion evidence.",
+                month.version());
+        }
+        setTransitionContext(subject, input.reason());
+        int changed = jdbc.update("""
+            UPDATE engagement_months
+            SET state = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND governance_version = ?
+            """, input.targetState(), monthId, month.version());
+        if (changed != 1) {
+            throw new DomainConflictException(
+                "VERSION_CONFLICT", "Historical month version is stale.",
+                monthContext(monthId).version());
+        }
+        outbox("ENGAGEMENT_MONTH", monthId,
+            "HISTORICAL_MONTH_TRANSITIONED",
+            replayKey,
+            Map.of("monthId", monthId, "from", month.state(),
+                "to", input.targetState(), "reason", input.reason()));
+        return monthReadiness(subject, monthId);
     }
 
     public Download errors(String subject, UUID jobId) {
@@ -1763,6 +2185,15 @@ public class MigrationService {
         }
         validateConditionalFields(template.code(), values, findings);
         validateReferences(job, values, findings);
+        if (job.monthId() != null && Boolean.TRUE.equals(
+            jdbc.queryForObject("""
+                SELECT state IN ('CLOSED', 'INVOICE_READY',
+                                 'INVOICE_SUBMITTED')
+                FROM engagement_months WHERE id = ?
+                """, Boolean.class, job.monthId()))) {
+            findings.add(error("CLOSED_MONTH_REQUIRES_REOPEN", null,
+                "A closed historical month must use the governed reopen and new-version workflow."));
+        }
         switch (template.code()) {
             case "01_employees" -> validateEmployee(values, findings);
             case "02_employee_allocations" ->
@@ -1774,8 +2205,10 @@ public class MigrationService {
                 }
                 decimalPositive(values, "quantity_days", findings);
             }
-            case "06_leave_requests" ->
+            case "06_leave_requests" -> {
                 decimalPositive(values, "quantity_days", findings);
+                validateLeaveBalance(job, values, findings);
+            }
             case "07a_attendance_punches" ->
                 validatePunch(values, findings);
             case "07b_attendance_daily" ->
@@ -1786,7 +2219,7 @@ public class MigrationService {
                 validateCertification(values, findings);
             case "11_business_confirmations" ->
                 validateConfirmation(values, findings);
-            case "12_invoices" -> validateInvoice(values, findings);
+            case "12_invoices" -> validateInvoice(job, values, findings);
             case "13_approval_history" ->
                 findings.add(new Finding(
                     "WARNING", "APPROVAL_AUTHORITY_REVIEW_REQUIRED",
@@ -1850,26 +2283,35 @@ public class MigrationService {
         }
         String employee = values.get("employee_number");
         if (employee != null && !employee.isBlank()
-            && !"01_employees".equals(job.templateCode())
-            && !Boolean.TRUE.equals(jdbc.queryForObject("""
-                SELECT EXISTS (
-                  SELECT 1
+            && !"01_employees".equals(job.templateCode())) {
+            Integer matches = jdbc.queryForObject("""
+                SELECT count(*) FROM (
+                  SELECT employee.id::text AS identity
                   FROM employees employee
                   WHERE employee.organization_id = ?
                     AND employee.employee_number = ?
-                  UNION ALL
-                  SELECT 1
+                  UNION
+                  SELECT fact.id::text
                   FROM migration_canonical_facts fact
                   WHERE fact.engagement_id = ?
                     AND fact.template_code = '01_employees'
                     AND fact.active
                     AND fact.business_payload->>'employee_number' = ?
-                )
-                """, Boolean.class, job.organizationId(), employee,
-                job.engagementId(), employee))) {
-            findings.add(error("REFERENCE_EMPLOYEE_NOT_FOUND",
-                "employee_number",
-                "Employee reference was not resolved in this scope."));
+                ) resolved
+                """, Integer.class, job.organizationId(), employee,
+                job.engagementId(), employee);
+            if (matches == 0) {
+                findings.add(error("REFERENCE_EMPLOYEE_NOT_FOUND",
+                    "employee_number",
+                    "Employee reference was not resolved in this scope."));
+            } else if (matches > 1) {
+                findings.add(error("REFERENCE_EMPLOYEE_AMBIGUOUS",
+                    "employee_number",
+                    "Employee reference resolves to more than one governed identity."));
+            } else {
+                validateEmploymentWindow(
+                    job, employee, values, findings);
+            }
         }
     }
 
@@ -1898,6 +2340,105 @@ public class MigrationService {
                 "An employee cannot manage themselves."));
         }
         zone(values.get("timezone"), "timezone", findings);
+    }
+
+    private void validateEmploymentWindow(
+        JobContext job,
+        String employeeNumber,
+        Map<String, String> values,
+        List<Finding> findings
+    ) {
+        LocalDate representedDate = null;
+        for (String field : List.of(
+            "attendance_date", "leave_date", "override_date",
+            "effective_date", "valid_from", "holiday_date")) {
+            String value = values.get(field);
+            if (value != null && !value.isBlank()) {
+                try {
+                    representedDate = LocalDate.parse(value);
+                } catch (RuntimeException ignored) {
+                    return;
+                }
+                break;
+            }
+        }
+        if (representedDate == null) {
+            String billingMonth = values.get("billing_month");
+            if (billingMonth != null && !billingMonth.isBlank()) {
+                try {
+                    representedDate = YearMonth.parse(billingMonth).atDay(1);
+                } catch (RuntimeException ignored) {
+                    return;
+                }
+            }
+        }
+        if (representedDate == null) {
+            return;
+        }
+        LocalDate finalDate = representedDate;
+        Boolean inside = jdbc.query("""
+            SELECT employee.join_date,
+                   (SELECT version.exit_date
+                    FROM employee_versions version
+                    WHERE version.employee_id = employee.id
+                    ORDER BY version.version DESC LIMIT 1)
+            FROM employees employee
+            WHERE employee.organization_id = ?
+              AND employee.employee_number = ?
+            """, rs -> {
+                if (!rs.next()) {
+                    return true;
+                }
+                LocalDate join = rs.getObject(1, LocalDate.class);
+                LocalDate exit = rs.getObject(2, LocalDate.class);
+                return !finalDate.isBefore(join)
+                    && (exit == null || !finalDate.isAfter(exit));
+            }, job.organizationId(), employeeNumber);
+        if (Boolean.FALSE.equals(inside)) {
+            findings.add(error("TEMPORAL_OUTSIDE_EMPLOYMENT", null,
+                "The represented date is outside the employee's governed employment window."));
+        }
+    }
+
+    private void validateLeaveBalance(
+        JobContext job,
+        Map<String, String> values,
+        List<Finding> findings
+    ) {
+        if (!"APPROVED".equals(values.get("decision_status"))
+            || "LWP".equals(values.get("paid_lwp_classification"))) {
+            return;
+        }
+        String employeeNumber = values.get("employee_number");
+        String leaveType = values.get("leave_type_code");
+        if (employeeNumber == null || leaveType == null) {
+            return;
+        }
+        try {
+            java.math.BigDecimal requested = new java.math.BigDecimal(
+                values.getOrDefault("quantity_days", "0"));
+            java.math.BigDecimal balance = jdbc.queryForObject("""
+                SELECT COALESCE(sum(ledger.quantity), 0)
+                FROM employees employee
+                JOIN leave_types type
+                  ON type.organization_id = employee.organization_id
+                 AND type.code = ?
+                LEFT JOIN leave_balance_ledger ledger
+                  ON ledger.employee_id = employee.id
+                 AND ledger.leave_type_id = type.id
+                WHERE employee.organization_id = ?
+                  AND employee.employee_number = ?
+                """, java.math.BigDecimal.class, leaveType,
+                job.organizationId(), employeeNumber);
+            if (balance != null && requested.compareTo(balance) > 0) {
+                findings.add(error(
+                    "LEAVE_BALANCE_INSUFFICIENT_LWP_REQUIRED",
+                    "paid_lwp_classification",
+                    "The paid leave quantity exceeds the governed balance; classify the excess as LWP."));
+            }
+        } catch (NumberFormatException ignored) {
+            // The stable numeric finding was already added.
+        }
     }
 
     private void validateAllocation(
@@ -1953,6 +2494,20 @@ public class MigrationService {
         if (first != null && last != null && last.isBefore(first)) {
             findings.add(error("ATTENDANCE_EVENT_ORDER_INVALID",
                 "last_out_at", "Last-out cannot precede first-in."));
+        } else if (first != null && last != null) {
+            long elapsed = java.time.Duration.between(
+                first.toInstant(), last.toInstant()).toMinutes();
+            try {
+                long net = Long.parseLong(values.getOrDefault(
+                    "net_worked_minutes", "0"));
+                if (net > elapsed) {
+                    findings.add(error("ATTENDANCE_DURATION_INCONSISTENT",
+                        "net_worked_minutes",
+                        "Net worked minutes cannot exceed the first-in/last-out duration."));
+                }
+            } catch (NumberFormatException ignored) {
+                // The stable numeric finding was already added.
+            }
         }
     }
 
@@ -2004,6 +2559,7 @@ public class MigrationService {
     }
 
     private void validateInvoice(
+        JobContext job,
         Map<String, String> values,
         List<Finding> findings
     ) {
@@ -2017,6 +2573,20 @@ public class MigrationService {
         if (!sha.isBlank() && !sha.matches("^[0-9a-fA-F]{64}$")) {
             findings.add(error("FIELD_INVALID_HASH", "invoice_sha256",
                 "Invoice document hash must be SHA-256."));
+        }
+        String invoiceNumber = values.getOrDefault(
+            "invoice_number", "").strip().toLowerCase(Locale.ROOT);
+        if (!invoiceNumber.isBlank() && Boolean.TRUE.equals(
+            jdbc.queryForObject("""
+                SELECT EXISTS (
+                  SELECT 1 FROM invoices
+                  WHERE vendor_organization_id = ?
+                    AND normalized_invoice_number = ?
+                    AND status NOT IN ('SUPERSEDED', 'CANCELLED'))
+                """, Boolean.class, job.organizationId(), invoiceNumber))) {
+            findings.add(error("INVOICE_DUPLICATE_NUMBER",
+                "invoice_number",
+                "An active invoice already uses this normalized number."));
         }
     }
 
@@ -3005,7 +3575,7 @@ public class MigrationService {
                actor_subject, metadata, correlation_id)
             VALUES (?, ?, ?, ?, ?, ?, CAST(? AS JSONB), ?)
             """, UUID.randomUUID(), engagementId, organizationId, jobId,
-            type, subject, json(metadata), UUID.randomUUID());
+            type, subject, json(metadata), CorrelationIdFilter.currentOrNew());
     }
 
     private void outbox(
@@ -3062,6 +3632,294 @@ public class MigrationService {
         return sha256(value.getBytes(StandardCharsets.UTF_8));
     }
 
+    private RetroContext lockedRetro(UUID requestId) {
+        return jdbc.query("""
+            SELECT request.id, request.engagement_id,
+                   request.engagement_month_id, request.request_type,
+                   request.state, request.represented_month,
+                   request.requested_by_subject, request.version,
+                   engagement.client_organization_id
+            FROM migration_retro_requests request
+            JOIN engagements engagement ON engagement.id = request.engagement_id
+            WHERE request.id = ?
+            FOR UPDATE OF request
+            """, rs -> {
+                if (!rs.next()) {
+                    throw new EntityNotFoundException(
+                        "Historical request not found.");
+                }
+                return new RetroContext(
+                    rs.getObject(1, UUID.class),
+                    rs.getObject(2, UUID.class),
+                    rs.getObject(3, UUID.class),
+                    rs.getString(4), rs.getString(5),
+                    rs.getObject(6, LocalDate.class), rs.getString(7),
+                    rs.getLong(8), rs.getObject(9, UUID.class));
+            }, requestId);
+    }
+
+    private Map<String, Object> replayRetroAction(
+        String subject,
+        String idempotencyKey
+    ) {
+        UUID requestId = jdbc.query("""
+            SELECT request_id FROM migration_retro_actions
+            WHERE actor_subject = ? AND idempotency_key = ?
+            """, rs -> rs.next() ? rs.getObject(1, UUID.class) : null,
+            subject, idempotencyKey);
+        return requestId == null ? null : retroById(requestId);
+    }
+
+    private void requireRetroVersion(
+        RetroContext context,
+        long expectedVersion
+    ) {
+        if (context.version() != expectedVersion) {
+            throw new DomainConflictException(
+                "VERSION_CONFLICT",
+                "Historical request version is stale.", context.version());
+        }
+    }
+
+    private Map<String, Object> retroById(UUID requestId) {
+        return jdbc.query("""
+            SELECT id, engagement_month_id, request_type, state,
+                   represented_month, reason, original_actor_unavailable,
+                   delegation_evidence_reference,
+                   procurement_notification_state, requested_by_subject,
+                   decided_by_subject, decision_at, decision_reason,
+                   version, created_at
+            FROM migration_retro_requests WHERE id = ?
+            """, rs -> {
+                if (!rs.next()) {
+                    throw new EntityNotFoundException(
+                        "Historical request not found.");
+                }
+                return retroResult(rs);
+            }, requestId);
+    }
+
+    private Map<String, Object> retroResult(ResultSet rs) throws SQLException {
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("id", rs.getObject(1, UUID.class));
+        value.put("engagementMonthId", rs.getObject(2, UUID.class));
+        value.put("requestType", rs.getString(3));
+        value.put("state", rs.getString(4));
+        value.put("representedMonth", rs.getObject(5, LocalDate.class));
+        value.put("reason", rs.getString(6));
+        value.put("originalActorUnavailable", rs.getBoolean(7));
+        value.put("delegationEvidenceReference", rs.getString(8));
+        value.put("procurementNotificationState", rs.getString(9));
+        value.put("requestedBy", rs.getString(10));
+        value.put("decidedBy", rs.getString(11));
+        value.put("decisionAt", rs.getObject(12, OffsetDateTime.class));
+        value.put("decisionReason", rs.getString(13));
+        value.put("version", rs.getLong(14));
+        value.put("createdAt", rs.getObject(15, OffsetDateTime.class));
+        return Collections.unmodifiableMap(value);
+    }
+
+    private int advanceMonthForRetro(
+        RetroContext context,
+        String subject,
+        String reason,
+        UUID correlationId
+    ) {
+        String target = switch (context.requestType()) {
+            case "COMMITMENT" -> "HISTORICAL_PENDING_CERTIFICATION";
+            case "CERTIFICATION" -> "HISTORICAL_PENDING_CONFIRMATION";
+            case "CONFIRMATION" -> "CONFIRMED";
+            default -> throw new IllegalStateException(
+                "Unsupported historical request type.");
+        };
+        setTransitionContext(subject, reason, correlationId);
+        return jdbc.update("""
+            UPDATE engagement_months
+            SET state = ?, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ? AND (
+              (state = 'HISTORICAL_REVIEW'
+                AND ? = 'HISTORICAL_PENDING_CERTIFICATION')
+              OR (state = 'HISTORICAL_PENDING_CERTIFICATION'
+                AND ? = 'HISTORICAL_PENDING_CONFIRMATION')
+              OR (state = 'HISTORICAL_PENDING_CONFIRMATION'
+                AND ? = 'CONFIRMED'))
+            """, target, context.monthId(), target, target, target);
+    }
+
+    private boolean orderedHistoricalTransition(
+        String source,
+        String target
+    ) {
+        return ("HISTORICAL_REVIEW".equals(source)
+                && "HISTORICAL_PENDING_CERTIFICATION".equals(target))
+            || ("HISTORICAL_PENDING_CERTIFICATION".equals(source)
+                && "HISTORICAL_PENDING_CONFIRMATION".equals(target))
+            || ("HISTORICAL_PENDING_CONFIRMATION".equals(source)
+                && "CONFIRMED".equals(target));
+    }
+
+    private void enqueueRetroNotification(
+        RetroContext context,
+        UUID requestId,
+        long version,
+        String eventType,
+        String subject,
+        String detail,
+        UUID correlationId
+    ) {
+        List<Map<String, String>> procurement = jdbc.query("""
+            SELECT member.email, member.display_name
+            FROM contact_groups contact_group
+            JOIN contact_group_members member
+              ON member.contact_group_id = contact_group.id
+            WHERE contact_group.engagement_id = ?
+              AND contact_group.group_type = 'PROCUREMENT_CC'
+              AND contact_group.status = 'ACTIVE'
+              AND member.status = 'ACTIVE'
+              AND member.valid_from <= CURRENT_DATE
+              AND (member.valid_to IS NULL OR member.valid_to >= CURRENT_DATE)
+            ORDER BY member.email
+            """, (rs, ignored) -> Map.of(
+                "email", rs.getString(1),
+                "displayName", rs.getString(2),
+                "role", "PROCUREMENT_CC"), context.engagementId());
+        Map<String, Object> recipients = Map.of(
+            "to", List.of(), "cc", procurement);
+        String plain = subject + "\nRepresented month: "
+            + context.representedMonth() + "\n" + detail
+            + "\nRecorded at the current authenticated time.";
+        String html = "<article><h1>" + html(subject)
+            + "</h1><p>Represented month: " + context.representedMonth()
+            + "</p><p>" + html(detail)
+            + "</p><p>Recorded at the current authenticated time.</p></article>";
+        String renderedHash = sha256(plain + "\n" + html);
+        String archiveHash = sha256(json(Map.of(
+            "eventType", eventType, "requestId", requestId,
+            "version", version, "recipients", recipients,
+            "renderedHash", renderedHash)));
+        jdbc.update("""
+            INSERT INTO notification_outbox
+              (id, engagement_month_id, event_type, business_object_type,
+               business_object_id, business_object_version, idempotency_key,
+               correlation_id, template_key, template_version,
+               recipient_snapshot, subject_text, plain_text, html_text,
+               rendered_body_hash, archive_manifest_hash, provider_status,
+               transport_status)
+            VALUES (?, ?, ?, 'MIGRATION_RETRO_REQUEST', ?, ?, ?, ?, ?, 1,
+                    ?::jsonb, ?, ?, ?, ?, ?, 'ACTION_REQUIRED',
+                    'NOT_CONFIGURED')
+            ON CONFLICT (idempotency_key) DO NOTHING
+            """, UUID.randomUUID(), context.monthId(), eventType, requestId,
+            Math.toIntExact(version), eventType + ":" + requestId + ":"
+                + version, correlationId, "migration-retro-v1",
+            json(recipients), subject, plain, html, renderedHash, archiveHash);
+    }
+
+    private MonthContext monthContext(UUID monthId) {
+        return jdbc.query("""
+            SELECT engagement_id, state, governance_version
+            FROM engagement_months WHERE id = ?
+            """, rs -> {
+                if (!rs.next()) {
+                    throw new EntityNotFoundException(
+                        "Historical month not found.");
+                }
+                return new MonthContext(
+                    rs.getObject(1, UUID.class), rs.getString(2),
+                    rs.getLong(3));
+            }, monthId);
+    }
+
+    private Map<String, List<String>> activeTemplateReferences(
+        UUID engagementId
+    ) {
+        Map<String, List<String>> references = new LinkedHashMap<>();
+        references.put("organization_code", jdbc.queryForList("""
+            SELECT organization.code
+            FROM engagements engagement
+            JOIN organizations organization ON organization.id IN (
+                engagement.vendor_organization_id,
+                engagement.client_organization_id,
+                engagement.procurement_organization_id,
+                engagement.finance_organization_id)
+            WHERE engagement.id = ? AND organization.status = 'ACTIVE'
+            ORDER BY organization.code
+            """, String.class, engagementId));
+        references.put("engagement_code", jdbc.queryForList("""
+            SELECT engagement_code FROM engagements
+            WHERE id = ? AND status = 'ACTIVE'
+            """, String.class, engagementId));
+        references.put("project_code", jdbc.queryForList("""
+            SELECT project_code FROM projects
+            WHERE engagement_id = ? AND status = 'ACTIVE'
+            ORDER BY project_code
+            """, String.class, engagementId));
+        references.put("employee_number", jdbc.queryForList("""
+            SELECT employee.employee_number
+            FROM employees employee
+            JOIN engagements engagement ON engagement.id = ?
+            WHERE employee.organization_id IN (
+                engagement.vendor_organization_id,
+                engagement.client_organization_id)
+            ORDER BY employee.employee_number
+            """, String.class, engagementId));
+        return Collections.unmodifiableMap(references);
+    }
+
+    private boolean hasCompletedMigration(UUID monthId) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+            SELECT EXISTS (
+              SELECT 1 FROM migration_jobs
+              WHERE engagement_month_id = ?
+                AND state IN ('COMPLETED', 'COMPLETED_WITH_ERRORS'))
+            """, Boolean.class, monthId));
+    }
+
+    private boolean hasApprovedRetro(UUID monthId, String type) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+            SELECT EXISTS (
+              SELECT 1 FROM migration_retro_requests
+              WHERE engagement_month_id = ? AND request_type = ?
+                AND state = 'APPROVED')
+            """, Boolean.class, monthId, type));
+    }
+
+    private boolean hasCommittedTemplate(UUID monthId, String template) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+            SELECT EXISTS (
+              SELECT 1 FROM migration_jobs
+              WHERE engagement_month_id = ? AND template_code = ?
+                AND state IN ('COMPLETED', 'COMPLETED_WITH_ERRORS'))
+            """, Boolean.class, monthId, template));
+    }
+
+    private void setTransitionContext(String subject, String reason) {
+        setTransitionContext(
+            subject, reason, CorrelationIdFilter.currentOrNew());
+    }
+
+    private void setTransitionContext(
+        String subject,
+        String reason,
+        UUID correlationId
+    ) {
+        jdbc.queryForObject(
+            "SELECT set_config('vms.actor_subject', ?, true)",
+            String.class, subject);
+        jdbc.queryForObject(
+            "SELECT set_config('vms.transition_reason', ?, true)",
+            String.class, reason);
+        jdbc.queryForObject(
+            "SELECT set_config('vms.correlation_id', ?, true)",
+            String.class, correlationId.toString());
+    }
+
+    private String html(String value) {
+        return value.replace("&", "&amp;").replace("<", "&lt;")
+            .replace(">", "&gt;").replace("\"", "&quot;")
+            .replace("'", "&#39;");
+    }
+
     private boolean containsNull(byte[] value) {
         for (byte item : value) {
             if (item == 0) {
@@ -3096,6 +3954,26 @@ public class MigrationService {
         long version,
         boolean partialCommit,
         int invalidCount
+    ) {
+    }
+
+    private record RetroContext(
+        UUID id,
+        UUID engagementId,
+        UUID monthId,
+        String requestType,
+        String state,
+        LocalDate representedMonth,
+        String requestedBy,
+        long version,
+        UUID organizationId
+    ) {
+    }
+
+    private record MonthContext(
+        UUID engagementId,
+        String state,
+        long version
     ) {
     }
 

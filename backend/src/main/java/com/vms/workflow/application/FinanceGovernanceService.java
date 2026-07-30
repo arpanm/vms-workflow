@@ -420,6 +420,7 @@ public class FinanceGovernanceService {
         }
         FinancePolicyService.Policy policy =
             policies.active(invoice.engagementId(), subject);
+        requireExceptionableRule(policy, failure.ruleCode());
         UUID reviewId = UUID.randomUUID();
         jdbc.update("""
             INSERT INTO procurement_reviews(
@@ -600,6 +601,7 @@ public class FinanceGovernanceService {
                 "FAILED_RULE_REQUIRED",
                 "The bound readiness rule is no longer blocked.");
         }
+        requireExceptionableRule(policy, failure.ruleCode());
 
         UUID acceptedRunId = createExceptionReadinessRun(
             invoice, pending.readinessRunId(), pending.resultId(),
@@ -647,6 +649,19 @@ public class FinanceGovernanceService {
             "PROCUREMENT_EXCEPTION_SECOND_APPROVAL", exceptionId,
             idempotencyKey, request, "PROCUREMENT_EXCEPTION", exceptionId);
         return exceptionMutationView(exceptionId);
+    }
+
+    private void requireExceptionableRule(
+        FinancePolicyService.Policy policy,
+        String ruleCode
+    ) {
+        if (Set.of("INVOICE_DOCUMENT", "PACKAGE_MANIFEST")
+                .contains(ruleCode)
+            || !policy.exceptionableRules().contains(ruleCode)) {
+            throw new DomainConflictException(
+                "READINESS_RULE_NOT_EXCEPTIONABLE",
+                "The bound readiness rule is not exceptionable under the effective policy.");
+        }
     }
 
     public List<Map<String, Object>> payments(String subject, UUID invoiceId) {

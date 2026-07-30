@@ -61,3 +61,13 @@ acceptance. They remain required before production release.
 3. Re-review the final diff and update the issue status with actual command
    outputs. Only then can F05 be **GO for local regression**; G4 remains a
    separate production acceptance gate.
+
+## Final evidence reconciliation — 2026-07-30
+
+The reviewed exception policy now appends exact immutable lineage and forbids
+document/manifest waivers; exact Finance recovery passed **1/1**. Export
+completion is live-lease fenced with reclaim/restart coverage. Finance system
+is **4/4**, distinct from intercepted-browser accessibility **3/3**. Full
+aggregate rows remain Maven 340 executed with 2 failures and 1 error and browser
+**287/292** (exact recovery **5/5**), so this addendum makes no full-green claim.
+Performance/scale, DR, F07-T057 and G4 remain separate.

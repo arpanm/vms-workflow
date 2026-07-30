@@ -181,6 +181,18 @@ async function releaseGateTests(temporary) {
       ),
     "review evidence must reject a real commit outside release ancestry",
   );
+  const staleReleaseReview = await validateReviewEvidence({
+    evidence: reviewEvidence.evidence,
+    headRef: "HEAD",
+    requireExactHead: true,
+  });
+  assert(
+    staleReleaseReview.result === "FAIL" &&
+      staleReleaseReview.findings.includes(
+        "reviewedThroughCommit must equal the validated release commit",
+      ),
+    "release evidence must reject a review that only covers an ancestor",
+  );
   const missingDisposition = await validateReviewEvidence({
     evidence: {
       ...reviewEvidence.evidence,
@@ -1216,14 +1228,25 @@ async function executeSelfTests(temporary) {
       }),
     "current commit mismatch must fail",
   );
-  await expectReject(
-    () =>
-      createProvenance(provenanceInputs, {
-        expectedCommit: git.commit,
-        requireClean: true,
-      }),
-    "untracked/dirty worktree must fail clean provenance",
+  const dirtyMarker = resolve(
+    repoRoot,
+    `f07-self-test-dirty-${process.pid}.tmp`,
   );
+  await writeFile(dirtyMarker, "intentional untracked provenance fixture\n", {
+    flag: "wx",
+  });
+  try {
+    await expectReject(
+      () =>
+        createProvenance(provenanceInputs, {
+          expectedCommit: git.commit,
+          requireClean: true,
+        }),
+      "untracked/dirty worktree must fail clean provenance",
+    );
+  } finally {
+    await rm(dirtyMarker, { force: true });
+  }
 
   const migration = await staticPreflight();
   assert(migration.result === "PASS", `migration schema findings: ${migration.findings.join("; ")}`);

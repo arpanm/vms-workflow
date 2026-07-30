@@ -4,8 +4,11 @@ import type {
   CreateMigrationInput,
   MigrationAccess,
   MigrationJob,
+  MigrationRow,
+  MonthReadiness,
   MigrationPage,
   Reconciliation,
+  RetroRequest,
   RetroRequestInput,
   TemplateDescriptor,
 } from "./contracts";
@@ -54,6 +57,9 @@ export const migrationApi = {
             templateVersion: "1",
             mode: "DRY_RUN",
             partialCommit: input.partialCommit,
+            sourceType: input.sourceType,
+            confidence: input.confidence,
+            sourceDescription: input.sourceDescription,
           }),
         ],
         { type: "application/json" },
@@ -66,6 +72,17 @@ export const migrationApi = {
   validate: (job: MigrationJob, key: string) =>
     apiClient.post<MigrationJob>(
       `${root}/jobs/${encoded(job.jobId)}/validate`,
+      { expectedVersion: job.version },
+      { headers: mutationHeaders(job.version, key) },
+    ),
+  queueValidation: (job: MigrationJob, key: string) =>
+    apiClient.post<{
+      jobId: string;
+      state: string;
+      executionState: "QUEUED";
+      version: number;
+    }>(
+      `${root}/jobs/${encoded(job.jobId)}/validation-runs`,
       { expectedVersion: job.version },
       { headers: mutationHeaders(job.version, key) },
     ),
@@ -108,9 +125,45 @@ export const migrationApi = {
     ),
   reconciliation: (jobId: string) =>
     apiClient.get<Reconciliation>(`${root}/jobs/${encoded(jobId)}/reconciliation`),
-  downloadTemplate: async (engagementId: string, code: string) => {
+  rows: (jobId: string, state?: string, afterRow = 1) =>
+    apiClient.get<{ items: MigrationRow[]; hasMore: boolean; nextRow: number }>(
+      `${root}/jobs/${encoded(jobId)}/rows?limit=100&afterRow=${afterRow}${
+        state ? `&state=${encoded(state)}` : ""
+      }`,
+    ),
+  correctionPlan: (jobId: string) =>
+    apiClient.get<{
+      jobId: string;
+      monthId?: string;
+      required: boolean;
+      requiredAction?: string;
+      packages?: Array<{
+        id: string;
+        version: number;
+        status: string;
+        supersedesId: string | null;
+      }>;
+      latestReopen?: { id: string; status: string } | null;
+    }>(`${root}/jobs/${encoded(jobId)}/correction-plan`),
+  resolveRow: (
+    job: MigrationJob,
+    rowId: string,
+    decision: "KEEP_EXISTING" | "REJECT" | "VERSIONED_SUPERSEDE",
+    reason: string,
+    key: string,
+  ) =>
+    apiClient.post<MigrationJob>(
+      `${root}/jobs/${encoded(job.jobId)}/rows/${encoded(rowId)}/resolution`,
+      { expectedVersion: job.version, decision, reason },
+      { headers: mutationHeaders(job.version, key) },
+    ),
+  downloadTemplate: async (
+    engagementId: string,
+    code: string,
+    format: "CSV" | "XLSX" = "CSV",
+  ) => {
     const result = await apiClient.download(
-      `${root}/templates/${encoded(code)}/download?engagementId=${encoded(engagementId)}`,
+      `${root}/templates/${encoded(code)}/download?engagementId=${encoded(engagementId)}&format=${format}`,
     );
     saveBlob(result.blob, result.fileName);
   },
@@ -122,4 +175,43 @@ export const migrationApi = {
     apiClient.post<Record<string, unknown>>(`${root}/retro-requests`, input, {
       headers: { "Idempotency-Key": key },
     }),
+  retroRequests: (engagementId: string, state?: string) =>
+    apiClient.get<{ items: RetroRequest[]; count: number }>(
+      `${root}/retro-requests?engagementId=${encoded(engagementId)}${
+        state ? `&state=${encoded(state)}` : ""
+      }`,
+    ),
+  decideRetro: (
+    request: RetroRequest,
+    decision: "APPROVED" | "REJECTED",
+    reason: string,
+    key: string,
+  ) =>
+    apiClient.post<RetroRequest>(
+      `${root}/retro-requests/${encoded(request.id)}/decision`,
+      { expectedVersion: request.version, decision, reason },
+      { headers: mutationHeaders(request.version, key) },
+    ),
+  cancelRetro: (request: RetroRequest, reason: string, key: string) =>
+    apiClient.post<RetroRequest>(
+      `${root}/retro-requests/${encoded(request.id)}/cancel`,
+      { expectedVersion: request.version, reason },
+      { headers: mutationHeaders(request.version, key) },
+    ),
+  monthReadiness: (monthId: string) =>
+    apiClient.get<MonthReadiness>(`${root}/months/${encoded(monthId)}/readiness`),
+  transitionMonth: (
+    readiness: MonthReadiness,
+    targetState:
+      | "HISTORICAL_PENDING_CERTIFICATION"
+      | "HISTORICAL_PENDING_CONFIRMATION"
+      | "CONFIRMED",
+    reason: string,
+    key: string,
+  ) =>
+    apiClient.post<MonthReadiness>(
+      `${root}/months/${encoded(readiness.monthId)}/transitions`,
+      { expectedVersion: readiness.version, targetState, reason },
+      { headers: mutationHeaders(readiness.version, key) },
+    ),
 };

@@ -146,6 +146,39 @@ class MigrationRecoveryWorkerIT {
     }
 
     @Test
+    void explicitAsyncRequestRunsImmediatelyAndReplaysIdempotently() {
+        scanner.mode.set(ScannerMode.PASSED);
+        Map<String, Object> uploaded = upload("AF-MIG-WORKER-ASYNC");
+        UUID jobId = id(uploaded);
+        long version = ((Number) uploaded.get("version")).longValue();
+
+        Map<String, Object> queued = migrations.queueValidation(
+            "user-arrow", jobId, version, "async-validation-once");
+        Map<String, Object> replayed = migrations.queueValidation(
+            "user-arrow", jobId, version, "async-validation-once");
+        assertEquals("QUEUED", queued.get("executionState"));
+        assertEquals(queued.get("version"), replayed.get("version"));
+
+        worker.runOnce();
+
+        assertEquals("READY_TO_COMMIT", text("""
+            SELECT state FROM migration_jobs WHERE id = ?
+            """, jobId));
+        assertNull(jdbc.queryForObject("""
+            SELECT async_requested_at FROM migration_jobs WHERE id = ?
+            """, OffsetDateTime.class, jobId));
+        assertEquals(1, integer("""
+            SELECT count(*) FROM migration_validation_attempts
+            WHERE job_id = ? AND state = 'COMPLETED'
+            """, jobId));
+        worker.runOnce();
+        assertEquals(1, integer("""
+            SELECT count(*) FROM migration_validation_attempts
+            WHERE job_id = ?
+            """, jobId));
+    }
+
+    @Test
     void scannerTimeoutDeadLettersAtBoundAndAuthorizedReplayRecoversIdempotently() {
         Map<String, Object> uploaded = upload("AF-MIG-WORKER-DEAD-LETTER");
         UUID originalId = id(uploaded);

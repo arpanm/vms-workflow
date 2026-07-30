@@ -599,6 +599,80 @@ test("[E2E-05] only a signed eligible explicit thread reply completes quorum; sp
 }) => {
   let workspace = await json(await request.get(
     `/api/v1/certification/months/${monthId}`,
+    { headers: authorization(tokens.productOwner) },
+  ), 200);
+  const reopened = await json(await request.post(
+    `/api/v1/certification/months/${monthId}/reopen-requests`,
+    {
+      headers: versionedHeaders(
+        tokens.productOwner,
+        workspace.version,
+        "e2e-05-reopen-request",
+      ),
+      data: {
+        expectedMonthVersion: workspace.version,
+        category: "CERTIFICATION_CORRECTION",
+        reason: "Exercise a separately governed inbound confirmation journey",
+        impactedRecordIds: [summaryId],
+        packageInvoiceImpact: "CONFIRMATION_HANDOFF_CURRENT",
+        riskStatement: "The prior handoff must be fenced before reconfirmation",
+      },
+    },
+  ), 201);
+  expect(reopened.lifecycleState).toBe("REOPEN_REQUESTED");
+  const reopenRequestId = queryDatabase(`
+    SELECT id FROM month_reopen_requests
+    WHERE engagement_month_id = '${monthId}'::uuid AND status = 'REQUESTED';
+  `);
+  const invalidationId = queryDatabase(`
+    SELECT id FROM certification_invalidations
+    WHERE reopen_request_id = '${reopenRequestId}'::uuid
+      AND object_id = '${summaryId}'::uuid;
+  `);
+
+  workspace = await json(await request.get(
+    `/api/v1/certification/months/${monthId}`,
+    { headers: authorization(tokens.governance) },
+  ), 200);
+  await json(await request.post(
+    `/api/v1/certification/reopen-requests/${reopenRequestId}/decisions`,
+    {
+      headers: versionedHeaders(
+        tokens.governance,
+        workspace.version,
+        "e2e-05-reopen-approve",
+      ),
+      data: {
+        expectedMonthVersion: workspace.version,
+        decision: "APPROVE",
+        reasoning: "Independent governance approved the reconfirmation journey",
+      },
+    },
+  ), 201);
+
+  workspace = await json(await request.get(
+    `/api/v1/certification/months/${monthId}`,
+    { headers: authorization(tokens.productOwner) },
+  ), 200);
+  const recertified = await json(await request.post(
+    `/api/v1/certification/months/${monthId}/summaries`,
+    {
+      headers: versionedHeaders(
+        tokens.productOwner,
+        workspace.version,
+        "e2e-05-recertify-summary",
+      ),
+      data: {
+        expectedMonthVersion: workspace.version,
+        decision: "PARTIALLY_CERTIFIED",
+        observations: "Re-certified unchanged scope for inbound confirmation",
+      },
+    },
+  ), 201);
+  summaryId = String(recertified.summary.id);
+
+  workspace = await json(await request.get(
+    `/api/v1/certification/months/${monthId}`,
     { headers: authorization(tokens.governance) },
   ), 200);
   const confirmation = await json(await request.post(
@@ -861,6 +935,25 @@ test("[E2E-05] only a signed eligible explicit thread reply completes quorum; sp
     SELECT COUNT(*) FROM business_confirmation_actions
     WHERE request_id = '${secondConfirmationRequestId}'::uuid;
   `)).toBe("1");
+  workspace = await json(await request.get(
+    `/api/v1/certification/months/${monthId}`,
+    { headers: authorization(tokens.governance) },
+  ), 200);
+  await json(await request.post(
+    `/api/v1/certification/invalidations/${invalidationId}/resolutions`,
+    {
+      headers: versionedHeaders(
+        tokens.governance,
+        workspace.version,
+        "e2e-05-clear-invalidation",
+      ),
+      data: {
+        expectedMonthVersion: workspace.version,
+        resolution: "CLEARED",
+        reasoning: "The unchanged scope received a fresh governed confirmation",
+      },
+    },
+  ), 201);
   expect(queryDatabase(`
     SELECT COUNT(*) FROM f05_certification_handoffs
     WHERE confirmation_request_id = '${secondConfirmationRequestId}'::uuid;

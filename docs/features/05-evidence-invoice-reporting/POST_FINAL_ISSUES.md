@@ -39,3 +39,10 @@ original static review; the final execution disposition is recorded separately.
 
 - The report lifecycle authorization, exact package lineage, exception persistence/expiry and the formerly stale UI contract are now remediated server-side/client-side; the focused local evidence is green, while suite-wide and external acceptance gates remain separate.
 - `VITE_E2E_SYSTEM_AUTH` is DEV-only and rejected by public-environment validation in production ([access-token.ts](/Users/arpan1.mukherjee/code/personal/vms-workflow/src/lib/auth/access-token.ts:27), [env.ts](/Users/arpan1.mukherjee/code/personal/vms-workflow/src/lib/env.ts:35)). Keep that boundary and do not make the system-test token bridge generally available.
+
+## Final evidence addendum — 2026-07-30
+
+Exception policy/append-only readiness recovery passed exact Finance **1/1**;
+lease recovery was exercised; finance system passed **4/4**. The non-green
+Maven 340-test and browser **287/292** aggregates remain preserved, with exact
+browser recovery **5/5**. Performance/scale, DR, F07-T057 and G4 are unchanged.

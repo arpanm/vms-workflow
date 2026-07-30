@@ -1,6 +1,17 @@
 # F07 — Test Review
 
+## Final integrated reconciliation — 2026-07-30
+
+Review preserves Maven 340 with 2 failures + 1 error followed by four exact
+recovery passes, and browser 287/292 followed by exact recovery 5/5. System
+7/7, self 9/9 and schema/operations gates are green. Focused recovery does not
+constitute a clean aggregate rerun.
+
 ## Evidence reviewed
+
+This review is preserved evidence through `c2d8dfb`. Later V39/V40,
+system-fixture and release-gate changes require a current-candidate rerun and
+test review.
 
 The implementation contains focused automated tests for database capabilities,
 HTTP hardening, request-size enforcement including chunked bodies, trusted
@@ -68,6 +79,7 @@ are:
 
 ## Review decision
 
-Local engineering status is **PASS / COMMIT-BOUND EVIDENCE PENDING**.
+Local implementation status is **PRESENT / CURRENT V1–V40 REGRESSION,
+EXACT-REVIEW AND COMMIT-BOUND EVIDENCE PENDING**.
 Production status is **NO-GO / ACTION_REQUIRED** until all mandatory external
 records are supplied.

@@ -39,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow_finance_export_worker_it",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",
@@ -214,6 +214,50 @@ class FinanceExportWorkerIT {
         assertEquals(0, jdbc.queryForObject("""
             SELECT COUNT(*) FROM f05_report_exports
             WHERE id = ? AND result_artifact_id IS NOT NULL
+            """, Integer.class, exportId));
+    }
+
+    @Test
+    void expiredClaimIsRecoveredAfterRestartWithoutDuplicateEffects()
+        throws Exception {
+        UUID exportId = requestJsonExport(
+            "INVOICE_READINESS", "expired-claim-recovery");
+        jdbc.update("""
+            UPDATE f05_report_exports
+            SET status = 'CLAIMED', progress = 15, attempt_count = 1,
+                retry_cycle_attempt_count = 1,
+                lease_owner = 'dead-worker',
+                lease_expires_at = CURRENT_TIMESTAMP - INTERVAL '1 second'
+            WHERE id = ?
+            """, exportId);
+
+        assertEquals(1, worker.processExports());
+        assertEquals("READY", jdbc.queryForObject("""
+            SELECT status FROM f05_report_exports WHERE id = ?
+            """, String.class, exportId));
+        assertEquals(2, jdbc.queryForObject("""
+            SELECT attempt_count FROM f05_report_exports WHERE id = ?
+            """, Integer.class, exportId));
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*)
+            FROM f05_private_artifacts artifact
+            JOIN f05_report_exports export
+              ON export.result_artifact_id = artifact.id
+            WHERE export.id = ?
+            """, Integer.class, exportId));
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*) FROM f05_domain_events
+            WHERE aggregate_type = 'REPORT_EXPORT'
+              AND aggregate_id = ?
+              AND event_type = 'f05.export.ready.v1'
+            """, Integer.class, exportId));
+
+        assertEquals(0, worker.processExports());
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*) FROM f05_domain_events
+            WHERE aggregate_type = 'REPORT_EXPORT'
+              AND aggregate_id = ?
+              AND event_type = 'f05.export.ready.v1'
             """, Integer.class, exportId));
     }
 

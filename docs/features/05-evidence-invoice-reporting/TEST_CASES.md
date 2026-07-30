@@ -7,7 +7,12 @@
 
 - [x] This test catalog is the completed F05 planning artifact; product-test implementation and execution remain subject to the acceptance gates in `TASKS.md`.
 - [x] Focused automation evidence is recorded in `TEST_AUTOMATION.md`: the finance-focused Spring/Flyway/PostgreSQL integration selection is **34/34 passing** and the isolated real-system Playwright lane is **3/3 passing**. See `FINAL_CLOSURE_REVIEW.md` and [the feature-status ledger](../../FEATURE_STATUS.md).
-- [x] Combined local regression evidence is green: backend **154/154**, Vitest **88/88**, combined intercepted Playwright **69/69**, isolated system Playwright **3/3**, plus typecheck/lint/build.
+- [ ] Fresh regression evidence is required for the current shared worktree.
+  The backend **154/154**, Vitest **88/88**, intercepted Playwright **69/69**
+  and system Playwright **3/3** figures are historical baseline evidence.
+  Fresh focused evidence on 2026-07-30 is committed concurrency **2/2**,
+  natural scanner-readiness **1/1**, accessibility **3/3**, and isolated
+  Java/PostgreSQL system flow **4/4**.
 - [ ] External-production acceptance is not configured and is not implied by local test success.
 
 Seed two organizations; one organization with two engagements/two projects; active/inactive vendor, product-owner, Procurement, finance, governance, auditor and outsider identities; scoped delegations and SOD-conflicting identities. Seed F02 closed/current/superseded attendance snapshots, F03 frozen/effective/revised plans and Linear plan/month-end/current states, F04 verified/exception/pending/superseded confirmation handoffs and reopen invalidations. Include scan-passed/pending/failed/unknown artifacts, invoice duplicate/correction/note samples, historical/reconstructed provenance, a deterministic clock/UUIDs/idempotency keys and malicious filename/comment/export cells. Every consequential case asserts typed outcome/error, current version/ETag and correlation ID; durable domain/audit/security/outbox facts; no cross-scope disclosure; no unexpected adapter call; and absence of salary/CTC/rate/markup/margin/payroll/employee-allocation calculation data.
@@ -48,7 +53,7 @@ Seed two organizations; one organization with two engagements/two projects; acti
 
 - `T-PROC-001` — Only scoped active Procurement reviewer can open a package/invoice/review queue; vendor, product owner, unrelated Procurement user, finance without review authority, inactive user and cross-tenant actor are denied safely. A valid reviewer sees only permitted summary/PII and cannot edit upstream attendance/deliverable/confirmation.
 - `T-PROC-002` — `APPROVED_FOR_PROCESSING`, `CHANGES_REQUESTED`, `ON_HOLD`, `REJECTED` and `EXCEPTION_ACCEPTED` are valid only from allowed state/authority/SOD. Each non-approval requires category/comment; audit snapshots actor authority, exact invoice/package/readiness versions, before/after state, policy, reason and correlation.
-- `T-PROC-003` — Exception acceptance requires exact failed rule/evidence, rationale, scoped validity/expiry and configured authority/second distinct approver. It remains visibly exception-accepted in package/readiness/control tower, never changes unverified confirmation to verified, cannot apply to newer package/invoice version without reapproval, and expires/reblocks as policy requires.
+- `T-PROC-003` — Exception acceptance requires an effective-policy exceptionable business rule, exact failed rule/evidence, rationale, scoped validity/expiry and configured authority/second distinct approver. Invoice-document scan/integrity and package-manifest integrity blockers are non-waivable even under misconfiguration. An accepted exception remains visibly exception-accepted in package/readiness/control tower, never changes unverified confirmation to verified, cannot apply to newer package/invoice version without reapproval, and expires/reblocks as policy requires.
 - `T-PROC-004` — Changes requested/hold/reject creates a durable idempotent assigned query/task with owner, category, due date, response and closure history. Source correction routes to owner workflow/F04 reopen, not an editable Procurement mutation; correction resubmission creates new package/invoice version while original review/query remains immutable.
 - `T-PROC-005` — Concurrent review/exception/query actions obey expected version and idempotency: one decision/task/outbox business effect, stale actor receives typed conflict/current state, and conflicting decision does not overwrite/relabel history. Retry/dead-letter/replay preserves event/attempt lineage.
 
@@ -58,7 +63,7 @@ Seed two organizations; one organization with two engagements/two projects; acti
 - `T-PAY-002` — Duplicate ERP callback/idempotency key, worker replay and concurrent status update create one payment-history event/business effect. Invalid transition or duplicate external reference follows configured conflict policy and is audited without loss of prior history.
 - `T-PAY-003` — Payment update does not alter package, invoice document/hash/version, readiness source set, F04 confirmation/certification, invoice commercial calculation or represent money movement. `PAID` remains a recorded/integrated AP status with source/provenance.
 - `T-F05-OUTBOX-001` — Every committed package/invoice/review/query/payment/invalidation transition atomically writes one domain event and transactional outbox row; transaction rollback leaves neither partial business state nor outbound event. Consumer duplicates/retries/admin replay cannot duplicate package, notification or business effect.
-- `T-F05-JOB-001` — Package/readiness/export/retention workers expose claim/attempt/progress/checkpoint/next retry/error/correlation; crash/restart resumes safely, bounded exponential backoff reaches visible dead letter and authorized replay after correction performs at most one effect.
+- `T-F05-JOB-001` — Package/readiness/export/retention workers expose claim/attempt/progress/checkpoint/next retry/error/correlation; crash/restart resumes safely, expired export claims are reclaimed, stale workers cannot complete after lease loss, bounded exponential backoff reaches visible dead letter and authorized replay after correction performs at most one effect.
 - `T-F05-AUD-001` — Audit/security events are append-only/redacted and capture actor/authority/object/version/source/reason/policy/result/evidence refs/correlation. Failed authorization, scan failure, integrity mismatch, download/share, exception, payment update, cross-scope attempt and compensating correction are all auditable; ordinary/admin roles cannot modify audit records.
 
 ## Reporting, control tower and export tests
@@ -115,6 +120,21 @@ Seed two organizations; one organization with two engagements/two projects; acti
 
 F05 is locally complete only when every non-external case has automated evidence or an approved, time-bounded exception; Flyway/Testcontainers, API/OpenAPI, React/Playwright, security/RLS, accessibility, F01–F04 regression and quality-command gates pass; and G0–G3 in `TASKS.md` are satisfied. Production invoice evidence additionally requires G4 and both explicitly external acceptance cases. A mock, fixture, PDF preview, email/transport receipt or UI-only result cannot close those gates.
 
+## Final execution disposition — 2026-07-30
+
+`T-PROC-003` is covered by a natural scanner-derived document blocker plus an
+append-only, policy-declared exceptionable business-rule lineage; no readiness
+result is updated. `T-F05-JOB-001` covers expired export-claim reclamation,
+live-lease completion fencing and stale-worker denial.
+
+Evidence is intentionally split by lane: exact Finance recovery **1/1**;
+finance local-system **4/4**; F05 accessibility intercepted-browser **3/3**.
+The integrated Maven row remains 340 executed with 2 failures and 1 error, and
+the combined browser row remains **287/292**, followed by exact recovery
+**5/5**. These recovery rows do not rewrite either aggregate as green.
+`T-F05-PERF-001`, `T-F05-DR-001`, F07-T057 and G4/provider acceptance retain
+their existing performance, recovery, soak and external boundaries.
+
 ## Completion-audit permanent regressions
 
 - `T-REP-001-DASHBOARD-CONTRACT` — Java publishes the metric DTO consumed by
@@ -126,5 +146,8 @@ F05 is locally complete only when every non-external case has automated evidence
 - `T-F05-JOB-001-COMMITTED-RACE` — two independently committed worker threads
   compete for one export; PostgreSQL leasing produces one ready artifact,
   domain event and outbox effect.
+- `T-F05-JOB-001-RESTART` — an expired dead-worker export claim is reclaimed;
+  the replacement attempt produces one artifact and one ready event, and a
+  repeated worker pass produces no additional effect.
 - `E2E-F05-SYS-001` now checks the real Java metric response and visible React
   metric label before the vendor invoice/package journey.

@@ -42,3 +42,14 @@ with focused PostgreSQL and React evidence. The audit did not convert the
 overall historical review to a fresh full-regression GO; natural exception
 setup, independent committed concurrency/lease-loss, performance/DR and G4
 external acceptance remain separate gates.
+
+## Final evidence addendum — 2026-07-30
+
+The natural non-waivable scanner path and append-only, policy-declared
+exception lineage passed the exact Finance recovery **1/1**. Lease-fenced
+expired-claim recovery was exercised. Finance local-system evidence is **4/4**;
+F05 accessibility is separately **3/3** intercepted-browser evidence. The
+preserved Maven aggregate remains 340 executed with 2 failures and 1 error, and
+the browser aggregate remains **287/292** with exact recovery **5/5**. No
+single full-green claim is made. Performance/scale, controlled DR, F07-T057 and
+G4 remain open at their existing boundaries.

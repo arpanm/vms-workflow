@@ -64,10 +64,11 @@ public class MigrationController {
     ResponseEntity<byte[]> template(
         @AuthenticationPrincipal Jwt jwt,
         @RequestParam UUID engagementId,
+        @RequestParam(defaultValue = "CSV") String format,
         @PathVariable String templateCode
     ) {
         return download(migrations.sample(
-            jwt.getSubject(), engagementId, templateCode));
+            jwt.getSubject(), engagementId, templateCode, format));
     }
 
     @GetMapping("/jobs")
@@ -120,6 +121,16 @@ public class MigrationController {
             jwt.getSubject(), jobId, state, limit, afterRow);
     }
 
+    @GetMapping("/jobs/{jobId}/correction-plan")
+    @Operation(summary =
+        "Resolve the governed reopen and superseding-package correction path")
+    Map<String, Object> correctionPlan(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID jobId
+    ) {
+        return migrations.correctionPlan(jwt.getSubject(), jobId);
+    }
+
     @PostMapping("/jobs/{jobId}/validate")
     @Operation(summary = "Scan, RFC-4180 parse and validate a staged job")
     ResponseEntity<Map<String, Object>> validate(
@@ -134,6 +145,26 @@ public class MigrationController {
         return versioned(migrations.validate(
             jwt.getSubject(), jobId, input.expectedVersion(),
             idempotencyKey));
+    }
+
+    @PostMapping("/jobs/{jobId}/validation-runs")
+    @Operation(
+        summary = "Queue durable asynchronous scan and validation execution")
+    ResponseEntity<Map<String, Object>> queueValidation(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID jobId,
+        @Valid @org.springframework.web.bind.annotation.RequestBody
+        MigrationDtos.VersionInput input,
+        @RequestHeader("If-Match") String ifMatch,
+        @RequestHeader("Idempotency-Key") String idempotencyKey
+    ) {
+        requireVersion(ifMatch, input.expectedVersion());
+        Map<String, Object> result = migrations.queueValidation(
+            jwt.getSubject(), jobId, input.expectedVersion(),
+            idempotencyKey);
+        return ResponseEntity.accepted()
+            .eTag("\"" + result.get("version") + "\"")
+            .body(result);
     }
 
     @PostMapping("/jobs/{jobId}/rows/{rowId}/resolution")
@@ -298,6 +329,72 @@ public class MigrationController {
     ) {
         return ResponseEntity.status(201).body(migrations.retro(
             jwt.getSubject(), input, idempotencyKey));
+    }
+
+    @GetMapping("/retro-requests")
+    @Operation(summary = "List scoped pending and completed historical requests")
+    Map<String, Object> retroRequests(
+        @AuthenticationPrincipal Jwt jwt,
+        @RequestParam UUID engagementId,
+        @RequestParam(required = false) String state,
+        @RequestParam(defaultValue = "50") @Min(1) @Max(100) int limit
+    ) {
+        return migrations.retroRequests(
+            jwt.getSubject(), engagementId, state, limit);
+    }
+
+    @PostMapping("/retro-requests/{requestId}/decision")
+    @Operation(summary = "Record a current-time historical request decision")
+    ResponseEntity<Map<String, Object>> decideRetro(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID requestId,
+        @Valid @org.springframework.web.bind.annotation.RequestBody
+        MigrationDtos.RetroDecisionInput input,
+        @RequestHeader("If-Match") String ifMatch,
+        @RequestHeader("Idempotency-Key") String idempotencyKey
+    ) {
+        requireVersion(ifMatch, input.expectedVersion());
+        return versioned(migrations.decideRetro(
+            jwt.getSubject(), requestId, input, idempotencyKey));
+    }
+
+    @PostMapping("/retro-requests/{requestId}/cancel")
+    @Operation(summary = "Cancel a pending historical request")
+    ResponseEntity<Map<String, Object>> cancelRetro(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID requestId,
+        @Valid @org.springframework.web.bind.annotation.RequestBody
+        MigrationDtos.ReasonInput input,
+        @RequestHeader("If-Match") String ifMatch,
+        @RequestHeader("Idempotency-Key") String idempotencyKey
+    ) {
+        requireVersion(ifMatch, input.expectedVersion());
+        return versioned(migrations.cancelRetro(
+            jwt.getSubject(), requestId, input, idempotencyKey));
+    }
+
+    @GetMapping("/months/{monthId}/readiness")
+    @Operation(summary = "Read historical month lifecycle and blocking tasks")
+    Map<String, Object> monthReadiness(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID monthId
+    ) {
+        return migrations.monthReadiness(jwt.getSubject(), monthId);
+    }
+
+    @PostMapping("/months/{monthId}/transitions")
+    @Operation(summary = "Advance a historical month after server-side readiness")
+    ResponseEntity<Map<String, Object>> transitionMonth(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID monthId,
+        @Valid @org.springframework.web.bind.annotation.RequestBody
+        MigrationDtos.MonthTransitionInput input,
+        @RequestHeader("If-Match") String ifMatch,
+        @RequestHeader("Idempotency-Key") String idempotencyKey
+    ) {
+        requireVersion(ifMatch, input.expectedVersion());
+        return versioned(migrations.transitionMonth(
+            jwt.getSubject(), monthId, input, idempotencyKey));
     }
 
     private ResponseEntity<Map<String, Object>> versioned(

@@ -22,11 +22,33 @@ public final class MigrationDtos {
         String mode,
         boolean partialCommit,
         UUID parentJobId,
-        UUID priorJobId
+        UUID priorJobId,
+        @NotBlank @Pattern(regexp =
+            "GREYTHR_EXPORT|LINEAR_API|LINEAR_EXPORT|ORIGINAL_EMAIL|SIGNED_DOCUMENT|APPROVED_SPREADSHEET|MANUAL_RECONSTRUCTION|OTHER")
+        String sourceType,
+        @NotBlank @Pattern(regexp = "HIGH|MEDIUM|LOW|UNVERIFIED")
+        String confidence,
+        @NotBlank @Size(max = 300) String sourceDescription
     ) {
         public UploadMetadata {
             templateVersion = templateVersion == null ? "1" : templateVersion;
             mode = mode == null ? "DRY_RUN" : mode;
+        }
+
+        public UploadMetadata(
+            UUID engagementId,
+            UUID organizationId,
+            UUID engagementMonthId,
+            String templateCode,
+            String templateVersion,
+            String mode,
+            boolean partialCommit,
+            UUID parentJobId,
+            UUID priorJobId
+        ) {
+            this(engagementId, organizationId, engagementMonthId, templateCode,
+                templateVersion, mode, partialCommit, parentJobId, priorJobId,
+                "OTHER", "UNVERIFIED", "Programmatic governed migration");
         }
     }
 
@@ -86,6 +108,22 @@ public final class MigrationDtos {
         @NotBlank @Size(max = 1000) String reason,
         boolean originalActorUnavailable,
         @Size(max = 500) String delegationEvidenceReference
+    ) {
+    }
+
+    public record RetroDecisionInput(
+        long expectedVersion,
+        @NotBlank @Pattern(regexp = "APPROVED|REJECTED") String decision,
+        @NotBlank @Size(max = 1000) String reason
+    ) {
+    }
+
+    public record MonthTransitionInput(
+        long expectedVersion,
+        @NotBlank @Pattern(regexp =
+            "HISTORICAL_PENDING_CERTIFICATION|HISTORICAL_PENDING_CONFIRMATION|CONFIRMED")
+        String targetState,
+        @NotBlank @Size(max = 1000) String reason
     ) {
     }
 }

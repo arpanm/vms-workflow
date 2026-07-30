@@ -29,3 +29,11 @@ The package PDF renderer currently produces only a title and row count. This is 
 ## Release condition
 
 Implement and test all four findings, then run the F05 backend integration/security suite and the repository end-to-end regression gate. Update [POST_FIX_ISSUES-BACKEND.md](POST_FIX_ISSUES-BACKEND.md) when the P0 exception test is passing.
+
+## Final disposition addendum — 2026-07-30
+
+The exception policy/immutable-lineage and export lease-recovery findings are
+implemented. Exact Finance recovery passed **1/1** and finance system passed
+**4/4**. Preserve the non-green aggregate evidence (Maven 340 executed with 2
+failures and 1 error; browser **287/292**, exact slice **5/5**) and the existing
+performance/DR, F07-T057 and external G4 gates.

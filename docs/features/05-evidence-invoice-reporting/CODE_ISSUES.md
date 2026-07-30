@@ -14,12 +14,12 @@ findings after code changes.
 
 | ID | Priority | Status | Required closure evidence |
 | --- | --- | --- | --- |
-| F05-VAL-001 | P0 | Fix present; **awaiting regression proof** | Natural blocked-readiness exception workflow, second-approver/SOD, expiry, mismatch and cross-tenant denial tests. |
-| F05-VAL-002 | P1 | Fix/implementation requires **fresh verification** | Per-report projections/formulas, persisted authority-snapshot use and screen/export field-mask parity under multiple personas. |
-| F05-VAL-003 | P2 | Open architecture follow-up | Database keyset or snapshot-bound cursor with concurrent mutation continuity proof; current opaque cursor is bounded but materializes scoped results. |
-| F05-VAL-004 | P2 | Open local control follow-up | Authorized/audited legal-hold and scanner-transition workflow plus direct-SQL rejection tests. |
-| F05-VAL-005 | P1 | Open test-depth gap | Independently committed concurrency/lease-loss/replay cases, not only transaction-rolled-back serial calls. |
-| F05-VAL-006 | P2 | Open quality gate | Browser runtime, accessibility, performance, DR and full repository regression evidence. |
+| F05-VAL-001 | P0 | Resolved locally; exact recovery 1/1 | A real quarantined artifact produces a persisted `INVOICE_DOCUMENT` blocker. Policy versions an explicit business-rule exception allowlist, while `INVOICE_DOCUMENT` and `PACKAGE_MANIFEST` remain non-waivable. The test appends a new exact-bound lineage and preserves SOD, expiry, revoked-authority and cross-tenant denials. |
+| F05-VAL-002 | P1 | Existing local coverage; fresh verification pending | Per-report projections/formula escaping, persisted authority-snapshot rejection and restricted field suppression are implemented in focused tests. |
+| F05-VAL-003 | P2 | Existing local coverage; fresh verification pending | Signed bounded snapshot/keyset continuity is covered by `FinancePaginationIT`; very-large-scale capacity remains a performance gate. |
+| F05-VAL-004 | P2 | Existing local coverage; fresh verification pending | Authorized legal-hold/scanner auditing and direct-SQL rejection are covered by `FinanceArtifactGovernanceIT` and `FinanceDatabaseControlsIT`. |
+| F05-VAL-005 | P1 | Lease recovery resolved; breadth open | Export completion requires a live claimant lease, stale failure cannot overwrite a replacement claim, and expired-claim restart/idempotency is exercised. Invoice/review/share concurrency breadth remains open. |
+| F05-VAL-006 | P2 | Partially evidenced | Axe/keyboard/tablet passed 3/3 and finance system passed 4/4. Generated-file depth, performance/scale, controlled DR and G4 remain open. |
 
 ## External items (not local defects)
 
@@ -37,10 +37,17 @@ They must stay explicitly external even after local tests pass.
 - **Resolved locally — truncated dashboard aggregates:** metrics and queue
   counts no longer derive from the first 50 tower rows. PostgreSQL aggregates
   the complete authorized engagement set; a 55-row integration fixture passes.
-- **Still open — F05-VAL-001/F05-TEST-002 depth:** the exception state is
-  executable, but the main exception integration setup still creates its
-  blocked rule as a deterministic test fixture rather than through a naturally
-  failing readiness source. Do not claim that evidence gap closed.
+- **Locally hardened — F05-VAL-001/F05-TEST-002:** the scanner creates a
+  natural document blocker, document/package integrity rules are now
+  non-waivable, and the governed exception regression uses a policy-declared
+  business readiness rule rather than an invented rule code. Exact SOD,
+  expiry, mismatch, revoked-authority and cross-tenant checks remain covered.
+  The exact Finance recovery passed **1/1**.
 - **Still open — F05-VAL-005 depth:** independently committed competing
-  package/invoice/review/share mutations and export lease-loss/restart proof
-  remain absent. A two-worker committed export-claim race is now green.
+  invoice/review/share mutations remain absent. A two-worker committed
+  export-claim race and package race are previously green; live-lease fencing
+  and expired-claim recovery coverage were exercised; broader mutation
+  concurrency remains open.
+
+The integrated Maven result remains 340 executed with 2 failures and 1 error;
+the **1/1** Finance recovery is a separate row, not a full-green claim.

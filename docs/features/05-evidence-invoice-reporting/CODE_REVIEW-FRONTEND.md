@@ -80,3 +80,10 @@ not substitutes for the local P0/P1 fixes above.
 - `npm run lint` — passed with 8 fast-refresh warnings; no errors.
 - `npm run test` — passed: 17 files, 64 tests; no F05 finance coverage found.
 - `npm run build` — passed; Vite reported two large-chunk advisories.
+
+## Superseding evidence addendum — 2026-07-30
+
+F05 accessibility passed **3/3** in the intercepted-browser lane and finance
+local-system passed **4/4**. The combined browser attempt remains **287/292**,
+with only its exact failed slice subsequently **5/5**; it is not recorded as a
+clean 292/292 run. Provider identity and G4 remain external.

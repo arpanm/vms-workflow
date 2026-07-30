@@ -46,6 +46,10 @@ and disclosed, not a rewrite of certification or confirmation.
 An exception request binds `invoiceId`, invoice optimistic version, failed
 `ruleId`, `readinessRunId`, `packageId`/version, effective policy version,
 rationale and expiry. It never accepts an approver identity from the caller.
+The effective policy explicitly lists exceptionable business-readiness rules;
+invoice-document scan/integrity and package-manifest integrity rules are
+non-waivable server invariants. A request for either returns
+`READINESS_RULE_NOT_EXCEPTIONABLE`.
 When the effective policy requires two people, the request remains
 `PENDING_SECOND_APPROVAL`. A different signed-in Procurement authority calls
 `POST /procurement/exceptions/{exceptionId}/second-approval` with the exact
@@ -54,6 +58,11 @@ actor from authentication, rejects the requester, stale/mismatched lineage and
 expired requests, and returns `ACCEPTED` only after it has appended the
 exception-derived readiness lineage. Invoice reads expose the immutable
 request/package/readiness/policy binding needed by an authorized reviewer.
+
+Export workers claim durable rows with an expiring lease. A rendered result is
+committed only while the same worker still owns a live lease; an expired claim
+is recoverable by a replacement worker, and stale completion/failure cannot
+overwrite that replacement claim.
 
 The Procurement control tower uses the same
 `SNAPSHOT_MEMBERSHIP_VALUES_LIVE_AT_READ` contract: the set of month IDs is
@@ -69,6 +78,11 @@ are labeled `LIVE`.
 
 ## API verification
 
-`FinanceOpenApiIT` and frontend contract tests cover the surface. Final
-OpenAPI, header, cursor, authorization and redaction verification is pending
-the coordinated F05 regression. See [TEST_AUTOMATION.md](TEST_AUTOMATION.md).
+`FinanceOpenApiIT` and frontend contract tests cover the surface. The final
+Finance workflow recovery passed **1/1**, including natural scanner blocking,
+non-waivable integrity policy and append-only exception lineage. The finance
+local-system lane passed **4/4**. These are focused/local-system results: the
+integrated Maven row remains 340 executed with 2 failures and 1 error, and the
+combined browser row remains **287/292** with a separate **5/5** recovery.
+Performance/scale, controlled DR, F07-T057 and G4 remain outside this API
+verification. See [TEST_AUTOMATION.md](TEST_AUTOMATION.md).

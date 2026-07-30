@@ -41,3 +41,11 @@ browser regression and a fresh independent review are still required.
 3. Re-review the final, stable diff after those results exist. External G4
    approvals (production storage/scanner/renderer, OIDC/grants, retention,
    backup/restore and business/AP acceptance) remain separate production gates.
+
+## Final execution addendum — 2026-07-30
+
+Focused Finance recovery passed **1/1** after the append-only exception-lineage
+fixture correction; finance system passed **4/4**. Lease recovery was exercised.
+The full Maven and browser attempts remain preserved as 340 executed with 2
+failures and 1 error, and **287/292**, respectively; browser exact recovery was
+**5/5**. Performance/scale, controlled DR, F07-T057 and G4 remain open.

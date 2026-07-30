@@ -53,3 +53,12 @@ matrix is green.
 - Keep external G4 approvals separate: production object storage/scanner/
   renderer, OIDC and database grants, retention/legal-hold, backup/restore,
   Procurement sign-off, and AP/ERP acceptance.
+
+## Final evidence reconciliation — 2026-07-30
+
+Local exception policy and lease recovery are implemented and exercised. Exact
+Finance recovery is **1/1**, finance local-system is **4/4**, and accessibility
+is **3/3** intercepted-browser evidence. The preserved aggregates remain Maven
+340 executed with 2 failures and 1 error and browser **287/292**, followed by
+browser exact recovery **5/5**; neither aggregate is relabeled green. The
+verdict continues to exclude performance/scale, controlled DR, F07-T057 and G4.

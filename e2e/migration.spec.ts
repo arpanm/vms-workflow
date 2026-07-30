@@ -72,6 +72,9 @@ test("[E2E-08A] upload records the immutable valid-rows-only commit policy", asy
       templateVersion: "1",
       mode: "DRY_RUN",
       partialCommit: true,
+      sourceType: "APPROVED_SPREADSHEET",
+      confidence: "HIGH",
+      sourceDescription: "Governed historical employee register",
     });
   await expect.poll(() => api.multipartFileNames())
     .toContain("employees.csv");
@@ -87,7 +90,9 @@ test("[E2E-08B] creates a current-time retro request with explicit delegation ev
   await page.getByLabel("Delegation / replacement authority reference").fill("delegation-2026-44");
   await page.getByRole("button", { name: "Create retro request now" }).click();
   await expect(page.getByText(/current authenticated timestamp/)).toBeVisible();
-  const call = api.requests.find((request) => request.path.endsWith("/retro-requests"));
+  const call = api.requests.find((request) =>
+    request.method === "POST" && request.path.endsWith("/retro-requests"),
+  );
   expect(call?.body).toMatchObject({
     requestType: "CONFIRMATION",
     originalActorUnavailable: true,

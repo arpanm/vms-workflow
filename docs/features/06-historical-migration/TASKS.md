@@ -1,8 +1,38 @@
 # F06 — Historical Migration Tasks
 
+## Final integrated reconciliation — 2026-07-30
+
+F06 local code is complete through V43: V41 supplies retro lifecycle/source
+declarations and V43 supplies the durable asynchronous migration queue. The
+current migration system lane passes 6/6. The exact migration/OpenAPI recovery
+passes 1/1 and focused accessibility passes 3/3. The failed full Maven
+aggregate (340 executed; 2 failures + 1 error) and browser aggregate (287/292)
+remain preserved separately from the passing recovery slices. Production
+source-owner, storage/scanner, controlled scale/cutover and DR approval remain
+external `NO-GO / ACTION_REQUIRED` gates.
+
 **Phase:** 6
 **Requirements:** RQ-027–RQ-029; PRD 11, 13–16, 18, 21–22
 **Stack:** Java 25 / Spring Boot / PostgreSQL + Flyway / React + TanStack Query / Playwright
+
+## 30 July 2026 completion audit addendum
+
+- [x] Retro lifecycle: immutable current-time approve/reject/cancel actions,
+  requester/decider separation, scoped inbox, Procurement notification
+  envelopes and historical-month outcome transitions.
+- [x] Operational row workbench: bounded row paging, state filtering and
+  duplicate keep/reject/versioned-supersede actions; persisted upload source
+  declarations.
+- [x] Validation/audit closure: complete stable employee/temporal/attendance/
+  leave/invoice/closed-month codes and request-correlated migration audit.
+- [x] Async capacity: queue request-thread scan/validation into the durable
+  bounded worker with lease/checkpoint resume, cancellation and a 100k boundary.
+- [x] Generated templates: active-tenant reference codes and optional XLSX
+  lookup sheets.
+- [x] Contract/accessibility: executable migration OpenAPI/auth parity plus
+  axe, keyboard, focus and tablet tests.
+- [x] Consumed correction: expose the exact F04 reopen then F05 superseding
+  package route while retaining immutable imported and package lineage.
 
 ## Planning status
 

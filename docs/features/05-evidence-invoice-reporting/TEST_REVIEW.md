@@ -39,3 +39,12 @@ repository regression. The remaining required closure is natural
 blocked-readiness exception coverage, independent commit/concurrency and
 lease-loss/restart fault injection, the updated system-browser journey,
 performance/DR, and the explicitly external provider/Procurement gates.
+
+## Final evidence addendum — 2026-07-30
+
+Natural blocked-readiness plus append-only exception lineage now passes **1/1**,
+lease-loss/restart recovery was exercised, and the updated finance system lane
+passes **4/4**. Accessibility passes **3/3** in its intercepted-browser lane.
+The Maven aggregate remains 340 executed with 2 failures and 1 error; browser
+aggregate remains **287/292** with a separate exact recovery **5/5**.
+Performance/scale, controlled DR, F07-T057 and G4 remain open.

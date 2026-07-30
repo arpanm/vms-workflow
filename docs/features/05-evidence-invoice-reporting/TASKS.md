@@ -11,7 +11,12 @@
 - [x] Local Java/PostgreSQL and React/TanStack implementation work is recorded in `CODEGEN.md`.
 - [x] Independent code-review, static-analysis and security-review passes, their issue registers, and the local fixes are recorded in the F05 documentation set.
 - [x] Backend and frontend automation has been added. The finance-focused Spring/Flyway/PostgreSQL integration gate is green (**34/34**) and the isolated real-system F05 Playwright lane is green (**3/3**); evidence is recorded in `FINAL_CLOSURE_REVIEW.md` and [the feature-status ledger](../../FEATURE_STATUS.md).
-- [x] Final combined local execution is green: backend **154/154**, Vitest **88/88**, combined intercepted Playwright **69/69**, isolated system Playwright **3/3**, plus typecheck/lint/build.
+- [ ] Fresh combined local execution for the current shared worktree. The
+  **154/154**, **88/88**, **69/69** and **3/3** figures below are historical
+  baseline evidence, not a current closure claim. Fresh focused evidence on
+  2026-07-30 is: committed concurrency **2/2**, natural scanner-readiness
+  **1/1**, accessibility **3/3**, and isolated Java/PostgreSQL system flow
+  **4/4**. G4 remains explicitly external.
 - [x] The 2026-07-30 completion audit reconciled the executable Java/React dashboard metric DTO, replaced first-page-derived dashboard totals with full authorized-scope SQL aggregates, preserved zero-versus-unavailable and live temporal semantics, and added permanent integration/system-E2E coverage. Focused evidence is recorded in `TEST_AUTOMATION.md`; older full-regression counts are not restated as fresh.
 - [ ] External provider/deployment/Procurement acceptance remains unconfigured and must not be marked complete locally.
 
@@ -31,7 +36,7 @@ The platform may retain invoice identifiers and document metadata (currency, tax
 ### F04/F05 contract gate
 
 - [x] **F05-TASK-001 — Freeze and contract-test the F04 handoff** *(local; RQ-024–026; PRD 08–10, 13, 16, 21–22).* Consume only the versioned `certification.confirmation.readiness` and invalidation/reopen contracts behind a typed adapter/feature flag. Require engagement/month scope, effective plan/baseline, roster/attendance snapshot, Linear plan/month-end source state, certification summary, verified confirmation or disclosed authority-bound exception, object versions/checksums, policy/config version, freshness/provenance, correlation/causation and invalidation reason. Reject incomplete, superseded, cross-scope, stale or client-asserted handoffs. Publish F05 package/invoice invalidation events without creating F04 facts; retain an explicit contract compatibility/version policy.
-- [x] **F05-TASK-002 — Define F05 policy, roles and state machines** *(local; PRD 10 §§3–9, 12, 14–16).* Version engagement policy for mandatory/non-blocking readiness rules, invoice numbering normalization, allowed MIME/size/classification/retention, package formats/rendering engine, invoice/procurement/payment transitions, exception authority/second approval, query SLA, payment visibility, export fields/masking, dashboard freshness and retention/legal hold. Define granular permissions (`EVIDENCE_PACKAGE_*`, `INVOICE_*`, `PROCUREMENT_REVIEW`, `PROCUREMENT_EXCEPTION`, `PAYMENT_UPDATE`, `REPORT_EXPORT`, restricted download/audit) with vendor/client/Procurement/finance/governance separation of duties; never trust a client role, organization or actor claim.
+- [x] **F05-TASK-002 — Define F05 policy, roles and state machines** *(local; PRD 10 §§3–9, 12, 14–16).* Version engagement policy for mandatory/non-blocking and exceptionable business-readiness rules; document-scan/integrity and package-manifest blockers remain non-waivable invariants. Version invoice numbering normalization, allowed MIME/size/classification/retention, package formats/rendering engine, invoice/procurement/payment transitions, exception authority/second approval, query SLA, payment visibility, export fields/masking, dashboard freshness and retention/legal hold. Define granular permissions (`EVIDENCE_PACKAGE_*`, `INVOICE_*`, `PROCUREMENT_REVIEW`, `PROCUREMENT_EXCEPTION`, `PAYMENT_UPDATE`, `REPORT_EXPORT`, restricted download/audit) with vendor/client/Procurement/finance/governance separation of duties; never trust a client role, organization or actor claim.
 
 ## Data model, integrity, canonical artifacts and storage
 
@@ -83,3 +88,23 @@ The platform may retain invoice identifiers and document metadata (currency, tax
 
 **G3 — UX/reporting/regression:** required role workflows, UI states and WCAG checks pass; export filtering/masking/metadata/formula safety and current-versus-snapshot labels pass; F01–F04 regressions, full automated local suite and quality commands pass.
 **G4 — External production acceptance:** only after approved private storage/scan/render/retention setup, deployment grants/backup restore, SSO policy, ERP/AP integration if enabled, Procurement package/process acceptance and controlled live validation. Fixture or intercepted-browser success does not satisfy G4.
+
+## 2026-07-30 final evidence reconciliation
+
+- The exception-policy task is implemented with a versioned allowlist for
+  business-readiness rules. `INVOICE_DOCUMENT` and `PACKAGE_MANIFEST` remain
+  non-waivable, and exception acceptance appends a new exact-bound readiness
+  lineage instead of mutating immutable results.
+- Export recovery is lease-fenced: only the live claimant may complete, an
+  expired claim can be reclaimed, and stale completion/failure cannot overwrite
+  the replacement. The recovery regression was exercised in the integrated
+  Maven run.
+- The preserved integrated Maven result is 340 executed with 2 failures and 1
+  error. The exact Finance recovery subsequently passed **1/1**; this is not a
+  clean 340/340 claim.
+- The preserved combined browser result is **287/292**, followed by an exact
+  failed-slice recovery of **5/5**. F05 accessibility is a separate intercepted
+  browser result (**3/3**), while the local Vite/Spring/Flyway/PostgreSQL finance
+  system lane is separately **4/4**.
+- G4/external acceptance, production-like performance/scale, F07-T057 soak and
+  the controlled DR exercise remain outside local F05 closure.

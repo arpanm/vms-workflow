@@ -66,3 +66,8 @@ production query distribution and real provider
 behavior remain pending or `ACTION_REQUIRED`. See
 [SECURITY_ANALYSIS.md](SECURITY_ANALYSIS.md) and
 [FINAL_ISSUES.md](FINAL_ISSUES.md).
+
+The recorded analysis predates V39/V40 and the current release-control
+hardening. A candidate release must rerun static/system analysis and bind the
+five-dimension review to the exact candidate commit; ancestry alone is not
+accepted by the release gate.

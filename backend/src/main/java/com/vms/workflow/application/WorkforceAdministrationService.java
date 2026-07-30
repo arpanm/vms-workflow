@@ -1097,6 +1097,88 @@ public class WorkforceAdministrationService {
                         OR source.valid_to >= allocated.work_date
                       )
                 )
+                UNION ALL
+                SELECT allocated.employee_id, allocated.work_date,
+                       'MISSING_CALENDAR_WEEKDAY',
+                       'The effective calendar has no rule for this weekday.'
+                FROM allocated
+                JOIN employee_calendar_assignments assignment
+                  ON assignment.employee_id = allocated.employee_id
+                 AND assignment.valid_from <= allocated.work_date
+                 AND (
+                   assignment.valid_to IS NULL
+                   OR assignment.valid_to >= allocated.work_date
+                 )
+                WHERE NOT EXISTS (
+                    SELECT 1
+                    FROM working_calendar_weekdays weekday
+                    WHERE weekday.calendar_version_id =
+                          assignment.calendar_version_id
+                      AND weekday.iso_weekday =
+                          EXTRACT(ISODOW FROM allocated.work_date)
+                )
+                UNION ALL
+                SELECT allocated.employee_id, allocated.work_date,
+                       'INELIGIBLE_EMPLOYEE_STATUS',
+                       'Employee is not active and enabled for this roster day.'
+                FROM allocated
+                JOIN employees employee ON employee.id = allocated.employee_id
+                JOIN employee_versions version
+                  ON version.employee_id = allocated.employee_id
+                 AND version.valid_from <= allocated.work_date
+                 AND (
+                   version.valid_to IS NULL
+                   OR version.valid_to >= allocated.work_date
+                 )
+                WHERE employee.join_date > allocated.work_date
+                   OR version.employment_status NOT IN ('ACTIVE', 'ON_LEAVE')
+                   OR version.activation_status <> 'ENABLED'
+                   OR (
+                     version.exit_date IS NOT NULL
+                     AND version.exit_date < allocated.work_date
+                   )
+                UNION ALL
+                SELECT allocated.employee_id, allocated.work_date,
+                       'INVALID_SHIFT_POLICY',
+                       'Shift policy is not published or effective on this day.'
+                FROM allocated
+                JOIN employee_shift_assignments assignment
+                  ON assignment.employee_id = allocated.employee_id
+                 AND assignment.valid_from <= allocated.work_date
+                 AND (
+                   assignment.valid_to IS NULL
+                   OR assignment.valid_to >= allocated.work_date
+                 )
+                JOIN workforce_shift_policy_versions policy
+                  ON policy.id = assignment.shift_policy_version_id
+                WHERE policy.status <> 'PUBLISHED'
+                   OR policy.valid_from > allocated.work_date
+                   OR (
+                     policy.valid_to IS NOT NULL
+                     AND policy.valid_to < allocated.work_date
+                   )
+                UNION ALL
+                SELECT allocation.employee_id, day.work_date::date,
+                       'ALLOCATION_EXCEEDS_100_PERCENT',
+                       'Effective project allocations exceed 100 percent.'
+                FROM employee_project_allocations allocation
+                CROSS JOIN LATERAL generate_series(
+                    GREATEST(allocation.valid_from, ?::date),
+                    LEAST(
+                        COALESCE(allocation.valid_to, (?::date - 1)),
+                        (?::date - 1)
+                    ),
+                    INTERVAL '1 day'
+                ) AS day(work_date)
+                WHERE allocation.engagement_id = ?
+                  AND allocation.status IN ('PLANNED', 'ACTIVE')
+                  AND allocation.valid_from < ?
+                  AND (
+                    allocation.valid_to IS NULL
+                    OR allocation.valid_to >= ?
+                  )
+                GROUP BY allocation.employee_id, day.work_date
+                HAVING SUM(allocation.allocation_percent) > 100
             )
             SELECT employee_id, work_date, code, message
             FROM issues
@@ -1109,12 +1191,16 @@ public class WorkforceAdministrationService {
                 result.getString("message")),
             month.monthStart(), month.monthStart().plusMonths(1),
             month.monthStart().plusMonths(1), month.engagementId(),
+            month.monthStart().plusMonths(1), month.monthStart(),
+            month.monthStart(), month.monthStart().plusMonths(1),
+            month.monthStart().plusMonths(1), month.engagementId(),
             month.monthStart().plusMonths(1), month.monthStart());
         boolean ready = counts.employeeDayCount() > 0
             && counts.missingCalendar() == 0
             && counts.missingShift() == 0
             && counts.missingEmployeeVersion() == 0
-            && counts.missingSourceMode() == 0;
+            && counts.missingSourceMode() == 0
+            && issues.isEmpty();
         if (counts.employeeDayCount() == 0) {
             issues = new ArrayList<>(issues);
             issues.add(new RosterReadinessIssueView(

@@ -19,6 +19,10 @@ public class FinancePolicyService {
         "ENGAGEMENT_CONTRACT", "ROSTER_ALLOCATION", "ATTENDANCE",
         "APPROVED_PLAN", "LINEAR_SNAPSHOT", "DELIVERY_CERTIFICATION",
         "VERIFIED_CONFIRMATION", "INVOICE_DOCUMENT", "PACKAGE_MANIFEST");
+    private static final Set<String> DEFAULT_EXCEPTIONABLE_RULES = Set.of(
+        "ENGAGEMENT_CONTRACT", "ROSTER_ALLOCATION", "ATTENDANCE",
+        "APPROVED_PLAN", "LINEAR_SNAPSHOT", "DELIVERY_CERTIFICATION",
+        "VERIFIED_CONFIRMATION");
     private static final Set<String> DEFAULT_MIME_TYPES = Set.of(
         "application/pdf", "image/png", "image/jpeg");
     private static final Set<String> DEFAULT_CLASSIFICATIONS = Set.of(
@@ -48,6 +52,8 @@ public class FinancePolicyService {
                 DEFAULT_CLASSIFICATIONS.stream().sorted().toList(),
             "maximumUploadBytes", 25L * 1024L * 1024L,
             "mandatoryRules", DEFAULT_RULES,
+            "exceptionableRules",
+                DEFAULT_EXCEPTIONABLE_RULES.stream().sorted().toList(),
             "exceptionSecondApprovalRequired", true,
             "retentionClass", "FINANCE_EVIDENCE");
         jdbc.update("""
@@ -90,6 +96,8 @@ public class FinancePolicyService {
                     stringValue(document.get("retentionClass"),
                         "FINANCE_EVIDENCE"),
                     list(document.get("mandatoryRules"), DEFAULT_RULES),
+                    ruleSet(document.get("exceptionableRules"),
+                        DEFAULT_EXCEPTIONABLE_RULES),
                     booleanValue(
                         document.get("exceptionSecondApprovalRequired"), true));
             }, engagementId);
@@ -98,6 +106,18 @@ public class FinancePolicyService {
     private static Set<String> strings(Object value, Set<String> defaults) {
         if (!(value instanceof List<?> values) || values.isEmpty()) {
             return defaults;
+        }
+        Set<String> result = new LinkedHashSet<>();
+        values.forEach(item -> result.add(String.valueOf(item)));
+        return Set.copyOf(result);
+    }
+
+    private static Set<String> ruleSet(Object value, Set<String> defaults) {
+        if (value == null) {
+            return defaults;
+        }
+        if (!(value instanceof List<?> values)) {
+            return Set.of();
         }
         Set<String> result = new LinkedHashSet<>();
         values.forEach(item -> result.add(String.valueOf(item)));
@@ -132,6 +152,7 @@ public class FinancePolicyService {
         Set<String> allowedClassifications,
         String retentionClass,
         List<String> mandatoryRules,
+        Set<String> exceptionableRules,
         boolean exceptionSecondApprovalRequired
     ) {
         public String label() {

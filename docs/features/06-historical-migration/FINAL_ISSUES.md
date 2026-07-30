@@ -1,5 +1,13 @@
 # F06 Historical Migration — Final Open Issues
 
+## Final integrated reconciliation — 2026-07-30
+
+No local F06 implementation issue remains open through V43. The outstanding
+items are external source-owner mapping/sign-off, approved production
+storage/scanner, controlled 100k-row rehearsal, backup/restore and cutover/DR
+approval. Aggregate Maven/browser failures remain recorded even though focused
+F06 recovery passes.
+
 > **Superseded review snapshot.** This file preserves the independent review
 > findings as raised. The authoritative post-fix disposition is recorded in
 > `FINAL_REVIEW.md` after the final F06 regression. P0 findings 1–2 and local

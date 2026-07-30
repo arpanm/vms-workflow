@@ -1,5 +1,13 @@
 # F06 Historical Migration — Independent Code Review
 
+## Final integrated reconciliation — 2026-07-30
+
+Local implementation is complete through V41/V43, including ordered retro
+transitions, immutable actions/source declarations, durable worker
+leases/checkpoints/retries/dead-letter, tenant CSV/XLSX templates, executable
+OpenAPI, accessibility coverage and consumed-package correction routing.
+System 6/6 and focused recovery 1/1 pass; external production gates remain.
+
 **Review scope:** V17, migration backend/API/security classes, migration frontend, and E2E fixture. Product code was not changed.
 
 ## Verdict

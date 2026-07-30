@@ -1,5 +1,12 @@
 # F06 — Historical Migration Test Cases
 
+## Final integrated reconciliation — 2026-07-30
+
+Current evidence: migration system 6/6; exact migration/OpenAPI recovery 1/1;
+focused accessibility 3/3. The full Maven run executed 340 tests and retained
+2 failures plus 1 error; the full browser run passed 287/292. Focused recovery
+does not convert either row into a clean aggregate pass.
+
 **Traceability:** RQ-027–RQ-029; PRD 11, 13–16, 18, 21–22.
 **Boundary:** local automation uses synthetic files and Testcontainers
 PostgreSQL. Production source-owner/rehearsal cases are explicitly external.

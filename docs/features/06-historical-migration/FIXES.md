@@ -1,5 +1,15 @@
 # F06 — Review Finding Fix Disposition
 
+## 30 July 2026 completion-audit remediation
+
+V41 and API/UI changes close retro outcomes, Procurement delivery envelopes,
+historical lifecycle readiness, bounded row/conflict workbench, upload
+provenance persistence, missing stable validation codes and request
+correlation. V43 and the completion batch also add durable async execution,
+the exact 100k boundary, tenant-generated CSV/XLSX templates, executable
+OpenAPI parity, F06-specific accessibility and consumed-package correction
+routing. Consolidated regression remains pending; these are not externalized.
+
 This document links the independent review findings to the implemented
 remediation. Exact passing commands and counts are recorded in
 `docs/FEATURE_STATUS.md`; external provider and rehearsal gates remain

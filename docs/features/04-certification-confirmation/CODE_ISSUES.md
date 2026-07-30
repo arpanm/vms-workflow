@@ -14,9 +14,24 @@
 
 No open local P0/P1 product finding is recorded in the final remediation evidence. The prior findings are intentionally retained, not erased, in [CODE_ISSUES-BACKEND.md](CODE_ISSUES-BACKEND.md), [CODE_ISSUES-FRONTEND.md](CODE_ISSUES-FRONTEND.md), [CODE_ANALYSIS_ISSUES.md](CODE_ANALYSIS_ISSUES.md), and [SECURITY_ISSUES.md](SECURITY_ISSUES.md); [FIXES.md](FIXES.md) maps their resolution.
 
+The ledger was reconciled against the current Java services, PostgreSQL
+migrations, React workflows and local test artifacts. No additional missing
+local F04 code path was found; V42 closes the repeated-reopen invariant defect.
+
 Do not close any row above from fixtures, a provider status, a receipt, silence, timeout, or intercepted Playwright run.
 
 The independent V13 review records no open local P0/P1 in the five final P1
 new-write paths. `F04-V13-DATA-001` is an upgrade/deployment gate: for a
 database with pre-V13 F04 facts, it must be discharged before rollout rather
 than treated as provider or consumer acceptance.
+
+## Final verification reconciliation — 2026-07-30
+
+Local remediation is complete. Static frontend automation passed 120/120 and
+the system lanes passed 4/4, 6/6 and 7/7. The consolidated browser run passed
+287/292; the exact five affected combinations subsequently passed focused
+recovery. The consolidated Maven run executed 340 tests with two failures and
+one error; the affected backend cases subsequently passed focused recovery.
+
+This ledger does not claim a single post-remediation full-green Maven/browser
+run. The external and deployment controls in the table above remain open.

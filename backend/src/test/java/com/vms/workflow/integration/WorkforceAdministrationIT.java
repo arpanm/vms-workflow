@@ -471,6 +471,32 @@ class WorkforceAdministrationIT {
             """, first.path("id").asText()));
     }
 
+    @Test
+    void rosterReadinessRejectsCalendarAssignmentsWithMissingWeekdayRules()
+        throws Exception {
+        jdbc.update("""
+            DELETE FROM working_calendar_weekdays
+            WHERE calendar_version_id = (
+                SELECT calendar_version_id
+                FROM employee_calendar_assignments
+                WHERE employee_id = ?::uuid
+                  AND valid_from <= DATE '2026-06-01'
+                  AND (valid_to IS NULL OR valid_to >= DATE '2026-06-30')
+                LIMIT 1
+            )
+              AND iso_weekday = 1
+            """, EMPLOYEE);
+
+        mvc.perform(get(
+                    "/api/v1/workforce/engagement-months/{id}/roster-readiness",
+                    "00000000-0000-0000-0000-000000000601")
+                .with(token("user-arrow")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.ready").value(false))
+            .andExpect(jsonPath(
+                "$.issues[?(@.code == 'MISSING_CALENDAR_WEEKDAY')]").isNotEmpty());
+    }
+
     private static String deliverableAllocation(
         String deliverableId,
         int percentage

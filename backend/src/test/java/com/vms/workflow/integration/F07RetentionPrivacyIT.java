@@ -31,7 +31,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow_f07_retention_privacy_it",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",

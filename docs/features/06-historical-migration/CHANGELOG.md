@@ -1,5 +1,28 @@
 # F06 — Change Log
 
+## 2026-07-30 — V41/V43 final reconciliation
+
+- Completed retro lifecycle/source declarations and durable asynchronous
+  migration execution with leases, checkpoints, retries and dead-lettering.
+- Added tenant CSV/XLSX, executable OpenAPI, accessibility coverage and
+  consumed-package correction routing.
+- Recorded migration system 6/6, focused migration/OpenAPI recovery 1/1 and
+  accessibility 3/3 without overwriting failed aggregate evidence.
+
+## 2026-07-30 — Completion-audit remediation
+
+- Added V41 immutable retro actions and persisted upload provenance.
+- Added retro outcomes, Procurement envelopes, historical readiness/transitions
+  and real UI row/inbox flows.
+- Added missing stable validation paths and request-correlated audit.
+- Added V43 durable asynchronous execution requests over PostgreSQL
+  `SKIP LOCKED` leases, checkpoints, bounded retries/dead-letter and cancel.
+- Added the exact 100k parser boundary test, immediate worker execution test,
+  tenant-reference CSV/XLSX generation, executable OpenAPI assertions and
+  F06 axe/keyboard/tablet automation.
+- Added imported consumed-package correction-plan API/UI/E2E linkage to the
+  governed F04 reopen then F05 superseding-package workflow.
+
 ## 2026-07-27 — Governed historical migration
 
 - Replaced the skeletal plan with detailed implementation and test catalogs.

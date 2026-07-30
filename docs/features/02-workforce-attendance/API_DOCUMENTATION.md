@@ -37,6 +37,16 @@ permission failures use `403`.
 |---|---|---|
 | `GET /workforce/employees?organizationId={uuid}` | Required organization query parameter. | `200 EmployeeView[]`, ordered by employee number. Requires `workforce.read`. |
 | `GET /workforce/employees/me` | None. | `200 EmployeeView` for exactly one active, enabled linked employee with `attendance.self`; otherwise sanitized `404`. It does not require or expose a roster. |
+
+### Roster readiness completeness
+
+`GET /workforce/engagement-months/{engagementMonthId}/roster-readiness`
+evaluates every effective allocated employee-day. In addition to missing
+calendar, shift, employee-version and source-mode assignments, it returns
+bounded issues for incomplete weekday templates, inactive or disabled
+employment, join/exit-window violations, superseded or out-of-range shift
+policies and allocation totals above 100 percent. Any issue blocks roster
+finalization; the service never silently drops an employee-day.
 | `GET /workforce/employees/{id}` | Employee UUID path. | `200 EmployeeView` for workforce readers or the authorized linked self. |
 | `POST /workforce/employees` | `CreateEmployeeRequest`. | `201 EmployeeView`; creates identity, lifecycle version 1 and source-mode assignment. `GREYTHR_AUTHORITATIVE` is rejected until a governed certification workflow exists. |
 | `PATCH /workforce/employees/{id}/lifecycle` | `EmployeeLifecycleRequest`. | `200 EmployeeView`; closes the prior effective version and inserts a new version. |

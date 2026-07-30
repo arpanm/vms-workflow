@@ -117,6 +117,17 @@
                         <include>**/*IT.java</include>
                     </includes>
                     <!--
+                      Integration classes use class-specific Testcontainers
+                      database keys so committed/concurrency evidence cannot
+                      leak into another class. Evict each completed Spring test
+                      context before the next class to close its pool and keep
+                      Docker resource use bounded instead of retaining dozens
+                      of isolated PostgreSQL containers.
+                    -->
+                    <systemPropertyVariables>
+                        <spring.test.context.cache.maxSize>1</spring.test.context.cache.maxSize>
+                    </systemPropertyVariables>
+                    <!--
                       Testcontainers and Docker Desktop can otherwise leave a
                       fork blocked forever in a daemon socket call. The full
                       integration/capacity lane exercises every feature and

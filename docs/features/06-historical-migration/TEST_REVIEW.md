@@ -1,5 +1,12 @@
 # F06 Historical Migration — Test Automation Review
 
+## Final integrated reconciliation — 2026-07-30
+
+Reviewed evidence is migration system 6/6, migration/OpenAPI recovery 1/1 and
+accessibility 3/3. The full Maven and browser failures remain historical facts,
+not superseded by these focused passes. External production rehearsal and
+source-owner approval remain open.
+
 > **Historical pre-automation review.** The gaps below are preserved because
 > they drove the automation work. The authoritative disposition is the
 > post-remediation section at the end of this document.

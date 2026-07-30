@@ -231,6 +231,7 @@ public class FinanceOperationsWorker {
                 next_attempt_at = CURRENT_TIMESTAMP,
                 last_error_code = NULL
             WHERE id = ? AND status = 'CLAIMED' AND lease_owner = ?
+              AND lease_expires_at > CURRENT_TIMESTAMP
             """, value.rowCount(), artifactId, value.hash(),
             claim.id(), workerId);
         if (changed != 1) {
@@ -251,7 +252,7 @@ public class FinanceOperationsWorker {
                     + (? * INTERVAL '1 second'),
                 lease_owner = NULL, lease_expires_at = NULL,
                 last_error_code = ?
-            WHERE id = ? AND lease_owner = ?
+            WHERE id = ? AND status = 'CLAIMED' AND lease_owner = ?
             """, retry ? "FAILED" : "DEAD_LETTER",
             retry ? retrySeconds(claim.attempt()) : 0,
             safeError(exception), claim.id(), workerId);

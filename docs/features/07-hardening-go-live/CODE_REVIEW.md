@@ -1,9 +1,19 @@
 # F07 — Independent Code Review
 
-This is the preserved pre-fix review record. Findings are not erased when a
+## Final integrated reconciliation — 2026-07-30
+
+The reviewed local implementation reaches V43; V42 owns the repeated-reopen
+invariant and V43 the durable migration queue. Static/harness gates pass.
+Aggregate Maven/browser results are not promoted to clean passes by their
+focused recovery slices. Remaining local evidence and all external production
+approvals stay open.
+
+This is the preserved pre-fix review record through `c2d8dfb`. Findings are not erased when a
 fix is generated; their current disposition is cross-linked to
 [FIXES.md](FIXES.md). Focused and definitive complete Maven evidence is green.
-The final Terra review is closed with no P0–P3 finding.
+The recorded Terra review is closed with no P0–P3 finding for that scope. It
+does not review the later V39/V40 and release-control changes; the release gate
+now requires a new exact-candidate review before local release closure.
 
 ## Backend/security findings
 
@@ -41,6 +51,7 @@ integration tests; its two delivery-worker counts were contaminated by a
 non-dedicated test database. After assigning the worker IT a dedicated
 database, definitive R3 passes 73 unit + 217 integration (290/290), zero
 failures/errors/skips. The final Terra review closed with no P0–P3 finding.
-Commit-bound release/restore evidence is still required. External
+Current V1–V40 regression, exact-candidate review and commit-bound
+release/restore evidence are still required. External
 production decisions remain outside this repository, so production is
 `NO-GO / ACTION_REQUIRED`.

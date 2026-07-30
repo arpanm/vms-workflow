@@ -19,7 +19,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApiError } from "@/lib/api-client";
 
 import { migrationApi } from "./api";
-import type { CreateMigrationInput, MigrationJob, RetroRequestInput } from "./contracts";
+import type {
+  CreateMigrationInput,
+  MigrationJob,
+  RetroRequest,
+  RetroRequestInput,
+} from "./contracts";
 import { commitReadiness, formatTimestamp, safeIssueMessage } from "./presentation";
 
 const key = () => crypto.randomUUID();
@@ -85,7 +90,7 @@ function TemplateCatalog({
   };
 
   return (
-    <Card>
+    <Card className="min-w-0 w-full">
       <CardHeader>
         <CardTitle>1. Template and staged upload</CardTitle>
       </CardHeader>
@@ -98,8 +103,8 @@ function TemplateCatalog({
         ) : templates.isError ? (
           <ErrorNotice error={templates.error} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm" aria-label="Historical migration templates">
+          <div className="w-full max-w-full overflow-x-auto">
+            <table className="min-w-max w-full text-sm" aria-label="Historical migration templates">
               <thead>
                 <tr className="border-b text-left">
                   <th className="py-2">Order</th>
@@ -120,14 +125,24 @@ function TemplateCatalog({
                     <td>{item.code.split("_").slice(1).join(" ")}</td>
                     <td>{item.dependencies.length ? item.dependencies.join(", ") : "Foundation"}</td>
                     <td>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void migrationApi.downloadTemplate(engagementId, item.code)}
-                      >
-                        <Download className="mr-1 h-4 w-4" aria-hidden="true" />
-                        Download
-                      </Button>
+                      <div className="flex flex-wrap gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void migrationApi.downloadTemplate(engagementId, item.code, "CSV")}
+                        >
+                          <Download className="mr-1 h-4 w-4" aria-hidden="true" />
+                          CSV
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => void migrationApi.downloadTemplate(engagementId, item.code, "XLSX")}
+                        >
+                          <Download className="mr-1 h-4 w-4" aria-hidden="true" />
+                          XLSX + active references
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -227,7 +242,7 @@ function JobList({ selectedJobId, engagementId }: { selectedJobId?: string; enga
     retry: false,
   });
   return (
-    <Card>
+    <Card className="min-w-0 w-full">
       <CardHeader>
         <CardTitle>Migration jobs</CardTitle>
       </CardHeader>
@@ -306,6 +321,21 @@ function JobWorkspace({
     },
     onSuccess: refresh,
   });
+  const queuedValidation = useMutation({
+    mutationFn: (job: MigrationJob) =>
+      migrationApi.queueValidation(job, key()),
+    onSuccess: async () => {
+      await client.invalidateQueries({
+        queryKey: ["migration", "job", jobId],
+      });
+      await client.invalidateQueries({ queryKey: ["migration", "jobs"] });
+    },
+  });
+  const correctionPlan = useQuery({
+    queryKey: ["migration", "correction-plan", jobId],
+    queryFn: () => migrationApi.correctionPlan(jobId),
+    retry: false,
+  });
 
   if (jobQuery.isPending) return <p className="p-6" role="status">Loading exact migration job…</p>;
   if (jobQuery.isError || !jobQuery.data) return <ErrorNotice error={jobQuery.error} />;
@@ -316,8 +346,8 @@ function JobWorkspace({
     : null;
 
   return (
-    <div className="space-y-5">
-      <Card>
+    <div className="min-w-0 w-full space-y-5">
+      <Card className="min-w-0 w-full">
         <CardHeader>
           <CardTitle className="flex flex-wrap items-center gap-2">
             {job.safeFileName} <StatusBadge status={job.state} />
@@ -350,9 +380,16 @@ function JobWorkspace({
           <div className="flex flex-wrap gap-2">
             <Button
               onClick={() => mutation.mutate({ action: "validate", job })}
-              disabled={mutation.isPending || !job.permissions.includes("MIGRATION_VALIDATE")}
+              disabled={mutation.isPending || queuedValidation.isPending || !job.permissions.includes("MIGRATION_VALIDATE")}
             >
               Validate staged rows
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => queuedValidation.mutate(job)}
+              disabled={mutation.isPending || queuedValidation.isPending || !job.permissions.includes("MIGRATION_VALIDATE")}
+            >
+              Queue durable validation
             </Button>
             <Button variant="outline" onClick={() => void migrationApi.downloadErrors(job.jobId)}>
               <Download className="mr-1 h-4 w-4" aria-hidden="true" /> Download safe errors
@@ -365,16 +402,46 @@ function JobWorkspace({
               <RotateCcw className="mr-1 h-4 w-4" aria-hidden="true" /> Reprocess rejects
             </Button>
           </div>
+          {queuedValidation.isSuccess && (
+            <p className="text-sm text-success" role="status">
+              Validation is queued for resumable background execution.
+            </p>
+          )}
+          {correctionPlan.data?.required && correctionPlan.data.monthId && (
+            <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm">
+              <strong>Consumed evidence requires governed correction.</strong>
+              <p>
+                Reopen the historical month through F04, complete the corrected
+                certification, then generate a new superseding F05 package
+                version. Prior package versions remain immutable.
+              </p>
+              <Link
+                className="font-medium underline"
+                to="/certification/$monthId"
+                params={{ monthId: correctionPlan.data.monthId }}
+              >
+                Open governed month correction
+              </Link>
+            </div>
+          )}
           <ErrorNotice error={mutation.error} />
+          <ErrorNotice error={queuedValidation.error} />
         </CardContent>
       </Card>
 
-      <Card>
+      <RowReview job={job} onResolved={refresh} />
+
+      <Card className="min-w-0 w-full">
         <CardHeader><CardTitle>Validation issues</CardTitle></CardHeader>
         <CardContent>
           {job.issues.length ? (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm" aria-label="Migration row validation issues">
+            <div
+              aria-label="Migration row validation issues"
+              className="w-full max-w-full overflow-x-auto"
+              role="region"
+              tabIndex={0}
+            >
+              <table className="min-w-max w-full text-sm" aria-label="Migration row validation issues">
                 <thead><tr className="border-b text-left"><th>Row</th><th>Severity</th><th>Code</th><th>Field</th><th>Safe detail</th></tr></thead>
                 <tbody>{job.issues.map((issue) => (
                   <tr key={`${issue.rowNumber}-${issue.code}-${issue.field}`} className="border-b">
@@ -389,7 +456,7 @@ function JobWorkspace({
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="min-w-0 w-full">
         <CardHeader><CardTitle>2. Exact reconciliation and dual sign-off</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           {job.reconciliation ? (
@@ -472,6 +539,102 @@ function JobWorkspace({
   );
 }
 
+function RowReview({
+  job,
+  onResolved,
+}: {
+  job: MigrationJob;
+  onResolved: (job: MigrationJob) => Promise<void>;
+}) {
+  const [state, setState] = useState("");
+  const [afterRow, setAfterRow] = useState(1);
+  const [reason, setReason] = useState("Reviewed source evidence and duplicate lineage");
+  const rows = useQuery({
+    queryKey: ["migration", "rows", job.jobId, state, afterRow],
+    queryFn: () => migrationApi.rows(job.jobId, state || undefined, afterRow),
+    retry: false,
+  });
+  const resolve = useMutation({
+    mutationFn: ({
+      rowId,
+      decision,
+    }: {
+      rowId: string;
+      decision: "KEEP_EXISTING" | "REJECT" | "VERSIONED_SUPERSEDE";
+    }) => migrationApi.resolveRow(job, rowId, decision, reason, key()),
+    onSuccess: async (updated) => {
+      await onResolved(updated);
+      await rows.refetch();
+    },
+  });
+  return (
+    <Card className="min-w-0 w-full">
+      <CardHeader><CardTitle>Validation rows and mapping conflicts</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="grid gap-1 text-sm">
+            Row state
+            <select
+              value={state}
+              onChange={(event) => {
+                setState(event.target.value);
+                setAfterRow(1);
+              }}
+              className="rounded-md border bg-background px-3 py-2"
+            >
+              <option value="">All rows</option>
+              {["VALID", "WARNING", "INVALID", "DUPLICATE_IDENTICAL", "DUPLICATE_CONFLICT", "REJECTED", "COMMITTED"].map((value) => (
+                <option key={value} value={value}>{value.replaceAll("_", " ")}</option>
+              ))}
+            </select>
+          </label>
+          <label className="min-w-72 flex-1 grid gap-1 text-sm">
+            Resolution reason
+            <input value={reason} onChange={(event) => setReason(event.target.value)} className="rounded-md border px-3 py-2" />
+          </label>
+        </div>
+        {rows.isPending ? <p role="status">Loading governed row page…</p>
+          : rows.isError ? <ErrorNotice error={rows.error} />
+            : rows.data?.items.length ? (
+              <div
+                aria-label="Governed migration row page"
+                className="w-full max-w-full overflow-x-auto"
+                role="region"
+                tabIndex={0}
+              >
+                <table className="min-w-max w-full text-sm" aria-label="Governed migration row page">
+                  <thead><tr className="border-b text-left"><th>Row</th><th>State</th><th>Source</th><th>Confidence</th><th>Findings</th><th>Resolution</th></tr></thead>
+                  <tbody>{rows.data.items.map((row) => (
+                    <tr key={row.id} className="border-b align-top">
+                      <td className="py-2">{row.rowNumber}</td>
+                      <td><StatusBadge status={row.state} /></td>
+                      <td>{row.sourceType}</td>
+                      <td>{row.confidence}</td>
+                      <td>{row.findings.map((finding) => <p key={`${finding.code}-${finding.field}`}><code>{finding.code}</code> {finding.message}</p>)}</td>
+                      <td>
+                        {row.state === "DUPLICATE_CONFLICT" ? (
+                          <div className="flex flex-wrap gap-1">
+                            <Button size="sm" variant="outline" disabled={resolve.isPending || reason.trim().length < 3} onClick={() => resolve.mutate({ rowId: row.id, decision: "KEEP_EXISTING" })}>Keep existing</Button>
+                            <Button size="sm" variant="outline" disabled={resolve.isPending || reason.trim().length < 3} onClick={() => resolve.mutate({ rowId: row.id, decision: "VERSIONED_SUPERSEDE" })}>Supersede</Button>
+                            <Button size="sm" variant="destructive" disabled={resolve.isPending || reason.trim().length < 3} onClick={() => resolve.mutate({ rowId: row.id, decision: "REJECT" })}>Reject</Button>
+                          </div>
+                        ) : "—"}
+                      </td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            ) : <p className="rounded-md border border-dashed p-4">No rows match this filter.</p>}
+        <div className="flex gap-2">
+          <Button variant="outline" disabled={afterRow <= 1} onClick={() => setAfterRow(Math.max(1, afterRow - 100))}>Previous rows</Button>
+          <Button variant="outline" disabled={!rows.data?.hasMore} onClick={() => setAfterRow(rows.data?.nextRow ?? afterRow)}>Next rows</Button>
+        </div>
+        <ErrorNotice error={resolve.error} />
+      </CardContent>
+    </Card>
+  );
+}
+
 function RecoveryAndRetro({
   job,
   mutation,
@@ -501,8 +664,25 @@ function RecoveryAndRetro({
         key(),
       ),
   });
+  const readiness = useQuery({
+    queryKey: ["migration", "month-readiness", job.monthId],
+    queryFn: () => migrationApi.monthReadiness(job.monthId ?? ""),
+    enabled: Boolean(job.monthId),
+    retry: false,
+  });
+  const transition = useMutation({
+    mutationFn: (targetState:
+      | "HISTORICAL_PENDING_CERTIFICATION"
+      | "HISTORICAL_PENDING_CONFIRMATION"
+      | "CONFIRMED") =>
+      migrationApi.transitionMonth(readiness.data!, targetState, reason, key()),
+    onSuccess: (value) => {
+      readiness.refetch();
+      return value;
+    },
+  });
   return (
-    <Card>
+    <Card className="min-w-0 w-full">
       <CardHeader><CardTitle>3. Recovery and explicitly retroactive approval</CardTitle></CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
@@ -527,7 +707,7 @@ function RecoveryAndRetro({
             </Button>
           ) : null}
           <Button variant="outline" disabled={mutation.isPending} onClick={() => mutation.mutate({ action: "cancel", job })}>Cancel pre-commit job</Button>
-          <Button variant="destructive" disabled={mutation.isPending || !job.permissions.includes("MIGRATION_ROLLBACK")} onClick={() => mutation.mutate({ action: "rollback", job })}>Request governed rollback</Button>
+          <Button className="border-destructive text-foreground hover:bg-destructive/10" variant="outline" disabled={mutation.isPending || !job.permissions.includes("MIGRATION_ROLLBACK")} onClick={() => mutation.mutate({ action: "rollback", job })}>Request governed rollback</Button>
         </div>
         <div className="grid gap-3 rounded-md border p-4 md:grid-cols-2">
           <label className="grid gap-1 text-sm">Historical action
@@ -552,6 +732,102 @@ function RecoveryAndRetro({
         </div>
         {retro.isSuccess && <p className="text-sm text-success" role="status">Historical request recorded with the current authenticated timestamp.</p>}
         <ErrorNotice error={retro.error} />
+        {readiness.data ? (
+          <div className="space-y-3 rounded-md border p-4" aria-label="Historical month readiness">
+            <div className="flex flex-wrap items-center gap-2">
+              <strong>Month readiness</strong>
+              <StatusBadge status={readiness.data.state} />
+              <span>{readiness.data.completedJobs} completed batches · {readiness.data.pendingRetroRequests} pending historical decisions</span>
+            </div>
+            {readiness.data.blockers.length > 0 && (
+              <ul className="list-disc pl-5 text-sm">
+                {readiness.data.blockers.map((blocker) => <li key={blocker}>{blocker.replaceAll("_", " ")}</li>)}
+              </ul>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {readiness.data.state === "HISTORICAL_REVIEW" && (
+                <Button variant="outline" disabled={transition.isPending} onClick={() => transition.mutate("HISTORICAL_PENDING_CERTIFICATION")}>Advance to pending certification</Button>
+              )}
+              {readiness.data.state === "HISTORICAL_PENDING_CERTIFICATION" && (
+                <Button variant="outline" disabled={transition.isPending} onClick={() => transition.mutate("HISTORICAL_PENDING_CONFIRMATION")}>Advance to pending confirmation</Button>
+              )}
+              {readiness.data.state === "HISTORICAL_PENDING_CONFIRMATION" && (
+                <Button disabled={transition.isPending} onClick={() => transition.mutate("CONFIRMED")}>Confirm historical month</Button>
+              )}
+            </div>
+            <ErrorNotice error={transition.error} />
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function RetroInbox({
+  engagementId,
+  canDecide,
+}: {
+  engagementId: string;
+  canDecide: boolean;
+}) {
+  const client = useQueryClient();
+  const [reason, setReason] = useState("Reviewed reconstructed evidence for the represented month");
+  const requests = useQuery({
+    queryKey: ["migration", "retro-inbox", engagementId],
+    queryFn: () => migrationApi.retroRequests(engagementId),
+    enabled: Boolean(engagementId),
+    retry: false,
+  });
+  const act = useMutation({
+    mutationFn: ({
+      request,
+      action,
+    }: {
+      request: RetroRequest;
+      action: "APPROVED" | "REJECTED" | "CANCELLED";
+    }) => action === "CANCELLED"
+      ? migrationApi.cancelRetro(request, reason, key())
+      : migrationApi.decideRetro(request, action, reason, key()),
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: ["migration", "retro-inbox", engagementId] });
+    },
+  });
+  return (
+    <Card className="min-w-0 w-full">
+      <CardHeader><CardTitle>Historical approval and confirmation inbox</CardTitle></CardHeader>
+      <CardContent className="space-y-3">
+        <label className="grid gap-1 text-sm">
+          Current-time decision / cancellation reason
+          <input value={reason} onChange={(event) => setReason(event.target.value)} className="rounded-md border px-3 py-2" />
+        </label>
+        {requests.isPending ? <p role="status">Loading historical requests…</p>
+          : requests.isError ? <ErrorNotice error={requests.error} />
+            : requests.data?.items.length ? (
+              <div className="w-full max-w-full overflow-x-auto">
+                <table className="min-w-max w-full text-sm" aria-label="Historical request inbox">
+                  <thead><tr className="border-b text-left"><th>Month</th><th>Type</th><th>State</th><th>Requested by</th><th>Procurement</th><th>Current-time action</th></tr></thead>
+                  <tbody>{requests.data.items.map((request) => (
+                    <tr key={request.id} className="border-b align-top">
+                      <td className="py-2">{request.representedMonth}</td>
+                      <td>{request.requestType}</td>
+                      <td><StatusBadge status={request.state} /></td>
+                      <td>{request.requestedBy}</td>
+                      <td>{request.procurementNotificationState}</td>
+                      <td>
+                        {request.state === "PENDING" ? (
+                          <div className="flex flex-wrap gap-1">
+                            {canDecide && <Button size="sm" disabled={act.isPending || reason.trim().length < 3} onClick={() => act.mutate({ request, action: "APPROVED" })}>Approve now</Button>}
+                            {canDecide && <Button className="border-destructive text-foreground hover:bg-destructive/10" size="sm" variant="outline" disabled={act.isPending || reason.trim().length < 3} onClick={() => act.mutate({ request, action: "REJECTED" })}>Reject now</Button>}
+                            <Button size="sm" variant="outline" disabled={act.isPending || reason.trim().length < 3} onClick={() => act.mutate({ request, action: "CANCELLED" })}>Cancel</Button>
+                          </div>
+                        ) : request.decisionAt ? formatTimestamp(request.decisionAt) : "—"}
+                      </td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            ) : <p className="rounded-md border border-dashed p-4">No historical requests in this scope.</p>}
+        <ErrorNotice error={act.error} />
       </CardContent>
     </Card>
   );
@@ -569,9 +845,9 @@ export function MigrationWorkspace({ selectedJobId }: { selectedJobId?: string }
   const engagementId = access.data?.engagementId ?? "";
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+    <div className="min-w-0 w-full max-w-full space-y-6 p-4 md:p-6">
+      <header className="flex min-w-0 w-full flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
           <p className="text-sm font-medium text-primary">F06 · governed historical data</p>
           <h1 className="text-2xl font-semibold">Historical migration center</h1>
           <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
@@ -590,17 +866,21 @@ export function MigrationWorkspace({ selectedJobId }: { selectedJobId?: string }
       ) : (
         <ErrorNotice error={access.error} />
       )}
-      <div className="grid gap-6 xl:grid-cols-[22rem_1fr]">
+      <div className="grid min-w-0 w-full gap-6 xl:grid-cols-[22rem_minmax(0,1fr)]">
         {engagementId ? (
-          <JobList selectedJobId={activeJobId} engagementId={engagementId} />
-        ) : <div />}
+          <div className="min-w-0">
+            <JobList selectedJobId={activeJobId} engagementId={engagementId} />
+          </div>
+        ) : <div className="min-w-0" />}
         {activeJobId ? (
-          <JobWorkspace
-            jobId={activeJobId}
-            approvalRole={access.data?.approvalRole ?? null}
-          />
+          <div className="min-w-0">
+            <JobWorkspace
+              jobId={activeJobId}
+              approvalRole={access.data?.approvalRole ?? null}
+            />
+          </div>
         ) : (
-          <div className="grid min-h-64 place-items-center rounded-lg border border-dashed p-8 text-center">
+          <div className="grid min-h-64 min-w-0 place-items-center rounded-lg border border-dashed p-8 text-center">
             <div>
               <DatabaseZap className="mx-auto h-8 w-8 text-muted-foreground" aria-hidden="true" />
               <h2 className="mt-3 font-medium">Select or upload a migration job</h2>
@@ -609,6 +889,12 @@ export function MigrationWorkspace({ selectedJobId }: { selectedJobId?: string }
           </div>
         )}
       </div>
+      {engagementId ? (
+        <RetroInbox
+          engagementId={engagementId}
+          canDecide={Boolean(access.data?.approvalRole)}
+        />
+      ) : null}
     </div>
   );
 }

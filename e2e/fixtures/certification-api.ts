@@ -807,6 +807,46 @@ export async function mockCertificationApi(page: Page, options: CertificationApi
       return;
     }
 
+    if (url.pathname === "/api/v1/certification/inbox" && method === "GET") {
+      const submitted = currentMonth.submission.status === "SUBMITTED";
+      await fulfillJson(route, {
+        generatedAt: "2026-08-30T10:10:00Z",
+        total: 1,
+        actionRequired: 1,
+        overdue: submitted ? 1 : 0,
+        items: [
+          {
+            monthId: ids.month,
+            engagementId: ids.engagement,
+            engagementCode: "ENG-CADENCE-001",
+            engagementName: "ArrowFoundry × Reliance",
+            monthStartDate: "2026-08-01",
+            monthLabel: "August 2026",
+            lifecycleState: currentMonth.lifecycleState,
+            monthVersion: currentMonth.version,
+            submissionStatus: currentMonth.submission.status,
+            deliverableCount: currentMonth.deliverables.length,
+            terminalDecisionCount: currentMonth.summary.terminalItemCount,
+            assignedReviewCount: currentMonth.deliverables.filter(
+              (item) => item.assignedToCurrentActor && !item.certification?.terminal,
+            ).length,
+            pendingInboundReviewCount: currentMonth.inboundReviews.filter(
+              (item) => item.reviewStatus === "PENDING",
+            ).length,
+            confirmationState: currentRequest.state,
+            confirmationDueAt: currentRequest.dueAt,
+            readinessStatus: currentReadiness.status,
+            overdue: submitted,
+            nextAction: submitted
+              ? "CERTIFY_ASSIGNED_DELIVERABLES"
+              : "COMPLETE_DELIVERY_SUBMISSION",
+            actionPath: `/certification/${ids.month}`,
+          },
+        ],
+      });
+      return;
+    }
+
     if (url.pathname === `/api/v1/certification/months/${ids.month}` && method === "GET") {
       if (options.unsafeMonthError) {
         await fulfillJson(

@@ -72,11 +72,17 @@ implemented. The current completion markers are:
   notification, reminder/expiry, and F05-handoff durable work. Failed
   configured notifications expose reasoned, exact-month-version replay only to
   the existing `certification.outbox.replay` authority.
+- [x] `F04-TASK-028` — repeated governed reopen/correction cycles retain one
+  effective pending request while append-only decisions allow a later cycle
+  (V42).
 - [ ] G4 embedded provider/deployment acceptance — sender/mailbox/storage,
   controlled identity, production grants/platform controls, and full-stack
   acceptance remain open.
-- [x] Root-agent verification — the final 111 backend, 64 frontend, and 59
-  Playwright results require a final root-agent rerun.
+- [x] Local verification reconciliation — static frontend tests passed
+  120/120; system lanes passed 4/4, 6/6 and 7/7; the browser matrix passed
+  287/292 before the exact five affected combinations passed focused recovery.
+  The 340-test Maven run reported two failures and one error before the
+  affected backend cases passed focused recovery.
 
 See [FIXES.md](FIXES.md) and [CODE_ISSUES.md](CODE_ISSUES.md) for the exact
 resolved and still-open scope.
@@ -94,3 +100,7 @@ resolved and still-open scope.
 ## Exit gate
 
 Every terminal F04 outcome is tied to immutable plan/attendance/certification/request versions and hashes, a verifiable authorized actor/source/action history, and replay-safe notification/job evidence. Vendor content and product-owner annotations remain separate; Linear status, transport receipts, reminders, timeout, silence, auto-replies, forwarded links and ambiguous replies never manufacture acceptance or confirmation. Production email/reply acceptance remains blocked until G4 external prerequisites are supplied.
+
+The verification record above is cumulative and does not represent a single
+full post-fix green Maven and browser run. G4 provider/deployment acceptance
+and the controls listed in [CODE_ISSUES.md](CODE_ISSUES.md) remain open.

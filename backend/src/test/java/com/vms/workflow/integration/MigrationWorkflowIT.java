@@ -13,15 +13,20 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.nio.charset.StandardCharsets;
+import java.io.ByteArrayInputStream;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
+import java.util.zip.ZipInputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -36,7 +41,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest(properties = {
-    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow",
+    "spring.datasource.url=jdbc:tc:vmspostgresql:18-alpine:///vms_workflow_migration_workflow_it",
     "spring.datasource.driver-class-name=org.testcontainers.jdbc.ContainerDatabaseDriver",
     "spring.datasource.username=test",
     "spring.datasource.password=test",
@@ -58,6 +63,8 @@ class MigrationWorkflowIT {
         UUID.fromString("00000000-0000-0000-0000-000000000602");
     private static final UUID JUNE =
         UUID.fromString("00000000-0000-0000-0000-000000000601");
+    private static final UUID HISTORICAL_AUGUST =
+        UUID.fromString("00000000-0000-0000-0000-000000000604");
 
     @Autowired
     private MockMvc mvc;
@@ -75,6 +82,136 @@ class MigrationWorkflowIT {
     private ApplicationContext applicationContext;
 
     @Test
+    void tenantTemplateWorkbookContainsImportAndActiveReferenceSheets()
+        throws Exception {
+        byte[] workbook = mvc.perform(get(
+                "/api/v1/migrations/templates/{code}/download",
+                "01_employees")
+                .queryParam("engagementId", ENGAGEMENT.toString())
+                .queryParam("format", "XLSX")
+                .with(token("user-arrow")))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsByteArray();
+        Set<String> entries = new HashSet<>();
+        String lookupXml = "";
+        try (ZipInputStream zip = new ZipInputStream(
+            new ByteArrayInputStream(workbook))) {
+            java.util.zip.ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                entries.add(entry.getName());
+                if ("xl/worksheets/sheet2.xml".equals(entry.getName())) {
+                    lookupXml = new String(
+                        zip.readAllBytes(), StandardCharsets.UTF_8);
+                }
+            }
+        }
+        assertTrue(entries.contains("xl/worksheets/sheet1.xml"));
+        assertTrue(entries.contains("xl/worksheets/sheet2.xml"));
+        assertTrue(lookupXml.contains("ARROWFOUNDRY"));
+        assertTrue(lookupXml.contains("NAM"));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void retroApprovalIsAtomicWithOrderedMonthTransitionAndTransitionReplays()
+        throws Exception {
+        UUID blockedMonth = UUID.randomUUID();
+        jdbc.update("""
+            INSERT INTO engagement_months
+              (id, engagement_id, month_start_date, state, historical_flag)
+            VALUES (?, ?, '2026-09-01', 'HISTORICAL_REVIEW', TRUE)
+            """, blockedMonth, ENGAGEMENT);
+        String requestBody = mvc.perform(post(
+                "/api/v1/migrations/retro-requests")
+                .with(token("user-governance"))
+                .header("Idempotency-Key", "retro-atomic-create")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "engagementId":"%s",
+                      "engagementMonthId":"%s",
+                      "requestType":"CONFIRMATION",
+                      "representedMonth":"2026-09-01",
+                      "reason":"Prove transition-bound decision",
+                      "originalActorUnavailable":false
+                    }
+                    """.formatted(ENGAGEMENT, blockedMonth)))
+            .andExpect(status().isCreated())
+            .andReturn().getResponse().getContentAsString();
+        JsonNode request = mapper.readTree(requestBody);
+        mvc.perform(post(
+                "/api/v1/migrations/retro-requests/{id}/decision",
+                request.path("id").asText())
+                .with(token("user-arrow"))
+                .header("If-Match", request.path("version").asText())
+                .header("Idempotency-Key", "retro-atomic-decision")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "expectedVersion":1,
+                      "decision":"APPROVED",
+                      "reason":"Must not skip certification state"
+                    }
+                    """))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code")
+                .value("HISTORICAL_READINESS_BLOCKED"));
+        assertEquals("PENDING", jdbc.queryForObject("""
+            SELECT state FROM migration_retro_requests WHERE id = ?::uuid
+            """, String.class, request.path("id").asText()));
+        assertEquals(0, count("""
+            SELECT count(*) FROM migration_retro_actions
+            WHERE request_id = ?::uuid
+            """, request.path("id").asText()));
+
+        UUID advancingMonth = UUID.randomUUID();
+        UUID certification = UUID.randomUUID();
+        jdbc.update("""
+            INSERT INTO engagement_months
+              (id, engagement_id, month_start_date, state, historical_flag)
+            VALUES (?, ?, '2026-10-01',
+                    'HISTORICAL_PENDING_CERTIFICATION', TRUE)
+            """, advancingMonth, ENGAGEMENT);
+        jdbc.update("""
+            INSERT INTO migration_retro_requests
+              (id, engagement_id, engagement_month_id, request_type, state,
+               represented_month, reason, requested_by_subject,
+               decided_by_subject, decision_at, decision_reason,
+               procurement_notification_state, idempotency_key)
+            VALUES (?, ?, ?, 'CERTIFICATION', 'APPROVED', '2026-10-01',
+                    'Bound certification evidence', 'user-governance',
+                    'user-arrow', CURRENT_TIMESTAMP, 'Approved now',
+                    'ACTION_REQUIRED', 'retro-transition-fixture')
+            """, certification, ENGAGEMENT, advancingMonth);
+        String transition = """
+            {
+              "expectedVersion":0,
+              "targetState":"HISTORICAL_PENDING_CONFIRMATION",
+              "reason":"Certification evidence is bound"
+            }
+            """;
+        for (int attempt = 0; attempt < 2; attempt++) {
+            mvc.perform(post(
+                    "/api/v1/migrations/months/{id}/transitions",
+                    advancingMonth)
+                    .with(token("user-arrow"))
+                    .header("If-Match", "0")
+                    .header("Idempotency-Key",
+                        "historical-transition-replay")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(transition))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state")
+                    .value("HISTORICAL_PENDING_CONFIRMATION"));
+        }
+        assertEquals(1, count("""
+            SELECT count(*) FROM migration_outbox_events
+            WHERE event_key LIKE
+              'historical-month:%:HISTORICAL_PENDING_CONFIRMATION:historical-transition-replay'
+            """));
+    }
+
+    @Test
     void flywayV17AndGovernedLifecycleProduceOneProvenancedEffect()
         throws Exception {
         assertEquals(1, count("""
@@ -84,6 +221,10 @@ class MigrationWorkflowIT {
         assertEquals(1, count("""
             SELECT count(*) FROM flyway_schema_history
             WHERE version = '20' AND success
+            """));
+        assertEquals(1, count("""
+            SELECT count(*) FROM flyway_schema_history
+            WHERE version = '41' AND success
             """));
         JsonNode uploaded = uploadEmployee("AF-MIG-101", null);
         UUID uploadedId = UUID.fromString(uploaded.path("id").asText());
@@ -437,6 +578,13 @@ class MigrationWorkflowIT {
             SELECT state FROM migration_jobs WHERE id = ?
             """, String.class, UUID.fromString(job.path("id").asText())));
 
+        jdbc.update("""
+            INSERT INTO engagement_months
+              (id, engagement_id, month_start_date, state, risk_status,
+               historical_flag)
+            VALUES (?, ?, '2026-08-01', 'HISTORICAL_PENDING_CONFIRMATION',
+                    'ON_TRACK', TRUE)
+            """, HISTORICAL_AUGUST, ENGAGEMENT);
         String retroBody = mvc.perform(post("/api/v1/migrations/retro-requests")
                 .with(token("user-governance"))
                 .header("Idempotency-Key", "retro-current-time")
@@ -446,15 +594,15 @@ class MigrationWorkflowIT {
                       "engagementId":"%s",
                       "engagementMonthId":"%s",
                       "requestType":"CONFIRMATION",
-                      "representedMonth":"2026-06-01",
+                      "representedMonth":"2026-08-01",
                       "reason":"Original approver unavailable",
                       "originalActorUnavailable":true,
                       "delegationEvidenceReference":"delegation-case-101"
                     }
-                    """.formatted(ENGAGEMENT, JUNE)))
+                    """.formatted(ENGAGEMENT, HISTORICAL_AUGUST)))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.state").value("PENDING"))
-            .andExpect(jsonPath("$.representedMonth").value("2026-06-01"))
+            .andExpect(jsonPath("$.representedMonth").value("2026-08-01"))
             .andReturn().getResponse().getContentAsString();
         JsonNode retro = mapper.readTree(retroBody);
         assertNull(retro.path("decisionAt").isNull()
@@ -463,8 +611,46 @@ class MigrationWorkflowIT {
             OffsetDateTime.parse(retro.path("createdAt").asText());
         assertTrue(createdAt.isAfter(
             OffsetDateTime.parse("2026-06-30T23:59:59Z")));
-        assertNotEquals("2026-06-01",
+        assertNotEquals("2026-08-01",
             createdAt.toLocalDate().toString());
+        String decisionBody = mvc.perform(post(
+                "/api/v1/migrations/retro-requests/{requestId}/decision",
+                retro.path("id").asText())
+                .with(token("user-arrow"))
+                .header("If-Match", retro.path("version").asText())
+                .header("Idempotency-Key", "retro-current-decision")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "expectedVersion":%d,
+                      "decision":"APPROVED",
+                      "reason":"Reconstructed evidence independently approved"
+                    }
+                    """.formatted(retro.path("version").asLong())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.state").value("APPROVED"))
+            .andExpect(jsonPath("$.version").value(2))
+            .andExpect(jsonPath("$.decisionAt").isNotEmpty())
+            .andExpect(jsonPath("$.procurementNotificationState")
+                .value("ACTION_REQUIRED"))
+            .andReturn().getResponse().getContentAsString();
+        JsonNode decision = mapper.readTree(decisionBody);
+        assertTrue(!OffsetDateTime.parse(decision.path("decisionAt").asText())
+            .isBefore(createdAt));
+        assertEquals("CONFIRMED", jdbc.queryForObject("""
+            SELECT state FROM engagement_months WHERE id = ?
+            """, String.class, HISTORICAL_AUGUST));
+        assertEquals(1, count("""
+            SELECT count(*) FROM migration_retro_actions
+            WHERE request_id = ? AND action = 'APPROVED'
+              AND actor_subject = 'user-arrow'
+            """, UUID.fromString(retro.path("id").asText())));
+        assertEquals(1, count("""
+            SELECT count(*) FROM notification_outbox
+            WHERE business_object_id = ?
+              AND event_type = 'HISTORICAL_RETRO_OUTCOME_RECORDED'
+              AND correlation_id IS NOT NULL
+            """, UUID.fromString(retro.path("id").asText())));
     }
 
     @Test
@@ -1030,7 +1216,10 @@ class MigrationWorkflowIT {
               "templateCode":"%s",
               "templateVersion":"1",
               "mode":"DRY_RUN",
-              "partialCommit":%s
+              "partialCommit":%s,
+              "sourceType":"APPROVED_SPREADSHEET",
+              "confidence":"HIGH",
+              "sourceDescription":"Focused governed migration test"
               %s
             }
             """.formatted(

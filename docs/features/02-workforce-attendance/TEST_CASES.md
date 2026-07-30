@@ -28,6 +28,10 @@ planned feature.
 
 Additional automated invariants:
 
+- [x] roster readiness rejects an assigned calendar whose shift template omits
+  the represented weekday (`MISSING_CALENDAR_WEEKDAY`);
+- [x] roster readiness rejects inactive/disabled/not-yet-joined/exited employee
+  versions, non-effective shift policies and over-allocated employee-days;
 - [x] repeated attendance-day GET creates/updates/resolves no persistent row;
 - [x] multi-day leave totals are allocated exactly once over eligible dates;
 - [x] reviewer reads cannot become employee punch/leave/regularization commands;
@@ -40,3 +44,16 @@ Additional automated invariants:
 
 See [TEST_AUTOMATION.md](TEST_AUTOMATION.md), [FIXES.md](FIXES.md) and
 [UI_DOCUMENTATION.md](UI_DOCUMENTATION.md).
+
+## Final execution evidence — 2026-07-30
+
+- Static frontend tests: 120/120 passed.
+- System regression lanes: 4/4, 6/6 and 7/7 passed.
+- Full browser matrix: 287/292 passed on the consolidated run; the exact five
+  failures were fixed and passed a focused 5/5 recovery slice.
+- Full Maven suite: 340 tests executed with two failures and one error; the
+  affected tests passed focused recovery after remediation.
+
+No single post-remediation full-suite run is claimed. Live provider,
+controlled-identity and deployed-environment cases remain blocked as recorded
+above.

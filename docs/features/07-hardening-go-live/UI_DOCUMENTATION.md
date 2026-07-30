@@ -1,8 +1,23 @@
 # F07 — UI Functional Flow and How-to
 
+## Final integrated reconciliation — 2026-07-30
+
+The operator flows cover the current V43 system and pass the ordered local
+system lane 7/7. Browser aggregate evidence remains 287/292 with a separate
+5/5 exact recovery. Representative-user UAT/accessibility approval, the real
+24-hour soak, DR drill and production artifact/provenance evidence remain open.
+
 F07 hardens the shared application shell. Retention and feature-flag governance
 are currently operator/API workflows documented through authenticated Swagger;
 the browser does not invent a second client-side authority model.
+
+## Role guides and contextual support
+
+The global sidebar exposes **Role guides & support** at `/support`. The page
+routes employee, vendor HR/admin, vendor delivery, product owner, Procurement,
+integration admin, governance/reopen and migration users to their correct
+workspace and gives safe escalation guidance. The matching long-form guide is
+[Role Guides and Support](../../ROLE_GUIDES_AND_SUPPORT.md).
 
 ## Shared safety flow
 

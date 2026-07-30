@@ -89,7 +89,11 @@ function payloadBody(route: Route) {
 
 export async function mockMigrationApi(
   page: Page,
-  options: { denied?: boolean; initialState?: string } = {},
+  options: {
+    denied?: boolean;
+    initialState?: string;
+    consumedPackage?: boolean;
+  } = {},
 ) {
   await page.addInitScript(() => {
     const captured: Array<Record<string, unknown>> = [];
@@ -262,6 +266,94 @@ export async function mockMigrationApi(
     if (path.endsWith(`/jobs/${migrationIds.job}`) && request.method() === "GET") {
       return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(job()) });
     }
+    if (path.endsWith(`/jobs/${migrationIds.job}/rows`) && request.method() === "GET") {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          items: [{
+            id: "f6000000-0000-0000-0000-000000000201",
+            rowNumber: 3,
+            state: "INVALID",
+            sourceType: "APPROVED_SPREADSHEET",
+            confidence: "HIGH",
+            representedAt: "2026-06-01T00:00:00Z",
+            recordedAt: "2026-07-27T10:01:00Z",
+            naturalKeyHash: "d".repeat(64),
+            limitations: null,
+            findings: [{
+              severity: "ERROR",
+              code: "REFERENCE_EMPLOYEE_NOT_FOUND",
+              field: "employee_number",
+              message: "Employee reference was not resolved in this scope.",
+            }],
+          }],
+          hasMore: false,
+          nextRow: 0,
+        }),
+      });
+    }
+    if (path.endsWith(`/jobs/${migrationIds.job}/correction-plan`) && request.method() === "GET") {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          jobId: migrationIds.job,
+          monthId: migrationIds.month,
+          required: Boolean(options.consumedPackage),
+          requiredAction: options.consumedPackage
+            ? "F04_REOPEN_THEN_F05_NEW_PACKAGE_VERSION"
+            : "NONE",
+          packages: options.consumedPackage ? [{
+            id: "f5000000-0000-0000-0000-000000000301",
+            version: 1,
+            status: "CURRENT",
+            supersedesId: null,
+          }] : [],
+          latestReopen: null,
+        }),
+      });
+    }
+    if (path.endsWith(`/months/${migrationIds.month}/readiness`) && request.method() === "GET") {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          monthId: migrationIds.month,
+          engagementId: migrationIds.engagement,
+          state: "HISTORICAL_REVIEW",
+          version: 2,
+          completedJobs: 1,
+          pendingRetroRequests: 0,
+          blockers: [],
+          ready: true,
+        }),
+      });
+    }
+    if (path.endsWith("/retro-requests") && request.method() === "GET") {
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          items: [{
+            id: "f6000000-0000-0000-0000-000000000301",
+            engagementMonthId: migrationIds.month,
+            requestType: "CONFIRMATION",
+            state: "PENDING",
+            representedMonth: "2026-06-01",
+            reason: "Reconstructed evidence requires a current-time confirmation",
+            requestedBy: "Historical Migration Operator",
+            decidedBy: null,
+            decisionAt: null,
+            decisionReason: null,
+            procurementNotificationState: "PENDING",
+            version: 1,
+            createdAt: "2026-07-27T10:05:00Z",
+          }],
+          count: 1,
+        }),
+      });
+    }
     if (path.endsWith("/validate")) {
       state = "READY_TO_COMMIT";
       version++;
@@ -292,7 +384,7 @@ export async function mockMigrationApi(
       state = "ROLLED_BACK";
       committedRows = 0;
       version++;
-    } else if (path.endsWith("/retro-requests")) {
+    } else if (path.endsWith("/retro-requests") && request.method() === "POST") {
       return route.fulfill({
         status: 201,
         contentType: "application/json",

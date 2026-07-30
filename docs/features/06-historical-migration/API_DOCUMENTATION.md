@@ -1,19 +1,36 @@
 # F06 — API and OpenAPI Documentation
 
+## Final integrated reconciliation — 2026-07-30
+
+This API documents the V41 retro lifecycle and V43 durable asynchronous queue.
+Executable OpenAPI recovery passes 1/1 and the real local migration system lane
+passes 6/6. Production identity/provider/source-owner acceptance remains
+external; focused evidence is not a clean full Maven or browser rerun.
+
 Base path: `/api/v1/migrations`. All routes require an authenticated JWT and
 server-derived active scope. Mutations require `Idempotency-Key`; changes to an
 existing job also require `If-Match`.
+
+V41 adds scoped `GET /retro-requests`, current-time
+`POST /retro-requests/{id}/decision`, immutable
+`POST /retro-requests/{id}/cancel`, `GET /months/{id}/readiness` and
+evidence-gated `POST /months/{id}/transitions`. Request/outcome messages use
+the durable notification outbox with frozen Procurement recipients and request
+correlation. Production delivery remains `ACTION_REQUIRED` until a configured
+dispatcher reports a real transport outcome.
 
 | Method/path | Purpose |
 | --- | --- |
 | `GET /access` | Effective scoped permissions and external acceptance state |
 | `GET /templates` | Ordered 14-template registry |
-| `GET /templates/{code}/download` | Safe exact-version CSV template |
+| `GET /templates/{code}/download?format=CSV\|XLSX` | Tenant-reference exact-version template/workbook |
 | `GET /jobs?cursor=` | Bounded signed-cursor job page |
 | `POST /jobs` | Multipart source + JSON metadata upload in dry-run mode |
 | `GET /jobs/{id}` | Job, counts, findings and exact reconciliation |
 | `GET /jobs/{id}/rows?cursor=&limit=` | Bounded row/finding page |
 | `POST /jobs/{id}/validate` | Parse and validate staged rows |
+| `POST /jobs/{id}/validation-runs` | Queue durable resumable worker validation |
+| `GET /jobs/{id}/correction-plan` | Resolve F04 reopen/F05 superseding-package lineage |
 | `POST /jobs/{id}/rows/{rowId}/resolution` | Append a conflict/row decision |
 | `POST /jobs/{id}/approvals` | Immutable exact-hash lead/governance sign-off with explicit `APPROVED` decision |
 | `POST /jobs/{id}/commit` | Commit exact approved batch through domain adapters; body reaffirms the immutable upload-time `partialCommit` policy |
