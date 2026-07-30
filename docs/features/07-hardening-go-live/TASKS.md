@@ -7,8 +7,9 @@ and V43 the durable migration queue. Local system 7/7, self-test 9/9
 (45.037 s), operations (15 runbooks/6 alerts), 43 migration schemas, rollout
 schema and the eight-feature SDLC check pass. Full Maven executed 340 with
 2 failures + 1 error; four exact recovery tests pass. Full browser is 287/292;
-exact recovery is 5/5. Remaining local tasks are F07-T057, F07-T066/T067,
-F07-T070 and a clean local commit. External release remains
+exact recovery is 5/5. The implementation is committed locally as `6f3e9c9`
+without a push. Remaining local tasks are F07-T057, F07-T066/T067 and
+F07-T070. External release remains
 `NO-GO / ACTION_REQUIRED`.
 
 **Phase:** 7

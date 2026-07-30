@@ -7,7 +7,7 @@ feature task and test catalogs remain authoritative for implementation
 requirements; this file answers what is still pending now.
 
 **Last reconciled:** 2026-07-30 (V43 final integrated evidence reconciliation)
-**Committed base under active work:** `eda3eb8`
+**Implementation commit:** `6f3e9c9` (local only; not pushed)
 **Current implementation scope:** V43 is the latest production migration; V42
 is the repeated-reopen invariant. Local implementation is complete. Aggregate
 failures and exact recovery results are both preserved below and in the
@@ -26,7 +26,7 @@ capacity, recovery or human approval gates.
 | F04 certification/confirmation | `LOCAL PRODUCT COMPLETE` | V11–V13 vertical plus cross-month certification/confirmation inboxes, operations health and exact-version reasoned replay UI are implemented. The new PostgreSQL inbox/operations case passes 1/1; typecheck and focused Vitest 6/6 pass. | All remaining provider/deployment gates are external. |
 | F05 evidence/invoice/reporting | `LOCAL FOCUSED EVIDENCE COMPLETE` | Natural scanner-readiness 1/1, committed package concurrency 2/2, accessibility 3/3, finance recovery 1/1 and isolated system 4/4 passed. | External G4 provider/deployment/Procurement/scale gates. |
 | F06 historical migration | `LOCAL FOCUSED EVIDENCE COMPLETE` | V41/V43 implementation, exact migration recovery 1/1 and migration system 6/6 pass. | External cutover/source-owner/storage/scale/DR gates. |
-| F07 hardening/go-live | `LOCAL IMPLEMENTATION COMPLETE / RELEASE NO-GO` | V42/V43, frontend 120/120, system 7/7, self-test 9/9 and schema/operations/SDLC gates pass. Aggregate Maven 340 ended 2 failures+1 error and browser passed 287/292; recovery slices pass but are not clean aggregate reruns. | Real 24-hour soak (F07-T057), current recovery-boundary/DR drill (F07-T066/T067), artifact/provenance production (F07-T070), clean local commit, then external approvals. |
+| F07 hardening/go-live | `LOCAL IMPLEMENTATION COMMITTED / RELEASE NO-GO` | V42/V43, frontend 120/120, system 7/7, self-test 9/9 and schema/operations/SDLC gates pass. Aggregate Maven 340 ended 2 failures+1 error and browser passed 287/292; recovery slices pass but are not clean aggregate reruns. Local implementation commit is `6f3e9c9`; nothing was pushed. | Real 24-hour soak (F07-T057), current recovery-boundary/DR drill (F07-T066/T067), artifact/provenance production (F07-T070), then external approvals. |
 
 ## Consolidated local execution backlog
 
@@ -37,11 +37,9 @@ under each feature below.
 | ID | Feature | Pending local subtask | Required closure evidence |
 |---|---|---|---|
 | LOCAL-FINAL-REGRESSION | Cross-feature | Obtain clean aggregate Maven and browser reruns if required; preserve the failed full rows and passing exact recovery slices. | Clean aggregate evidence without replacing historical failures |
-| LOCAL-FINAL-001 | Cross-feature | Create the local commit and update commit-bound evidence; do not push. | Clean worktree, cross-linked evidence and local commit hash |
 | F07-T057 | F07 | Run the real 24-hour production-like soak. | Timestamped 24-hour result and owner approval |
 | F07-T066/T067 | F07 | Execute the current recovery-boundary and disaster-recovery drill. | RTO/RPO, restore and boundary evidence |
 | F07-T070 | F07 | Produce commit-bound release artifacts and provenance. | Artifact digests, attestations and exact commit |
-| LOCAL-COMMIT | Cross-feature | Create the requested clean local commit; do not push. | Local commit hash |
 
 ## Open F07 implementation/review findings
 

@@ -3,8 +3,8 @@
 ## Final integrated reconciliation — 2026-07-30
 
 Open local evidence: F07-T057 real 24-hour soak; F07-T066/T067 current
-recovery-boundary and DR drill; F07-T070 artifact/provenance production; clean
-local commit. Full Maven/browser failures remain open aggregate evidence even
+recovery-boundary and DR drill; F07-T070 artifact/provenance production. The
+implementation is committed locally as `6f3e9c9` and was not pushed. Full Maven/browser failures remain open aggregate evidence even
 though exact recoveries pass. Production identity/provider/legal/capacity/DR/
 UAT approvals remain external `NO-GO / ACTION_REQUIRED`.
 
@@ -16,7 +16,7 @@ UAT approvals remain external `NO-GO / ACTION_REQUIRED`.
 | F07-FINAL-002 | Closed locally | F05 finance 4/4 and F06 migration 6/6 local-system E2E pass after F07 shared hardening. |
 | F07-FINAL-003 | P1 | Local harness/schema checks pass; execute exact commit-bound supply-chain and controlled restore/rollback evidence. |
 | F07-FINAL-004 | Closed locally | Final Terra review closed with no P0–P3 finding. |
-| F07-FINAL-005 | P2 | Commit-bound evidence bundle and final documentation/status reconciliation. |
+| F07-FINAL-005 | Partially closed | Implementation and reconciled documentation are committed locally at `6f3e9c9`; the T070 release artifact/evidence bundle still requires exact commit binding. |
 | F07-FINAL-006 | Closed locally | Corrected bounded harness/bootstrap paths pass in focused/static gates; original zero-test discovery and bootstrap timeout remain preserved in history. |
 | F07-FINAL-007 | Closed locally; commit binding pending | The first exact supply-chain execution correctly failed. After security-fixed dependencies, a clean digest-pinned PostgreSQL 18.4 image, restricted pod/container contexts and fail-closed SPDX evaluation, the exact complete rerun passes all reports/artifacts/image with zero findings. Bind the same gate to the clean remediation commit. |
 | F07-FINAL-008 | P1 | Run the remaining complete frontend/Maven/browser regression on the V1–V42 candidate. The ordered F07 system lane is current at 7/7; preserved R3/R4 and browser results remain historical. |

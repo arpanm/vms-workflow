@@ -4,7 +4,8 @@
 
 The remaining executable local evidence issues are F07-T057 (real 24-hour
 soak), F07-T066/T067 (current recovery-boundary and DR drill), F07-T070
-(artifact/provenance production), and the clean local commit. The full Maven
+(artifact/provenance production). The implementation commit is `6f3e9c9`
+(local only, not pushed). The full Maven
 and browser failures remain recorded despite passing focused recovery. The
 release-schema wrapper is environmentally unverified due to bind `EPERM` and a
 467-second silent escalated retry.

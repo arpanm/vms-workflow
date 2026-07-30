@@ -5,6 +5,9 @@ working tree contains the F00–F07 local product and hardening verticals.
 Lovable, Supabase, Cloudflare and TanStack Start server dependencies have been
 removed.
 
+The completed implementation is committed locally as `6f3e9c9`
+(`feat: finish F01-F07 governed product workflows`). It has not been pushed.
+
 ## Current status
 
 The detailed, continuously maintained ledger is

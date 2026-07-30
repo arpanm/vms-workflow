@@ -9,7 +9,7 @@ pending tests and external gates is
 [PENDING_WORK.md](PENDING_WORK.md).
 
 **Last updated:** 2026-07-30 (V43 final integrated evidence reconciliation)
-**Repository commit under test:** `c2d8dfb` plus the active integrated worktree
+**Implementation commit:** `6f3e9c9` (`feat: finish F01-F07 governed product workflows`)
 **Working-tree context:** The integrated worktree adds F02 employee/allocation
 lifecycle completion, F03 editable delivery drafts, F04 governed artifact
 upload/scan and withdrawal, F05 aggregate/concurrency hardening, F06
@@ -48,9 +48,10 @@ acceptance.
 | Release-schema wrapper | `listen EPERM 127.0.0.1`; escalated retry aborted after 467 s without output | Environmental wrapper limitation, not a product finding; wrapper is **not** claimed as passed, while its underlying gates pass. |
 
 Remaining executable F07 work is F07-T057 (real 24-hour soak), F07-T066/T067
-(current recovery-boundary and DR drill), F07-T070 (artifact/provenance
-production), and the requested clean local commit. External production gates
-remain `NO-GO / ACTION_REQUIRED`.
+(current recovery-boundary and DR drill) and F07-T070 (commit-bound
+artifact/provenance production). The requested implementation commit exists
+locally as `6f3e9c9`; nothing was pushed. External production gates remain
+`NO-GO / ACTION_REQUIRED`.
 
 | Feature | State | Completed subparts | Pending subparts | Automated evidence | Current failures |
 |---|---|---|---|---|---|
@@ -60,8 +61,8 @@ remain `NO-GO / ACTION_REQUIRED`.
 | F03 Delivery/Linear | Local product complete; external provider gates open | V36/V38 plus V39 repeatable deliverables/criteria/dependencies/assignments, guarded editable drafts and cloned revisions; delegated approval/replay and bounded reconciliation operator UI | Live Linear/mail and controlled acceptance | Focused PostgreSQL and 25/25 delivery frontend tests pass | None in focused lanes |
 | F04 Certification/confirmation | Local provider-neutral product complete; release acceptance blocked | V11–V13 plus V40 exact-version withdrawal and private governed multipart evidence storage/metadata/hash/scan transitions; cross-month operations UI | Live sender/mailbox/object storage/scanner, production grants/SSO/provider/F05 consumer and deployed acceptance | **Latest focused:** 10/10 PostgreSQL | None in focused lanes |
 | F05 Evidence/invoice/reporting | Implemented locally; release acceptance blocked | Flyway V14–V16 finance schema, scoped APIs/OpenAPI, immutable exact invoice/package lineage, private storage/scan/render adapters, package/invoice/Procurement/payment/report/export workflows, React finance workspaces and evidence docs | Production provider/deployment/Procurement acceptance and production-like scale approval | **Fresh focused:** natural scanner-readiness 1/1; committed concurrency 2/2; accessibility 3/3; isolated Spring/Flyway/PostgreSQL system 4/4. Prior 154/154 backend, 88/88 frontend and 69/69 browser results remain historical. | No F05 failure in the fresh focused lanes; external performance/scale and G4 are ACTION_REQUIRED |
-| F06 Historical migration | Local code complete; consolidated regression and production cutover blocked | V17–V20/V41/V43, retro outcome ledger, ordered month transitions, Procurement envelopes, row/conflict UI, source declarations, stable codes/correlation, durable async worker, 100k bound, tenant CSV/XLSX, OpenAPI/a11y and consumed-package correction routing | **Local:** consolidated final regression only. **External:** approved scanner/storage, controlled capacity window, source-owner sign-off, backup/restore and masked rehearsal | New focused code/tests are present; exact final counts belong to the root consolidated regression | No unresolved code issue recorded; verification and external cutover prerequisites remain |
-| F07 Hardening/go-live | V41 integration/reconciliation in progress; production blocked | Historical V1–V40 traceability, least privilege, retention/legal hold, flags, telemetry, capacity and release/DR/supply-chain harness evidence is retained | Fresh F07 owner verification and all external production gates | Frontend **120/120**, typecheck and build are current static evidence. Do not treat historical Maven/browser/system/supply results as V41 proof until the F07 owner publishes exact results. | Current F07 agent result pending. Production provider/legal/identity/deployment/soak/DR/manual/UAT approval remains `ACTION_REQUIRED / NO-GO`. |
+| F06 Historical migration | Local code and focused verification complete; production cutover blocked | V17–V20/V41/V43, retro outcome ledger, ordered month transitions, Procurement envelopes, row/conflict UI, source declarations, stable codes/correlation, durable async worker, 100k bound, tenant CSV/XLSX, OpenAPI/a11y and consumed-package correction routing | Approved scanner/storage, controlled capacity window, source-owner sign-off, backup/restore and masked rehearsal | System **6/6**; exact Migration recovery **1/1**; migration accessibility recovery **2/2** plus OpenAPI focused evidence | No unresolved local product failure; clean aggregate Maven/browser reruns are not claimed |
+| F07 Hardening/go-live | Local implementation committed; production release blocked | V42/V43, exact review fixes, least privilege, retention/legal hold, flags, telemetry, capacity and release/DR/supply-chain harness, role support guide | F07-T057, T066/T067, T070 and all external production gates | Frontend **120/120**; system **7/7**; self-test **9/9**; operations/migration/rollout/SDLC gates pass; Maven/browser split recovery evidence recorded above | Release-schema wrapper environment-blocked; provider/legal/identity/deployment/soak/DR/manual/UAT approval remains `ACTION_REQUIRED / NO-GO` |
 
 ## Open issues and blockers
 
