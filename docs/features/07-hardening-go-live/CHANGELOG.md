@@ -1,5 +1,16 @@
 # F07 — Changelog
 
+## 2026-07-30 — V44 checksum-safe local startup
+
+- Restored the immutable released contents of V39 and V40, moving their
+  function `search_path` hardening into additive migration V44.
+- Advanced the default synthetic fixture database to
+  `vms_workflow_local_v44`, preserving the prior database and its history.
+- Added validated `VMS_LOCAL_DATABASE` override and propagation to the runtime
+  environment file.
+- Verified `npm run dev:all` through all 50 migrations and both Spring/Vite
+  readiness probes while PostgreSQL and JWKS used automatically selected ports.
+
 ## 2026-07-30 — V42/V43 final evidence reconciliation
 
 - Recorded V42 as the repeated-reopen invariant and V43 as the durable

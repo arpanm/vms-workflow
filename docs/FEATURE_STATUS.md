@@ -8,21 +8,25 @@ The one-page queue of all unfinished local subfeatures, active findings,
 pending tests and external gates is
 [PENDING_WORK.md](PENDING_WORK.md).
 
-**Last updated:** 2026-07-30 (V43 final integrated evidence reconciliation)
+**Last updated:** 2026-07-30 (V44 local-start compatibility repair)
 **Implementation commit:** `6f3e9c9` (`feat: finish F01-F07 governed product workflows`)
 **Working-tree context:** The integrated worktree adds F02 employee/allocation
 lifecycle completion, F03 editable delivery drafts, F04 governed artifact
 upload/scan and withdrawal, F05 aggregate/concurrency hardening, F06
 registry-driven validation, and F07 typed release evidence. Production Flyway
-migrations now run through V43 (V42 is the repeated-reopen invariant and V43
-is the durable asynchronous migration queue). The latest frontend gate passes
+migrations now run through V44 (V42 is the repeated-reopen invariant, V43 is
+the durable asynchronous migration queue and V44 additively hardens the
+already-released V39/V40 functions). The latest frontend gate passes
 typecheck, 28 files/120 Vitest tests and the production build; the SDLC manifest
 gate passes all eight feature manifests and preserves distinct Sol
 codegen/Terra review models. Focused PostgreSQL evidence passes F02 24/24,
 F04 10/10, F06 19/19 and all agent-owned F03/F05 concurrency cases. The
 dynamic local launcher was browser-smoked end to end with authenticated seeded
 data and now selects/propagates PostgreSQL, JWKS, Spring and Vite ports, using a
-dedicated `vms_workflow_local` fixture database.
+dedicated `vms_workflow_local_v44` fixture database. A real `dev:all` startup
+validated and applied all 50 production/local migrations, reached both Spring
+and Vite readiness, and preserved the prior checksum-incompatible local
+database rather than repairing or deleting its Flyway history.
 The final aggregate Maven attempt ran 74 unit plus 266 integration tests (340)
 and preserved 2 failures plus 1 error; exact recovery selectors subsequently
 passed Finance 1/1, Migration 1/1 and Capacity 2/2. The final browser aggregate

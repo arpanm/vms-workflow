@@ -70,9 +70,12 @@ database URL, issuer/JWKS URL, backend proxy target and frontend URL to every
 dependent process. The selected values are written to the ignored
 `.local-dev/runtime.env` file and printed after startup. `Ctrl+C` stops the
 Java/Node services while retaining the PostgreSQL container and named volume.
-Development fixtures use the dedicated `vms_workflow_local` database, keeping
-the normal `vms_workflow` database's Flyway history production-only. The
-local-only token defaults to the seeded `user-reliance` identity; set
+Development fixtures use the dedicated `vms_workflow_local_v44` database,
+keeping the normal `vms_workflow` database's Flyway history production-only.
+This schema-compatibility name preserves older local databases when an already
+applied migration must be restored to its immutable released checksum. Override
+it with `VMS_LOCAL_DATABASE` when an explicit compatible database is required.
+The local-only token defaults to the seeded `user-reliance` identity; set
 `VMS_LOCAL_SUBJECT` before `dev:all` to use another seeded development subject.
 The command loads the explicitly synthetic V1000+ development fixtures after
 the production V1+ Flyway chain. These fixtures are local-only and are never
@@ -116,8 +119,10 @@ npm run e2e
 npm run regression
 ```
 
-The production Flyway chain is V1–V43: V42 enforces the repeated-reopen
-invariant and V43 provides the durable asynchronous migration queue. The final
+The production Flyway chain is V1–V44: V42 enforces the repeated-reopen
+invariant, V43 provides the durable asynchronous migration queue and V44
+hardens the legacy V39/V40 trigger functions without changing their immutable
+released migrations. The final
 full Maven attempt executed 74 unit plus 266 integration tests (340 total) and
 ended with 2 failures and 1 error. Exact recovery selectors then passed Finance
 1/1, Migration 1/1 and Capacity 2/2; this is recovery evidence, not a claim

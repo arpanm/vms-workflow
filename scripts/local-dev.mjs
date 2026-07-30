@@ -9,7 +9,10 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const composeFile = join(repositoryRoot, "backend", "compose.yaml");
 const composeProject = "vms-workflow-local";
-const localDatabase = "vms_workflow_local";
+const localDatabase = databaseNameEnvironment(
+  "VMS_LOCAL_DATABASE",
+  "vms_workflow_local_v44",
+);
 const argumentsSet = new Set(process.argv.slice(2));
 const dependenciesOnly = argumentsSet.has("--dependencies-only");
 const down = argumentsSet.has("--down");
@@ -55,6 +58,7 @@ await ensureLocalDatabase();
 
 if (dependenciesOnly) {
   await persistRuntimeEnvironment({
+    VMS_LOCAL_DATABASE: localDatabase,
     VMS_DATABASE_URL:
       `jdbc:postgresql://127.0.0.1:${postgresPort}/${localDatabase}`,
     VMS_DATABASE_USERNAME: "vms",
@@ -83,6 +87,7 @@ const baseRuntimeEnvironment = {
   VMS_DATABASE_URL:
     `jdbc:postgresql://127.0.0.1:${postgresPort}/${localDatabase}`,
   VMS_DATABASE_USERNAME: "vms",
+  VMS_LOCAL_DATABASE: localDatabase,
   VMS_LOCAL_JWKS_PORT: String(jwksPort),
   VMS_OIDC_AUDIENCE: "vms-api",
   VMS_OIDC_ISSUER: issuer,
@@ -177,6 +182,16 @@ function numberEnvironment(name, fallback) {
   const value = Number(raw);
   if (!Number.isInteger(value) || value < 1 || value > 65535) {
     throw new Error(`${name} must be an integer between 1 and 65535.`);
+  }
+  return value;
+}
+
+function databaseNameEnvironment(name, fallback) {
+  const value = process.env[name] || fallback;
+  if (!/^[a-z][a-z0-9_]{0,62}$/.test(value)) {
+    throw new Error(
+      `${name} must be a lowercase PostgreSQL identifier (maximum 63 characters).`,
+    );
   }
   return value;
 }

@@ -231,6 +231,7 @@ lane.
 | 2026-07-30 | Final integrated frontend | typecheck; lint; Vitest; build | **PASS: 28 files/120 tests** | Lint 0 errors/13 warnings; Vitest 804 ms; build 3,042 modules in 2.80 s with only >500 kB advisory. |
 | 2026-07-30 | Final integrated system lanes | F05 finance; F06 migration; F07 system | **4/4; 6/6; 7/7 passed** | Local system evidence through production migrations V1–V43; external provider/identity/owner gates remain. |
 | 2026-07-30 | Final integrated harness/static | F07 self/migration/rollout/ops; SDLC; diff | **PASS** | Self 9/9 (45.037 s); 43 migrations; 15 runbooks/6 alerts; rollout and eight-feature Sol/Terra check; diff check. Release-schema wrapper itself is not claimed due to sandbox `EPERM` and aborted 467 s escalated retry. |
+| 2026-07-30 | Local launcher checksum recovery | `npm run dev:all` | **PASS: full stack ready** | Preserved the old checksum-incompatible local database; selected PostgreSQL 5436 and JWKS 9001 automatically; validated/applied V1–V44 plus V1000–V1005 (50 total); Spring 8080 and Vite 3000 reached their readiness probes. |
 
 Append a row for every feature-completion regression run. Never overwrite a
 failure: record the later passing run as a new row and link the issue/fix in

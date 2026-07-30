@@ -4,7 +4,6 @@
 CREATE OR REPLACE FUNCTION delivery_version_content_guard()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-SET search_path = pg_catalog, public
 AS $$
 DECLARE
     approver_count INTEGER;

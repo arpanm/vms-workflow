@@ -6,10 +6,13 @@ that can only be produced in an approved external environment. Detailed
 feature task and test catalogs remain authoritative for implementation
 requirements; this file answers what is still pending now.
 
-**Last reconciled:** 2026-07-30 (V43 final integrated evidence reconciliation)
+**Last reconciled:** 2026-07-30 (V44 local-start compatibility repair)
 **Implementation commit:** `6f3e9c9` (local only; not pushed)
-**Current implementation scope:** V43 is the latest production migration; V42
-is the repeated-reopen invariant. Local implementation is complete. Aggregate
+**Current implementation scope:** V44 is the latest production migration; V42
+is the repeated-reopen invariant, V43 is the durable migration queue and V44
+hardens released V39/V40 functions without changing their checksums. Local
+`dev:all` startup is restored against a preserved-data-compatible fixture
+database. Local implementation is complete. Aggregate
 failures and exact recovery results are both preserved below and in the
 regression catalog.
 **Production release state:** `NO-GO / ACTION_REQUIRED`; local synthetic or
@@ -26,7 +29,7 @@ capacity, recovery or human approval gates.
 | F04 certification/confirmation | `LOCAL PRODUCT COMPLETE` | V11–V13 vertical plus cross-month certification/confirmation inboxes, operations health and exact-version reasoned replay UI are implemented. The new PostgreSQL inbox/operations case passes 1/1; typecheck and focused Vitest 6/6 pass. | All remaining provider/deployment gates are external. |
 | F05 evidence/invoice/reporting | `LOCAL FOCUSED EVIDENCE COMPLETE` | Natural scanner-readiness 1/1, committed package concurrency 2/2, accessibility 3/3, finance recovery 1/1 and isolated system 4/4 passed. | External G4 provider/deployment/Procurement/scale gates. |
 | F06 historical migration | `LOCAL FOCUSED EVIDENCE COMPLETE` | V41/V43 implementation, exact migration recovery 1/1 and migration system 6/6 pass. | External cutover/source-owner/storage/scale/DR gates. |
-| F07 hardening/go-live | `LOCAL IMPLEMENTATION COMMITTED / RELEASE NO-GO` | V42/V43, frontend 120/120, system 7/7, self-test 9/9 and schema/operations/SDLC gates pass. Aggregate Maven 340 ended 2 failures+1 error and browser passed 287/292; recovery slices pass but are not clean aggregate reruns. Local implementation commit is `6f3e9c9`; nothing was pushed. | Real 24-hour soak (F07-T057), current recovery-boundary/DR drill (F07-T066/T067), artifact/provenance production (F07-T070), then external approvals. |
+| F07 hardening/go-live | `LOCAL IMPLEMENTATION COMMITTED / RELEASE NO-GO` | V42/V43 product migrations plus additive V44 checksum-safe function hardening; `dev:all` applied 50 migrations and reached Spring/Vite readiness. Frontend 120/120, system 7/7, self-test 9/9 and schema/operations/SDLC gates pass. Aggregate Maven 340 ended 2 failures+1 error and browser passed 287/292; recovery slices pass but are not clean aggregate reruns. Local implementation commit is `6f3e9c9`; nothing was pushed. | Real 24-hour soak (F07-T057), current recovery-boundary/DR drill (F07-T066/T067), artifact/provenance production (F07-T070), then external approvals. |
 
 ## Consolidated local execution backlog
 

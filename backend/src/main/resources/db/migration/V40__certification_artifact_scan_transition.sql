@@ -5,7 +5,6 @@ DROP TRIGGER IF EXISTS f04_evidence_artifacts_immutable ON evidence_artifacts;
 CREATE OR REPLACE FUNCTION f04_evidence_artifact_transition_guard()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-SET search_path = pg_catalog, public
 AS $$
 BEGIN
     IF OLD.scan_status <> 'PENDING'
