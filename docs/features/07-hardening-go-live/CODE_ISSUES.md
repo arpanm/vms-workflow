@@ -29,7 +29,7 @@ evidence remains open.
 |---|---|---|
 | F07-BE-001–009 | RESOLVED_IN_CODE / FOCUSED_PASS | Focused gate passes 73 unit + 45 integration; these preserved review issues did not fail the complete Maven run. |
 | F07-BE-010 | RESOLVED_TEST_ISOLATION | R2 counted two provider effects in two worker cases because the new IT did not have a dedicated database. It now uses `vms_workflow_delivery_commitment_worker`; definitive Maven R3 passes 290/290. |
-| F07-OPS-001–007 | RESOLVED_IN_CODE / LOCAL_HARNESS_PASS | Static, schema and harness gates pass. Exact commit-bound supply-chain/restore/release execution remains a release-evidence task, and production DR remains external. |
+| F07-OPS-001–007 | RESOLVED_IN_CODE / LOCAL_HARNESS_PASS | Static, schema and harness gates pass. T070 now has a dedicated exact-clean-commit artifact manifest with SBOM/checksum/build/database/readiness metadata and isolated rebuild equality; its focused reproducibility check passed for both artifacts. Exact final-candidate manifest, restore and release execution remain evidence tasks, and production DR remains external. |
 | F07-UI-001 | RESOLVED / VERIFIED_LOCALLY | Complete browser matrix passes 274/274 after preserved 268/274 and 7/7 rerun history. Manual representative-user accessibility remains external. |
 
 ## Product-wide and external blockers

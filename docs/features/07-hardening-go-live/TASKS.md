@@ -2,15 +2,13 @@
 
 ## Final integrated reconciliation — 2026-07-30
 
-The production migration chain is V1–V44: V42 is the repeated-reopen invariant,
-V43 is the durable migration queue and V44 additively hardens the immutable
-V39/V40 functions. Local product system 7/7, repeatable startup 2/2, self-test 9/9
-(45.037 s), operations (15 runbooks/6 alerts), 43 migration schemas, rollout
-schema and the eight-feature SDLC check pass. Full Maven executed 340 with
-2 failures + 1 error; four exact recovery tests pass. Full browser is 287/292;
-exact recovery is 5/5. The implementation is committed locally as `6f3e9c9`
-without a push. Remaining local tasks are F07-T057, F07-T066/T067 and
-F07-T070. External release remains
+The production migration chain is V1–V45: V42 is the repeated-reopen invariant,
+V43 is the durable migration queue, V44 additively hardens the immutable
+V39/V40 functions and V45 governs finance-artifact retention/disposal. Local
+product system 7/7, self-test 9/9 and the eight-feature SDLC check pass. Full
+Maven passes 347/347 and the full browser regression passes 292/292. Remaining
+evidence is F07-T057, a verified post-fix F07-T066/T067 rehearsal and
+exact-clean-commit F07-T070 execution. External release remains
 `NO-GO / ACTION_REQUIRED`.
 
 **Phase:** 7
@@ -315,6 +313,14 @@ task and the overall production decision remain open/`NO-GO`.
 - [ ] **F07-T070 — LOCAL:** Produce reproducible backend/frontend deployment
   artifacts with build metadata, checksums, SBOM, database compatibility range
   and health/readiness contract.
+  The executable contract is now `scripts/f07/release-artifact-manifest.mjs`.
+  It requires the exact clean commit, passing per-artifact CycloneDX evidence,
+  frontend/backend checksums, a dynamically derived current/previous additive
+  Flyway range (V44/V45 in the current worktree), and the three public health
+  endpoints. It also rebuilds both artifacts into isolated temporary outputs
+  with fixed `SOURCE_DATE_EPOCH=315532802` and rejects any digest mismatch.
+  T070 remains unchecked until that command succeeds on the final clean
+  candidate and its structured lane is bound into release evidence.
 - [x] **F07-T071 — LOCAL:** Implement server-authoritative feature flags with
   scope, owner, default, dependency, effective window and audit; UI hiding
   alone must not authorize or enable a workflow.

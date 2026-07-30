@@ -36,7 +36,7 @@ Seed two organizations; one organization with two engagements/two projects; acti
 - `T-STOR-002` — `PENDING`, `UNKNOWN`, malware-failed/quarantined or retention-disposed artifact cannot preview, package, export, share or generate a signed URL; generator returns a named scan blocker. Scan-passed artifact metadata is immutable/versioned and subsequent replacement creates new object/artifact lineage.
 - `T-STOR-003` — Authorized signed download is short-lived, single-object/version and organization/engagement/classification scoped; expired, revoked, tampered, reused outside scope or URL guessed by outsider is safely denied without existence leakage. Every view/download/share/revoke is audited; URLs/credentials/raw restricted bytes do not appear in JSON, browser state, normal logs, events or OpenAPI.
 - `T-STOR-004` — Package and export artifacts use only scan-passed current immutable object versions; output hash is recomputed and a corrupted/restored object or manifest causes visible integrity failure, alert and safe download block.
-- `T-STOR-005` — Retention job honors configurable class/policy and legal hold, skips referenced/held evidence, produces an auditable deletion/skip report and retains closed-month package lineage. Restricted/raw content uses minimal retention and access logging.
+- `T-STOR-005` — Authorized organization-scoped finance-content schedules seed no default duration. The governance API records an immutable eligible/held/referenced/not-due dry-run report; explicit execution rechecks state and disposes an approved candidate at most once while retaining metadata/hash/closed-month lineage. Local byte deletion runs only for the transactionally coupled PostgreSQL adapter; external storage requires a durable provider-specific pending/retry workflow.
 - `T-STOR-006` — **External acceptance:** approved private storage, scanner and renderer configuration validates actual object versioning, malware/quarantine callback, scoped short URL expiry/revocation, at-rest/transport controls, retention/legal-hold operation and restored-object hash verification without exposing credentials or production personal data.
 
 ## Invoice versioning and readiness tests
@@ -63,7 +63,7 @@ Seed two organizations; one organization with two engagements/two projects; acti
 - `T-PAY-002` — Duplicate ERP callback/idempotency key, worker replay and concurrent status update create one payment-history event/business effect. Invalid transition or duplicate external reference follows configured conflict policy and is audited without loss of prior history.
 - `T-PAY-003` — Payment update does not alter package, invoice document/hash/version, readiness source set, F04 confirmation/certification, invoice commercial calculation or represent money movement. `PAID` remains a recorded/integrated AP status with source/provenance.
 - `T-F05-OUTBOX-001` — Every committed package/invoice/review/query/payment/invalidation transition atomically writes one domain event and transactional outbox row; transaction rollback leaves neither partial business state nor outbound event. Consumer duplicates/retries/admin replay cannot duplicate package, notification or business effect.
-- `T-F05-JOB-001` — Package/readiness/export/retention workers expose claim/attempt/progress/checkpoint/next retry/error/correlation; crash/restart resumes safely, expired export claims are reclaimed, stale workers cannot complete after lease loss, bounded exponential backoff reaches visible dead letter and authorized replay after correction performs at most one effect.
+- `T-F05-JOB-001` — Synchronous package/readiness mutations remain version/idempotency fenced. Export workers expose claim/attempt/progress/next retry/error/correlation; crash/restart resumes safely, expired claims are reclaimed, stale workers cannot complete after lease loss, bounded backoff reaches visible dead letter and authorized replay performs at most one effect. Finance-content retention reuses the leased/idempotent governance execution lifecycle; competing approved runs dispose an eligible artifact at most once.
 - `T-F05-AUD-001` — Audit/security events are append-only/redacted and capture actor/authority/object/version/source/reason/policy/result/evidence refs/correlation. Failed authorization, scan failure, integrity mismatch, download/share, exception, payment update, cross-scope attempt and compensating correction are all auditable; ordinary/admin roles cannot modify audit records.
 
 ## Reporting, control tower and export tests
@@ -151,3 +151,14 @@ their existing performance, recovery, soak and external boundaries.
   repeated worker pass produces no additional effect.
 - `E2E-F05-SYS-001` now checks the real Java metric response and visible React
   metric label before the vendor invoice/package journey.
+- `T-STOR-005-RETENTION` applies V45, proves that missing authorized schedules
+  fail closed, versions an organization-scoped finance-content schedule,
+  records eligible/held/referenced dry-run decisions, explicitly executes one
+  due artifact, preserves metadata/hash/audit/event/outbox/proof and rejects
+  direct blob/state bypass.
+- `T-F05-JOB-001-RETENTION-RACE` executes two independently approved dry runs
+  against one due artifact and proves one disposal transition/proof.
+- `T-PROC-005-SHARE-RACE` races two overlapping grants and proves one active
+  share/event plus a typed `PACKAGE_SHARE_WINDOW_CONFLICT` loser.
+- `T-F05-UI-UPLOAD-POLICY` proves the API-supplied policy drives the upload
+  classification/retention controls rather than a client hard-coded value.

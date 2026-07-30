@@ -448,6 +448,60 @@ test("[E2E-F06-SYS-006] real retro request records current authenticated time", 
   expect(retro.decisionAt).toBeNull();
 });
 
+test("[E2E-F06-SYS-007] real quarantine blocks parsing even for malformed CSV", async ({
+  request,
+}) => {
+  const metadata = JSON.stringify({
+    engagementId,
+    organizationId,
+    engagementMonthId: null,
+    templateCode: "01_employees",
+    templateVersion: "1",
+    mode: "DRY_RUN",
+    partialCommit: false,
+    sourceType: "OTHER",
+    confidence: "UNVERIFIED",
+    sourceDescription: "Real-system quarantine ordering proof",
+  });
+  const uploaded = await json(
+    await request.post("/api/v1/migrations/jobs", {
+      headers: authorization(tokens.lead),
+      multipart: {
+        file: {
+          name: "system-quarantined-malformed.csv",
+          mimeType: "text/csv",
+          buffer: Buffer.from(
+            "salary,malformed\r\n"
+              + 'EICAR-STANDARD-ANTIVIRUS-TEST-FILE,"unterminated\r\n',
+          ),
+        },
+        metadata: {
+          name: "metadata.json",
+          mimeType: "application/json",
+          buffer: Buffer.from(metadata),
+        },
+      },
+    }),
+    200,
+  );
+  expect(uploaded.scanStatus).toBe("QUARANTINED");
+  expect(uploaded.totalRows).toBe(0);
+
+  const blocked = await request.post(
+    `/api/v1/migrations/jobs/${uploaded.jobId}/validate`,
+    {
+      headers: versionHeaders(
+        tokens.lead,
+        Number(uploaded.version),
+        "f06-system-quarantine-validate",
+      ),
+      data: { expectedVersion: Number(uploaded.version) },
+    },
+  );
+  expect(blocked.status()).toBe(409);
+  expect((await blocked.json()).code).toBe("SOURCE_SCAN_NOT_PASSED");
+});
+
 function authorization(token: string) {
   return { Authorization: `Bearer ${token}` };
 }

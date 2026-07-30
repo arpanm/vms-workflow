@@ -2,10 +2,9 @@
 
 ## Final integrated reconciliation — 2026-07-30
 
-The V43 migration-system automation passes 6/6, with focused
-migration/OpenAPI recovery 1/1 and accessibility 3/3. Preserve the failed
-Maven 340 (2 failures + 1 error) and browser 287/292 rows alongside their
-focused recovery evidence; neither aggregate was rerun clean.
+The V45 migration-system automation passes 7/7, with focused backend 32/32 and
+intercepted browser 8/8. The subsequent full Maven 347/347 and browser 292/292
+runs pass; earlier failed aggregate rows remain preserved as history.
 
 The detailed source is [TEST_CASES.md](TEST_CASES.md). Local lanes are:
 
@@ -27,3 +26,8 @@ Spring/Testcontainers integration, 90/90 Vitest, 74/74 combined intercepted
 Playwright and 6/6 real local system Playwright. Exact commands, subsequent
 review-fix reruns and any failures remain recorded in
 [the feature-status ledger](../../FEATURE_STATUS.md).
+
+Completion-audit recovery evidence adds `E2E-F06-SYS-007`; the real local
+system lane is now **7/7**. It also adds an intercepted UI assertion for the
+missing employee-day warning and focused PostgreSQL cases for current-report
+sign-off filtering. Production provider/cutover evidence remains external.

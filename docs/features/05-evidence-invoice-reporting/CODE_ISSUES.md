@@ -18,7 +18,7 @@ findings after code changes.
 | F05-VAL-002 | P1 | Existing local coverage; fresh verification pending | Per-report projections/formula escaping, persisted authority-snapshot rejection and restricted field suppression are implemented in focused tests. |
 | F05-VAL-003 | P2 | Existing local coverage; fresh verification pending | Signed bounded snapshot/keyset continuity is covered by `FinancePaginationIT`; very-large-scale capacity remains a performance gate. |
 | F05-VAL-004 | P2 | Existing local coverage; fresh verification pending | Authorized legal-hold/scanner auditing and direct-SQL rejection are covered by `FinanceArtifactGovernanceIT` and `FinanceDatabaseControlsIT`. |
-| F05-VAL-005 | P1 | Lease recovery resolved; breadth open | Export completion requires a live claimant lease, stale failure cannot overwrite a replacement claim, and expired-claim restart/idempotency is exercised. Invoice/review/share concurrency breadth remains open. |
+| F05-VAL-005 | P1 | Export/package/retention/share resolved; invoice/review breadth open | Export completion requires a live claimant lease; package generation, retention disposal and overlapping share grants have committed competing-caller coverage. Independent invoice upload/submit and review-decision races remain depth work. |
 | F05-VAL-006 | P2 | Partially evidenced | Axe/keyboard/tablet passed 3/3 and finance system passed 4/4. Generated-file depth, performance/scale, controlled DR and G4 remain open. |
 
 ## External items (not local defects)
@@ -44,10 +44,26 @@ They must stay explicitly external even after local tests pass.
   expiry, mismatch, revoked-authority and cross-tenant checks remain covered.
   The exact Finance recovery passed **1/1**.
 - **Still open — F05-VAL-005 depth:** independently committed competing
-  invoice/review/share mutations remain absent. A two-worker committed
-  export-claim race and package race are previously green; live-lease fencing
-  and expired-claim recovery coverage were exercised; broader mutation
-  concurrency remains open.
+  invoice/review mutations remain absent. Two-worker committed export-claim,
+  package, and overlapping-share races are green; live-lease fencing and
+  expired-claim recovery coverage were exercised; broader mutation concurrency
+  remains open.
 
 The integrated Maven result remains 340 executed with 2 failures and 1 error;
 the **1/1** Finance recovery is a separate row, not a full-green claim.
+
+## V45 completion-audit disposition
+
+- **Resolved — retention implementation:** V45 and
+  `RetentionPrivacyService` reuse the organization-scoped schedule,
+  dry-run/explicit-execution and authority-evidence model. The finance disposer
+  accepts only an eligible approved candidate, rechecks legal hold/references,
+  couples local byte deletion to immutable transition/proof/audit/event/outbox
+  evidence and rejects direct bypass. No duration is seeded.
+- **Resolved — policy-driven upload UI:** invoice reads publish the effective
+  policy and React submits its classification/retention values.
+- **Resolved — share concurrency:** overlapping grants produce one committed
+  share/event and a typed `PACKAGE_SHARE_WINDOW_CONFLICT` loser.
+- **Still open depth:** independent invoice upload/submit and competing review
+  decisions; non-transactional provider-delete retry/finalization; scale/DR
+  and external G4.

@@ -101,3 +101,16 @@ commercial columns are rejected and never persisted.
 **Exit gate:** all local G0–G3 tests pass; June-onward packages are reproducible;
 provenance distinguishes represented from recorded/approved time; external
 items remain `ACTION_REQUIRED` until real evidence exists.
+
+## Completion-audit closure
+
+- [x] Enforce scanner verdict before CSV parse/header handling.
+- [x] Prefer immutable finalized roster evidence for month coverage, otherwise
+  derive expected employee-days from effective allocation, employment and
+  calendar truth; report imported and bounded missing-day exceptions
+  independently.
+- [x] Reject pre-start raw attendance timestamps with a stable field finding.
+- [x] Regenerate reconciliation and invalidate prior approvals after every row
+  conflict resolution.
+- [x] Expose only approved sign-offs bound to the active reconciliation.
+- [x] Add focused PostgreSQL, UI-contract and real-system regression coverage.

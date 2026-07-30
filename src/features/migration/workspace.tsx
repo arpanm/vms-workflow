@@ -466,6 +466,30 @@ function JobWorkspace({
                 <p>Employee-days<strong className="block">{job.reconciliation.importedEmployeeDays} / {job.reconciliation.expectedEmployeeDays}</strong></p>
                 <p>Low confidence<strong className="block">{job.reconciliation.lowConfidenceRows}</strong></p>
               </div>
+              {job.reconciliation.coverage.missing_employee_days > 0 ? (
+                <div
+                  className="rounded-md border border-amber-500/50 bg-amber-50 p-3 text-sm text-amber-950"
+                  role="status"
+                >
+                  <strong>
+                    {job.reconciliation.coverage.missing_employee_days} expected employee-days are missing
+                  </strong>
+                  <ul className="mt-2 list-disc pl-5">
+                    {job.reconciliation.coverage.missing_employee_day_samples
+                      .slice(0, 10)
+                      .map((item) => (
+                        <li key={`${item.employeeNumber}-${item.workDate}`}>
+                          {item.employeeNumber} · {item.workDate}
+                        </li>
+                      ))}
+                  </ul>
+                  {job.reconciliation.coverage.missing_employee_day_samples.length > 10 ? (
+                    <p className="mt-2">
+                      Showing the first 10 scoped exceptions; use the reconciliation API for the bounded full sample.
+                    </p>
+                  ) : null}
+                </div>
+              ) : null}
               <ul className="grid gap-2 sm:grid-cols-2">
                 {job.reconciliation.approvals.map((approval) => (
                   <li key={approval.approvalId} className="rounded-md border p-3">

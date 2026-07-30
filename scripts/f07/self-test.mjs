@@ -24,6 +24,10 @@ import {
 } from "./release-gate.mjs";
 import { runProfile } from "./load-harness.mjs";
 import { createProvenance } from "./provenance.mjs";
+import {
+  resolveDatabaseCompatibility,
+  validateReleaseArtifactManifest,
+} from "./release-artifact-manifest.mjs";
 import { decideCanary, validatePolicy, verifyRollback } from "./rollout-verify.mjs";
 import {
   requiredMigrationExecutions,
@@ -43,8 +47,10 @@ import {
   validateTarMembers,
   validateDistinctKeyMaterial,
   validateLocalAssertions,
+  validatePostgresClientContainerName,
   verifyAuthenticatedManifest,
 } from "./backup-drill.mjs";
+import { validateDrillDatabaseNames } from "./local-dr-rehearsal.mjs";
 import {
   applyMediumRiskDispositions,
   createLicenseInventory,
@@ -1581,7 +1587,8 @@ async function executeSelfTests(temporary) {
       ]),
     "backup, integrity and signing secrets must be pairwise distinct",
   );
-  validateTarMembers(["./safe/", "./safe/object.bin"], [
+  validateTarMembers(["./", "./safe/", "./safe/object.bin"], [
+    "drwx------ 0 user group 0 Jan 1 00:00 ./",
     "drwx------ 0 user group 0 Jan 1 00:00 ./safe/",
     "-rw------- 0 user group 1 Jan 1 00:00 ./safe/object.bin",
   ]);
@@ -1593,7 +1600,61 @@ async function executeSelfTests(temporary) {
     async () => validateTarMembers(["./link"], ["lrwxr-xr-x link -> ../escape"]),
     "tar link members must fail before extraction",
   );
+  assert(
+    validatePostgresClientContainerName("vms-workflow-local-postgres-1") ===
+      "vms-workflow-local-postgres-1",
+    "digest-pinned PostgreSQL client mode must accept a bounded container name",
+  );
+  for (const unsafeContainer of [
+    "",
+    "../postgres",
+    "postgres;drop",
+    "postgres container",
+    "a".repeat(129),
+  ]) {
+    await expectReject(
+      async () => validatePostgresClientContainerName(unsafeContainer),
+      "containerized PostgreSQL client must reject unsafe container names",
+    );
+  }
+  assert(
+    stableJson(validateDrillDatabaseNames(
+      "vms_workflow_f07_source",
+      "vms_workflow_f07_drill",
+    )) === stableJson({
+      source: "vms_workflow_f07_source",
+      target: "vms_workflow_f07_drill",
+    }),
+    "local DR rehearsal must require explicit source/drill suffixes",
+  );
+  for (const [source, target] of [
+    ["vms_workflow", "vms_workflow_f07_drill"],
+    ["vms_workflow_f07_source", "vms_workflow"],
+    ["same_f07_source", "same_f07_source"],
+    ["source_f07_source;drop", "target_f07_drill"],
+  ]) {
+    await expectReject(
+      async () => validateDrillDatabaseNames(source, target),
+      "local DR rehearsal must reject broad, identical or unsafe databases",
+    );
+  }
   const supplyPlan = supplyChainPlan();
+  const backendPom = await readFile(repoPath("backend/pom.xml"), "utf8");
+  assert(
+    backendPom.includes(
+      "<project.build.outputTimestamp>1980-01-01T00:00:02Z" +
+        "</project.build.outputTimestamp>",
+    ),
+    "backend release JAR must have deterministic outputTimestamp configuration",
+  );
+  const fixedEpochProvenance = await createProvenance(
+    canonicalProvenanceInputs,
+    { expectedCommit: gitMetadata().commit },
+  );
+  assert(
+    fixedEpochProvenance.buildEnvironment.sourceDateEpoch === "315532802",
+    "provenance and canonical Maven outputTimestamp must use the same fixed epoch",
+  );
   for (const tool of ["trivy", "npm", "mvn", "semgrep"]) {
     assert(supplyPlan.requiredTools.includes(tool), `supply-chain plan must require ${tool}`);
   }
@@ -1602,6 +1663,139 @@ async function executeSelfTests(temporary) {
       supplyPlan.steps.some((step) => step.includes("release artifact")),
     "supply-chain plan must include real SAST and built-artifact scanning",
   );
+  assert(
+    recordEvidencePolicy["F07-T070"].laneId ===
+      "F07-CI-RELEASE-ARTIFACTS" &&
+      stableJson(recordEvidencePolicy["F07-T070"].requiredCases) ===
+        stableJson(["RELEASE-ARTIFACT-MANIFEST"]),
+    "T070 must require the exact release artifact manifest lane",
+  );
+  assert(
+    recordEvidencePolicy["E2E-08"].requiredCases.includes(
+      "E2E-F06-SYS-007@f06-migration-system-chromium",
+    ),
+    "E2E-08 must include the seventh canonical F06 system case",
+  );
+  const releaseCommit = gitMetadata().commit;
+  const artifactManifest = {
+    artifacts: {
+      backend: {
+        fileCount: 1,
+        path: "backend/target/workflow-backend-0.1.0-SNAPSHOT.jar",
+        sha256: "a".repeat(64),
+        size: 1,
+        type: "FILE",
+      },
+      frontend: {
+        fileCount: 1,
+        path: "dist",
+        sha256: "b".repeat(64),
+        size: 1,
+        type: "DIRECTORY",
+      },
+    },
+    buildMetadata: {
+      backendCommand: "mvn -B -f backend/pom.xml -DskipTests package",
+      commitTimestamp: gitMetadata().commitTimestamp,
+      frontendCommand: "npm run build",
+      sourceDateEpoch: "1",
+    },
+    cases: [{
+      durationMs: 1,
+      id: "RELEASE-ARTIFACT-MANIFEST",
+      source: "node:scripts/f07/release-artifact-manifest.mjs",
+      status: "PASSED",
+    }],
+    databaseCompatibility: await resolveDatabaseCompatibility(),
+    kind: "release-artifact-manifest-v1",
+    provenance: {
+      artifacts: [{ path: "dist/index.html", sha256: "c".repeat(64), size: 1 }],
+      buildEnvironment: { sourceDateEpoch: "1" },
+      commit: releaseCommit,
+      commitTimestamp: gitMetadata().commitTimestamp,
+      worktreeDirty: false,
+    },
+    readinessEndpoints: [
+      "/actuator/health",
+      "/actuator/health/liveness",
+      "/actuator/health/readiness",
+    ],
+    releaseCommit,
+    reproducibility: {
+      backend: {
+        command:
+          "mvn -B -f backend/pom.xml -DskipTests " +
+          "-Dproject.build.outputTimestamp=<source-date-epoch> " +
+          "-Dvms.build.directory=<isolated-output> package",
+        matchesRelease: true,
+        rebuildSha256: "a".repeat(64),
+        releaseSha256: "a".repeat(64),
+      },
+      frontend: {
+        command: "npm run build -- --outDir <isolated-output>",
+        matchesRelease: true,
+        rebuildSha256: "b".repeat(64),
+        releaseSha256: "b".repeat(64),
+      },
+      isolatedOutputs: true,
+      sourceDateEpoch: "1",
+    },
+    result: "PASS",
+    sboms: {
+      backend: {
+        format: "CycloneDX",
+        path: ".f07-evidence/test/backend.cdx.json",
+        sha256: "d".repeat(64),
+        specVersion: "1.6",
+      },
+      frontend: {
+        format: "CycloneDX",
+        path: ".f07-evidence/test/frontend.cdx.json",
+        sha256: "e".repeat(64),
+        specVersion: "1.6",
+      },
+    },
+    schemaVersion: 1,
+  };
+  await validateReleaseArtifactManifest(
+    artifactManifest,
+    releaseCommit,
+    { verifyFiles: false },
+  );
+  for (const [label, mutate] of [
+    ["dirty provenance", (manifest) => {
+      manifest.provenance.worktreeDirty = true;
+    }],
+    ["missing backend checksum", (manifest) => {
+      delete manifest.artifacts.backend.sha256;
+    }],
+    ["stale database range", (manifest) => {
+      manifest.databaseCompatibility.currentMigration = "V44";
+    }],
+    ["missing readiness", (manifest) => {
+      manifest.readinessEndpoints.pop();
+    }],
+    ["missing SBOM", (manifest) => {
+      delete manifest.sboms.frontend;
+    }],
+    ["mismatched rebuild", (manifest) => {
+      manifest.reproducibility.backend.rebuildSha256 = "f".repeat(64);
+    }],
+    ["mismatched rebuild epoch", (manifest) => {
+      manifest.reproducibility.sourceDateEpoch = "315532803";
+    }],
+  ]) {
+    const invalid = structuredClone(artifactManifest);
+    mutate(invalid);
+    await expectReject(
+      () => validateReleaseArtifactManifest(
+        invalid,
+        releaseCommit,
+        { verifyFiles: false },
+      ),
+      `release artifact manifest must reject ${label}`,
+    );
+  }
   validateImageReference(
     "cgr.dev/chainguard/postgres@sha256:dc2f04037c1044a22af76cee4de70b9111885b17c561b939d7ed70103d100759",
   );

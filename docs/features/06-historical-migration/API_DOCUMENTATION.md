@@ -86,3 +86,20 @@ pending-scan, reconciliation-mismatch and authorization-denial measurements.
   metadata are never transformed into a byte `content_hash`.
 - Attendance timestamps accept either ISO offset/UTC form or an ISO local
   date-time accompanied by the template's validated IANA `timezone`.
+
+## Completion-audit contract notes
+
+- Upload obtains a malware verdict before parsing any CSV structure. A
+  `PENDING` or `QUARANTINED` source may be listed by authorized operators but
+  cannot create rows; validation fails with `SOURCE_SCAN_NOT_PASSED`.
+- Reconciliation `coverage` is month-scoped when the job identifies a month.
+  Expected employee-days prefer the latest immutable finalized roster. When
+  none exists, the server derives them from effective allocation, employment
+  lifecycle, assigned calendar, holiday and date-override truth.
+  `attendance_coverage_basis` discloses which source was used.
+- `imported_employee_days` is derived independently from valid attendance
+  rows. `missing_employee_days` and `missing_employee_day_samples` disclose a
+  maximum of 200 scoped exceptions.
+- A row conflict resolution appends a new reconciliation version/hash. Job
+  `approvals` contains only `APPROVED` sign-offs bound to that latest report.
+  Clients must obtain both authorities again after any resolution.

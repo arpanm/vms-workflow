@@ -38,6 +38,19 @@ There are no accepted unresolved local P0/P1 findings after the post-fix review.
 The production scanner/private object storage, controlled 100k-row capacity
 evidence and masked source-owner rehearsal remain external release gates.
 
+## Completion-audit disposition
+
+The final requirements audit raised three additional local issues and closed
+all three:
+
+| Issue | Severity | Final disposition |
+|---|---:|---|
+| Upload parsed untrusted CSV before the scanner verdict | P0 | **Resolved.** Scan now precedes parse/header validation; quarantined malformed input creates zero rows. |
+| Attendance reconciliation used imported rows for both expected and imported totals | P1 | **Resolved.** Expected days prefer finalized roster evidence and otherwise derive from effective allocation/employment/calendar truth; missing days are explicit bounded exceptions. |
+| Conflict resolution retained the old report and surfaced stale/rejected approvals | P1 | **Resolved.** Resolution appends a report/audit record and responses filter sign-offs to approved decisions on the current report. |
+
+`T-MIG-048`–`T-MIG-052` and `E2E-F06-SYS-007` are the regression guards.
+
 ## P0 — release blockers
 
 1. **Rollback leaves canonical domain effects active.**

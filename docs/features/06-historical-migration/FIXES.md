@@ -37,3 +37,13 @@ remediation. Exact passing commands and counts are recorded in
 
 No finding is closed merely because a Markdown file exists. The status ledger
 and final review carry the evidence-backed state after each rerun.
+
+## Completion-audit fixes
+
+| Finding | Disposition | Implemented evidence |
+|---|---|---|
+| Source parsed before malware verdict | Fixed | Scanner inspection precedes all parser/header calls; quarantined malformed CSV is covered in PostgreSQL integration and real-system Playwright. |
+| Expected attendance equalled imported attendance | Fixed | Expected days prefer finalized roster evidence, then effective allocation, employment and calendar truth; imported and missing days are independent month-scoped values. |
+| Raw events before migration start were accepted | Fixed | `occurred_at` receives the same stable 1 June temporal boundary as daily attendance. |
+| Conflict resolution retained a stale report | Fixed | Every resolution appends a new report/hash and correlated audit event. |
+| Stale/rejected approvals appeared current in UI | Fixed | Job summaries return only approved decisions bound to the newest reconciliation; backend commit enforces the same identity. |

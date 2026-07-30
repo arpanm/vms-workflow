@@ -2,10 +2,10 @@
 
 ## Final integrated reconciliation — 2026-07-30
 
-**Local code:** complete through V41/V43. **Focused evidence:** migration
-system 6/6, migration/OpenAPI recovery 1/1, accessibility 3/3. **Aggregate
-evidence:** Maven 340 retained 2 failures + 1 error; browser retained 287/292,
-with recovery recorded separately. **Release:** external
+**Local code:** complete through V45. **Focused evidence:** backend 32/32,
+intercepted browser 8/8 and migration system 7/7. **Aggregate evidence:**
+Maven 347/347 and browser 292/292 pass; earlier failed rows remain in the
+append-only regression ledger. **Release:** external
 `NO-GO / ACTION_REQUIRED`.
 
 > **Historical pre-fix review.** The decision and matrix below intentionally
@@ -93,3 +93,26 @@ No accepted local P0/P1 remains. Production cutover is still blocked by the
 approved scanner/private object-storage selection, controlled 100k-row capacity
 evidence, source-owner mappings/sign-off, backup/restore checkpoint and masked
 rehearsal. These are `ACTION_REQUIRED`, not implied by local fixtures.
+
+## 30 July completion-audit addendum
+
+The earlier review tables above are preserved as review history, not current
+disposition. A requirements-outward audit found and closed three remaining
+local correctness gaps:
+
+1. source content could reach the parser before its malware verdict;
+2. reconciliation labelled imported attendance rows as expected attendance;
+3. a row resolution changed staged truth without creating a new report, while
+   the job response still returned stale/rejected approvals.
+
+The active implementation now scans first, prefers immutable finalized roster
+evidence for expected days (falling back to effective allocation, employment
+and calendar truth), reports bounded missing-day exceptions, rejects pre-start
+raw punches, versions reconciliation after every resolution, and returns only
+approved sign-offs for the newest report.
+
+Focused backend evidence is **32/32**, TypeScript and migration presentation
+evidence is green, and the real Vite/Spring/Flyway/PostgreSQL lane is **7/7**.
+No local F06 P0/P1 remains. Approved production scanner/storage operation,
+source-owner sign-off and controlled cutover/DR rehearsal remain external
+release evidence, not repository defects.

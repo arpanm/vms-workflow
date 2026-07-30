@@ -94,3 +94,29 @@ This audit ran focused checks, not a new full regression:
 
 No line above claims a single clean full Maven or full browser run.
 Performance/scale, controlled DR, F07-T057 and G4 remain separate gates.
+
+## 2026-07-30 V45 retention and policy-contract evidence
+
+- `npm run typecheck` — passed.
+- Current expanded governance/finance selector
+  (`FinanceWorkflowIT`, `FinanceCommittedConcurrencyIT`,
+  `FinanceRetentionWorkerIT`, `FinanceRetentionMigrationUpgradeIT`,
+  `FinanceDatabaseControlsIT`, `F07RetentionPrivacyIT`, and
+  `RetentionPrivacyServiceTest`) — **33/33 passed**. This includes a populated
+  V44→V45 upgrade proving no finance schedule/duration is seeded.
+- `mvn -B -f backend/pom.xml
+  -Dtest=FinanceRetentionWorkerIT,FinanceCommittedConcurrencyIT,FinanceWorkflowIT
+  test` — the earlier focused slice passed **14/14** against fresh PostgreSQL
+  18/Flyway V1–V45:
+  workflow **9/9**, committed concurrency **2/2**, retention **3/3**.
+- `npx playwright test e2e/finance.spec.ts
+  --project=f05-finance-chromium` — **7/7 passed**, including the effective
+  server upload-policy assertion.
+
+The retention suite covers no-schedule fail-closed behavior, authorized
+organization schedule versioning, immutable dry-run candidate decisions,
+explicit due/unreferenced disposal, legal-hold and retained-invoice-reference
+skips, direct SQL/blob bypass denial, metadata/hash preservation,
+audit/event/outbox/proof evidence and competing approved executions.
+The committed-concurrency suite additionally covers a competing package-share
+grant with one typed conflict loser.

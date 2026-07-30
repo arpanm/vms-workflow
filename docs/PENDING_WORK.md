@@ -6,16 +6,16 @@ that can only be produced in an approved external environment. Detailed
 feature task and test catalogs remain authoritative for implementation
 requirements; this file answers what is still pending now.
 
-**Last reconciled:** 2026-07-30 (V44 local-start compatibility repair)
+**Last reconciled:** 2026-07-30 (final V45 F05–F07 completion pass)
 **Implementation commits:** `6f3e9c9` (F01–F07) and `2709447`
-(repeatable local database startup/V44); local only, not pushed
-**Current implementation scope:** V44 is the latest production migration; V42
-is the repeated-reopen invariant, V43 is the durable migration queue and V44
-hardens released V39/V40 functions without changing their checksums. Local
-`dev:all` startup is restored against a preserved-data-compatible fixture
-database. Local implementation is complete. Aggregate
-failures and exact recovery results are both preserved below and in the
-regression catalog.
+(repeatable local database startup/V44); the V45 completion pass is local only
+and not pushed
+**Current implementation scope:** V45 is the latest production migration; V42
+is the repeated-reopen invariant, V43 is the durable migration queue, V44
+hardens released V39/V40 functions without changing their checksums and V45
+governs finance-artifact retention/disposal. `dev:all` preserves
+checksum-incompatible databases and automatically selects a deterministic
+compatible database. Local product implementation is complete.
 **Production release state:** `NO-GO / ACTION_REQUIRED`; local synthetic or
 recorded adapters cannot satisfy production provider, legal, identity,
 capacity, recovery or human approval gates.
@@ -24,13 +24,13 @@ capacity, recovery or human approval gates.
 
 | Work item | State | Completed evidence | Still required |
 |---|---|---|---|
-| F01 core administration | `LOCAL PRODUCT COMPLETE` | V34, typed Java APIs, React administration flows, approval engine, F04 governed-reopen bridge and permanent E2E catalog are implemented. Focused PostgreSQL verification passes 45/45; current cross-feature aggregate and recovery evidence is preserved below. | Local commit; production identity remains external. |
+| F01 core administration | `LOCAL PRODUCT COMPLETE` | V34, typed Java APIs, React administration flows, approval engine, F04 governed-reopen bridge and permanent E2E catalog are implemented. Focused PostgreSQL verification passes 45/45; current cross-feature aggregate evidence is preserved below. | No local product task; production identity remains external. |
 | F02 workforce/attendance | `LOCAL PRODUCT COMPLETE` | V35 plus V37 implement aliases, allocations, calendars/leave governance, breaks, versioned shift policies, overnight/split-session rules, exact roster readiness and immutable roster snapshots with manager React flows. Focused PostgreSQL passes administration 4/4 and attendance 22/22; browser passes 8/8. | Real greytHR tenant/cutover, production IdP and controlled staging/load acceptance remain external. |
 | F03 delivery/Linear | `LOCAL PRODUCT COMPLETE` | V36/V38/V39 implement replay/reconciliation operations, revision comparison, delegated approval lineage/quorum de-duplication, bounded cursor checkpoints and least-privilege/OpenAPI/failure-injection artifacts. Focused PostgreSQL passes 19/19; browser passes 9/9 and the final three-project locator recovery passes 3/3. | Live Linear/mail acceptance remains external. |
 | F04 certification/confirmation | `LOCAL PRODUCT COMPLETE` | V11–V13 vertical plus cross-month certification/confirmation inboxes, operations health and exact-version reasoned replay UI are implemented. The new PostgreSQL inbox/operations case passes 1/1; typecheck and focused Vitest 6/6 pass. | All remaining provider/deployment gates are external. |
-| F05 evidence/invoice/reporting | `LOCAL FOCUSED EVIDENCE COMPLETE` | Natural scanner-readiness 1/1, committed package concurrency 2/2, accessibility 3/3, finance recovery 1/1 and isolated system 4/4 passed. | External G4 provider/deployment/Procurement/scale gates. |
-| F06 historical migration | `LOCAL FOCUSED EVIDENCE COMPLETE` | V41/V43 implementation, exact migration recovery 1/1 and migration system 6/6 pass. | External cutover/source-owner/storage/scale/DR gates. |
-| F07 hardening/go-live | `LOCAL IMPLEMENTATION COMMITTED / RELEASE NO-GO` | V42/V43 product migrations plus additive V44 checksum-safe function hardening; `dev:all` applied 50 migrations and reached Spring/Vite readiness twice, including retained-history validation. Frontend 120/120, system 7/7, self-test 9/9 and schema/operations/SDLC gates pass. Aggregate Maven 340 ended 2 failures+1 error and browser passed 287/292; recovery slices pass but are not clean aggregate reruns. Local implementation commits are `6f3e9c9` and `2709447`; nothing was pushed. | Real 24-hour soak (F07-T057), current recovery-boundary/DR drill (F07-T066/T067), artifact/provenance production (F07-T070), then external approvals. |
+| F05 evidence/invoice/reporting | `LOCAL PRODUCT COMPLETE` | V45 governed retention/disposal; backend/shared 33/33, browser 7/7 and system 4/4 pass. | External provider/deployment/Procurement/scale gates. |
+| F06 historical migration | `LOCAL PRODUCT COMPLETE` | Scan-before-parse quarantine, effective finalized roster reconciliation and stale-approval protection; backend 32/32, browser 8/8 and system 7/7 pass. | External cutover/source-owner/storage/scale/DR gates. |
+| F07 hardening/go-live | `LOCAL IMPLEMENTATION COMPLETE / RELEASE NO-GO` | V42–V45 controls; checksum-compatible `dev:all`; frontend 120/120, Maven 347/347, browser 292/292, system 7/7, self-test 9/9 and SDLC pass. Nothing was pushed. | Real 24-hour soak (F07-T057), verified post-fix DR/reconciliation (F07-T066/T067), exact-clean-commit artifact execution (F07-T070), then external approvals. |
 
 ## Consolidated local execution backlog
 
@@ -40,10 +40,10 @@ under each feature below.
 
 | ID | Feature | Pending local subtask | Required closure evidence |
 |---|---|---|---|
-| LOCAL-FINAL-REGRESSION | Cross-feature | Obtain clean aggregate Maven and browser reruns if required; preserve the failed full rows and passing exact recovery slices. | Clean aggregate evidence without replacing historical failures |
+| LOCAL-FINAL-REGRESSION | Cross-feature | Complete. Historical failed runs remain in the append-only regression ledger. | Maven 347/347 and browser 292/292 pass |
 | F07-T057 | F07 | Run the real 24-hour production-like soak. | Timestamped 24-hour result and owner approval |
-| F07-T066/T067 | F07 | Execute the current recovery-boundary and disaster-recovery drill. | RTO/RPO, restore and boundary evidence |
-| F07-T070 | F07 | Produce commit-bound release artifacts and provenance. | Artifact digests, attestations and exact commit |
+| F07-T066/T067 | F07 | Complete and verify the post-fix recovery-boundary/DR rehearsal. Two attempts failed closed on archive validation; the validator was fixed, but the third run was interrupted before reconciliation. | Successful restore, reconciliation and boundary evidence |
+| F07-T070 | F07 | Execute the implemented deterministic artifact/provenance manifest on the final clean candidate commit. | Artifact digests, attestations and exact commit |
 
 ## Open F07 implementation/review findings
 
@@ -175,8 +175,8 @@ under each feature below.
 - `LOCAL IMPLEMENTATION COMPLETE / RELEASE NO-GO`: PEND-F07-001 through
   PEND-F07-011 are implemented. Current evidence includes F07 system 7/7,
   self-test 9/9, operations/migration/rollout/SDLC gates, frontend 120/120 and
-  the documented aggregate-plus-recovery backend/browser results. T057,
-  T066/T067 and T070 remain locally executable release evidence.
+  the clean aggregate backend/browser results. T057, verified T066/T067 and
+  exact-clean-commit T070 execution remain release evidence.
 - `EXTERNAL — ACTION_REQUIRED`: named release/security/data/legal/operations
   approvers; production OIDC/secrets/providers; legal/privacy/retention
   approval; scanner/storage/telemetry/on-call; production-like capacity and
@@ -187,19 +187,14 @@ under each feature below.
 ## Required final verification sequence
 
 1. `COMPLETE`: frontend typecheck/build, lint 0 errors, Vitest 120/120.
-2. `COMPLETE`: finance 4/4, migration 6/6 and ordered F07 7/7 system lanes.
-3. `PRESERVED SPLIT EVIDENCE`: full Maven executed 340 tests with 2 failures
-   and 1 error; exact Finance 1/1, Migration 1/1 and Capacity 2/2 recovery
-   selectors pass. A clean 340/340 rerun is not claimed.
-4. `PRESERVED SPLIT EVIDENCE`: full browser executed 292 tests with 287
-   passing; the exact five failing combinations then pass 5/5. A clean
-   292/292 rerun is not claimed.
-5. `COMPLETE`: self-test 9/9 and operations, migration-schema, rollout-schema,
-   SDLC and diff gates pass. The release-schema wrapper remains environment
-   blocked by sandbox `EPERM`; its underlying gates pass.
+2. `COMPLETE`: finance 4/4, migration 7/7 and ordered F07 7/7 system lanes.
+3. `COMPLETE`: full Maven passes 74 unit + 273 integration = 347/347.
+4. `COMPLETE`: full Chromium browser regression passes 292/292.
+5. `COMPLETE`: self-test 9/9, SDLC and diff gates pass.
 6. `COMPLETE`: final Terra review found no P0 and its P1/P2 findings were
    fixed with affected recovery evidence.
-7. `PENDING LOCAL EVIDENCE`: T057 24-hour soak, T066/T067 current DR drill and
-   T070 commit-bound artifacts/provenance.
-8. `IN PROGRESS`: final documentation reconciliation and requested local
-   commit; no remote push.
+7. `PENDING EVIDENCE`: T057 24-hour soak, successful post-fix T066/T067
+   restore/reconciliation and exact-clean-commit T070 execution. The DR and
+   manifest implementations are present; evidence is not fabricated.
+8. `COMPLETE AFTER THIS PASS`: final documentation reconciliation and one
+   requested local commit; no remote push.

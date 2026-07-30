@@ -156,8 +156,15 @@ export async function mockMigrationApi(
     invalidRows: 1,
     committedRows,
     lowConfidenceRows: 0,
-    expectedEmployeeDays: 2,
+    expectedEmployeeDays: 3,
     importedEmployeeDays: 2,
+    coverage: {
+      missing_employee_days: 1,
+      missing_employee_day_samples: [{
+        employeeNumber: "AF-001",
+        workDate: "2026-06-03",
+      }],
+    },
     approvals,
   });
   const job = () => ({

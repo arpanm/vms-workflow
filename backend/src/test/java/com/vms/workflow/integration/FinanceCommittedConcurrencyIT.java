@@ -16,6 +16,8 @@ import tools.jackson.databind.JsonNode;
 
 import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -43,7 +45,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     "vms.security.audience=vms-api",
     "vms.finance.local-scanner-enabled=true",
     "vms.finance.worker-enabled=true",
-    "vms.finance.worker-initial-delay=PT1H"
+    "vms.finance.worker-initial-delay=PT1H",
+    "vms.finance.retention-worker-initial-delay=PT1H"
 })
 @AutoConfigureMockMvc
 class FinanceCommittedConcurrencyIT {
@@ -169,12 +172,64 @@ class FinanceCommittedConcurrencyIT {
             WHERE event.engagement_month_id = ?::uuid
               AND event.event_type = 'f05.package.generated.v1'
             """, Integer.class, MONTH));
+
+        UUID packageId = jdbc.queryForObject("""
+            SELECT id FROM evidence_package_versions
+            WHERE engagement_month_id = ?::uuid AND status = 'CURRENT'
+            """, UUID.class, MONTH);
+        CountDownLatch shareReady = new CountDownLatch(2);
+        CountDownLatch shareStart = new CountDownLatch(1);
+        OffsetDateTime expiresAt = OffsetDateTime.now()
+            .plusDays(2).withNano(0);
+        try (ExecutorService executor = Executors.newFixedThreadPool(2)) {
+            Future<Map<String, Object>> first = executor.submit(
+                () -> shareAfterBarrier(shareReady, shareStart, packageId,
+                    expiresAt, "package-share-race-a-" + UUID.randomUUID()));
+            Future<Map<String, Object>> second = executor.submit(
+                () -> shareAfterBarrier(shareReady, shareStart, packageId,
+                    expiresAt, "package-share-race-b-" + UUID.randomUUID()));
+            shareReady.await();
+            shareStart.countDown();
+            assertEquals(1, completedShareCount(first, second));
+        }
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*) FROM evidence_package_shares
+            WHERE package_version_id = ?
+              AND recipient_subject = 'user-procurement'
+              AND access_scope = 'DOWNLOAD'
+              AND revoked_at IS NULL
+            """, Integer.class, packageId));
+        assertEquals(1, jdbc.queryForObject("""
+            SELECT COUNT(*)
+            FROM f05_domain_events event
+            JOIN evidence_package_shares share
+              ON share.id = event.aggregate_id
+            WHERE share.package_version_id = ?
+              AND event.event_type = 'f05.package.shared.v1'
+            """, Integer.class, packageId));
     }
 
     private int completedPackageCount(Future<UUID> first, Future<UUID> second)
         throws Exception {
         int completed = 0;
         for (Future<UUID> result : java.util.List.of(first, second)) {
+            try {
+                result.get();
+                completed++;
+            } catch (ExecutionException failure) {
+                assertInstanceOf(DomainConflictException.class,
+                    failure.getCause());
+            }
+        }
+        return completed;
+    }
+
+    private int completedShareCount(
+        Future<Map<String, Object>> first,
+        Future<Map<String, Object>> second
+    ) throws Exception {
+        int completed = 0;
+        for (Future<Map<String, Object>> result : List.of(first, second)) {
             try {
                 result.get();
                 completed++;
@@ -266,6 +321,21 @@ class FinanceCommittedConcurrencyIT {
             UUID.fromString(MONTH), expectedPackageVersion, readinessId,
             "Committed package race verification", idempotencyKey)
             .get("packageId").toString());
+    }
+
+    private Map<String, Object> shareAfterBarrier(
+        CountDownLatch ready,
+        CountDownLatch start,
+        UUID packageId,
+        OffsetDateTime expiresAt,
+        String idempotencyKey
+    ) throws Exception {
+        ready.countDown();
+        start.await();
+        return packages.createShare(
+            "user-arrow", packageId, "user-procurement", "DOWNLOAD",
+            expiresAt, "Committed package-share conflict verification",
+            idempotencyKey);
     }
 
     private int processAfterBarrier(

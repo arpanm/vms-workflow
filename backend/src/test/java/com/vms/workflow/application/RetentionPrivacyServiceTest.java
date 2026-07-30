@@ -41,7 +41,8 @@ class RetentionPrivacyServiceTest {
         RetentionPrivacyService service = new RetentionPrivacyService(
             mock(JdbcTemplate.class), authorization,
             mock(FinanceMutationJournal.class),
-            mock(FinanceCanonicalJson.class), Clock.systemUTC(),
+            mock(FinanceCanonicalJson.class),
+            mock(FinanceRetentionWorker.class), Clock.systemUTC(),
             mock(PlatformTransactionManager.class),
             true, 3, Duration.ofMinutes(5), Duration.ofMinutes(30));
 
@@ -72,7 +73,8 @@ class RetentionPrivacyServiceTest {
         return new RetentionPrivacyService(
             mock(JdbcTemplate.class), mock(AuthorizationStore.class),
             mock(FinanceMutationJournal.class),
-            mock(FinanceCanonicalJson.class), Clock.systemUTC(),
+            mock(FinanceCanonicalJson.class),
+            mock(FinanceRetentionWorker.class), Clock.systemUTC(),
             mock(PlatformTransactionManager.class),
             dualControl, attempts, delay, Duration.ofMinutes(30));
     }

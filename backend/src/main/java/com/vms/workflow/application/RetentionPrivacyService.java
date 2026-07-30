@@ -34,12 +34,14 @@ import java.util.UUID;
 @Service
 public class RetentionPrivacyService {
     private static final Set<String> RECORD_CLASSES = Set.of(
-        "TEMPORARY_EXPORT_CAPABILITY", "TEMPORARY_PACKAGE_SHARE");
+        "TEMPORARY_EXPORT_CAPABILITY", "TEMPORARY_PACKAGE_SHARE",
+        "FINANCE_EXPORT_CONTENT", "FINANCE_EVIDENCE_CONTENT");
 
     private final JdbcTemplate jdbc;
     private final AuthorizationStore authorization;
     private final FinanceMutationJournal journal;
     private final FinanceCanonicalJson canonical;
+    private final FinanceRetentionWorker financeRetention;
     private final Clock clock;
     private final boolean twoPersonRelease;
     private final int maxAttempts;
@@ -52,6 +54,7 @@ public class RetentionPrivacyService {
         AuthorizationStore authorization,
         FinanceMutationJournal journal,
         FinanceCanonicalJson canonical,
+        FinanceRetentionWorker financeRetention,
         Clock clock,
         PlatformTransactionManager transactionManager,
         @Value("${vms.retention.two-person-release:true}")
@@ -73,6 +76,7 @@ public class RetentionPrivacyService {
         this.authorization = authorization;
         this.journal = journal;
         this.canonical = canonical;
+        this.financeRetention = financeRetention;
         this.clock = clock;
         this.twoPersonRelease = twoPersonRelease;
         this.maxAttempts = maxAttempts;
@@ -185,8 +189,10 @@ public class RetentionPrivacyService {
             correlationId);
         if ("TEMPORARY_EXPORT_CAPABILITY".equals(recordClass)) {
             collectExports(runId, input, schedule.days());
-        } else {
+        } else if ("TEMPORARY_PACKAGE_SHARE".equals(recordClass)) {
             collectShares(runId, input, schedule.days());
+        } else {
+            collectFinanceContent(runId, input, schedule.days());
         }
         Counts counts = counts(runId);
         transition(runId, "DRY_RUN_COMPLETE", 0, counts.eligible(),
@@ -229,6 +235,7 @@ public class RetentionPrivacyService {
                 String outcome = candidateTransactions.execute(status ->
                     applyCandidate(subject, run, candidate, attempt));
                 if ("CAPABILITY_EXPIRED".equals(outcome)
+                    || "CONTENT_DISPOSED".equals(outcome)
                     || "ALREADY_APPLIED".equals(outcome)) {
                     expired++;
                 } else {
@@ -464,8 +471,12 @@ public class RetentionPrivacyService {
                 "RETENTION_EXECUTION_SUPERSEDED",
                 "A newer retention execution owns run completion.");
         }
+        boolean contentRun = run.recordClass().startsWith("FINANCE_");
         transition(run.id(), status, attempt, expired, skipped, failed,
-            next, failed == 0 ? "CAPABILITIES_EXPIRED"
+            next, failed == 0
+                ? contentRun
+                    ? "CONTENT_RETENTION_APPLIED"
+                    : "CAPABILITIES_EXPIRED"
                 : "DEAD_LETTER".equals(status)
                     ? "MAX_ATTEMPTS_EXHAUSTED"
                     : "RETRYABLE_FAILURE", subject);
@@ -778,8 +789,8 @@ public class RetentionPrivacyService {
                         rs.getObject(2, UUID.class),
                         rs.getTimestamp(3).toInstant()
                             .atOffset(java.time.ZoneOffset.UTC),
-                        rs.getBoolean(4), rs.getString(5), rs.getString(6),
-                        input.asOf());
+                        rs.getBoolean(4), false, rs.getString(5),
+                        rs.getString(6), input.asOf());
                 }
                 return null;
             }, days, days, input.organizationId());
@@ -817,24 +828,75 @@ public class RetentionPrivacyService {
                         rs.getObject(2, UUID.class),
                         rs.getTimestamp(3).toInstant()
                             .atOffset(java.time.ZoneOffset.UTC),
-                        rs.getBoolean(4), rs.getString(5), rs.getString(6),
-                        input.asOf());
+                        rs.getBoolean(4), false, rs.getString(5),
+                        rs.getString(6), input.asOf());
                 }
                 return null;
             }, days, input.organizationId(), input.organizationId(),
             input.organizationId(), input.organizationId());
     }
 
+    private void collectFinanceContent(
+        UUID runId, DryRunInput input, int days
+    ) {
+        String retentionClass =
+            "FINANCE_EXPORT_CONTENT".equals(recordClass(input.recordClass()))
+                ? "FINANCE_EXPORT" : "FINANCE_EVIDENCE";
+        jdbc.query("""
+            SELECT artifact.id,
+                   artifact.recorded_at + (? * INTERVAL '1 day'),
+                   artifact.legal_hold, artifact.classification,
+                   artifact.content_hash,
+                   EXISTS (
+                       SELECT 1 FROM invoice_versions
+                       WHERE document_artifact_id = artifact.id
+                   )
+                   OR EXISTS (
+                       SELECT 1 FROM evidence_package_items
+                       WHERE artifact_id = artifact.id
+                   )
+                   OR EXISTS (
+                       SELECT 1 FROM evidence_package_outputs
+                       WHERE artifact_id = artifact.id
+                   )
+                   OR EXISTS (
+                       SELECT 1 FROM procurement_query_responses
+                       WHERE response_artifact_id = artifact.id
+                   )
+            FROM f05_private_artifacts artifact
+            WHERE artifact.owner_organization_id = ?
+              AND artifact.retention_class = ?
+              AND artifact.retention_status = 'ACTIVE'
+            ORDER BY artifact.recorded_at, artifact.id
+            """, rs -> {
+                while (rs.next()) {
+                    candidate(
+                        runId, "FINANCE_ARTIFACT",
+                        rs.getObject(1, UUID.class),
+                        rs.getObject(1, UUID.class),
+                        rs.getTimestamp(2).toInstant()
+                            .atOffset(java.time.ZoneOffset.UTC),
+                        rs.getBoolean(3), rs.getBoolean(6), rs.getString(4),
+                        rs.getString(5), input.asOf());
+                }
+                return null;
+            }, days, input.organizationId(), retentionClass);
+    }
+
     private void candidate(
         UUID runId, String targetType, UUID targetId, UUID artifactId,
-        OffsetDateTime deadline, boolean held, String classification,
-        String sourceHash, OffsetDateTime asOf
+        OffsetDateTime deadline, boolean held, boolean referenced,
+        String classification, String sourceHash, OffsetDateTime asOf
     ) {
         String decision = held ? "HELD"
+            : referenced ? "REFERENCED"
             : deadline.isAfter(asOf) ? "NOT_DUE" : "ELIGIBLE";
         String reason = held ? "LEGAL_HOLD_ACTIVE"
+            : referenced ? "RETAINED_EVIDENCE_REFERENCE"
             : "NOT_DUE".equals(decision) ? "RETENTION_DEADLINE_NOT_REACHED"
-            : "CAPABILITY_EXPIRY_DUE_EVIDENCE_PRESERVED";
+            : "FINANCE_ARTIFACT".equals(targetType)
+                ? "CONTENT_DISPOSAL_DUE_METADATA_PRESERVED"
+                : "CAPABILITY_EXPIRY_DUE_EVIDENCE_PRESERVED";
         String proofHash = sourceHash == null
             ? canonical.sha256(map(
                 "schemaVersion", 1,
@@ -869,7 +931,9 @@ public class RetentionPrivacyService {
         }
         if (!"ELIGIBLE".equals(candidate.decision())) {
             String outcome = "HELD".equals(candidate.decision())
-                ? "SKIPPED_HELD" : "SKIPPED_STATE_CHANGED";
+                ? "SKIPPED_HELD"
+                : "REFERENCED".equals(candidate.decision())
+                    ? "SKIPPED_REFERENCED" : "SKIPPED_STATE_CHANGED";
             result(run.id(), candidate.id(), attempt, outcome,
                 candidate.reasonCode(), subject);
             return outcome;
@@ -885,6 +949,36 @@ public class RetentionPrivacyService {
                 "LEGAL_HOLD_ACTIVE_AT_EXECUTION", subject);
             return "SKIPPED_HELD";
         }
+        if ("FINANCE_ARTIFACT".equals(candidate.targetType())) {
+            UUID monthId = jdbc.queryForObject("""
+                SELECT engagement_month_id FROM f05_private_artifacts
+                WHERE id = ?
+                """, UUID.class, candidate.artifactId());
+            String outcome = financeRetention.applyApprovedCandidate(
+                run.id(), candidate.id(), run.scheduleId(),
+                candidate.artifactId(), monthId, subject);
+            if (!"CONTENT_DISPOSED".equals(outcome)) {
+                result(run.id(), candidate.id(), attempt, outcome,
+                    "CONTENT_STATE_CHANGED_AT_EXECUTION", subject);
+                return outcome;
+            }
+            jdbc.update("""
+                INSERT INTO f07_retention_proofs(
+                    id, run_id, candidate_id, proof_type, target_type,
+                    target_id, source_hash, content_deleted,
+                    closed_evidence_preserved, expired_by_subject,
+                    correlation_id
+                ) VALUES (?, ?, ?, 'CONTENT_DISPOSAL', ?, ?, ?, TRUE, TRUE,
+                          ?, ?)
+                """, UUID.randomUUID(), run.id(), candidate.id(),
+                candidate.targetType(), candidate.targetId(),
+                candidate.sourceHash(), subject,
+                CorrelationIdFilter.currentOrNew());
+            result(run.id(), candidate.id(), attempt, "CONTENT_DISPOSED",
+                "CONTENT_DELETED_METADATA_PRESERVED", subject);
+            return "CONTENT_DISPOSED";
+        }
+
         int changed;
         if ("REPORT_EXPORT".equals(candidate.targetType())) {
             changed = jdbc.update("""
@@ -1018,12 +1112,13 @@ public class RetentionPrivacyService {
 
     private RunRow runRow(UUID id) {
         RunRow row = jdbc.query("""
-            SELECT id, organization_id, record_class, as_of
+            SELECT id, organization_id, record_class, as_of, schedule_id
             FROM f07_retention_runs WHERE id = ?
             """, rs -> rs.next() ? new RunRow(
                 rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
                 rs.getString(3), rs.getTimestamp(4).toInstant()
-                    .atOffset(java.time.ZoneOffset.UTC)) : null, id);
+                    .atOffset(java.time.ZoneOffset.UTC),
+                rs.getObject(5, UUID.class)) : null, id);
         if (row == null) {
             throw new EntityNotFoundException("Retention run not found.");
         }
@@ -1155,7 +1250,8 @@ public class RetentionPrivacyService {
     }
 
     private record RunRow(
-        UUID id, UUID organizationId, String recordClass, OffsetDateTime asOf
+        UUID id, UUID organizationId, String recordClass, OffsetDateTime asOf,
+        UUID scheduleId
     ) {
     }
 

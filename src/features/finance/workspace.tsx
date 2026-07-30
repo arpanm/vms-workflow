@@ -642,8 +642,35 @@ function DocumentUpload({ invoice }: { invoice: InvoiceView }) {
             <Input ref={inputRef} id="invoice-file" name="file" type="file" accept=".pdf,.png,.jpg,.jpeg" required disabled={blocked || upload.isPending} />
             <p className="mt-1 text-xs text-muted-foreground">The browser sends this directly to the authenticated API. Raw evidence is not retained in application state.</p>
           </div>
-          <div><Label htmlFor="classification">Classification</Label><Input id="classification" name="classification" defaultValue="CONFIDENTIAL" required disabled={blocked} /></div>
-          <div><Label htmlFor="retention-policy">Retention policy</Label><Input id="retention-policy" name="retentionPolicy" defaultValue="INVOICE_STANDARD" required disabled={blocked} /></div>
+          <div>
+            <Label htmlFor="classification">Classification</Label>
+            <select
+              id="classification"
+              name="classification"
+              defaultValue={invoice.uploadPolicy.allowedClassifications[0]}
+              required
+              disabled={blocked}
+              className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+            >
+              {invoice.uploadPolicy.allowedClassifications.map((classification) => (
+                <option key={classification} value={classification}>{classification}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="retention-policy">Retention policy</Label>
+            <Input
+              id="retention-policy"
+              name="retentionPolicy"
+              value={invoice.uploadPolicy.retentionPolicy}
+              readOnly
+              required
+              disabled={blocked}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Controlled by {invoice.uploadPolicy.policyVersion}.
+            </p>
+          </div>
           <div className="md:col-span-2"><Label htmlFor="upload-reason">Reason</Label><Textarea id="upload-reason" name="reason" required disabled={blocked} /></div>
           <label className="flex items-start gap-2 text-sm md:col-span-2"><input name="confirmed" type="checkbox" required disabled={blocked} className="mt-1" /><span>I confirm this action creates a new immutable document version against server invoice v{invoice.version}; prior evidence is retained.</span></label>
           <div className="md:col-span-2"><FinanceError error={upload.error} compact /><Button type="submit" disabled={blocked || upload.isPending}><Upload className="mr-1.5 h-4 w-4" aria-hidden="true" />{replace ? "Create replacement version" : "Upload for scan"}</Button></div>

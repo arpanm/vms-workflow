@@ -17,6 +17,7 @@ import {
   writeJson,
 } from "./lib.mjs";
 import { createProvenance } from "./provenance.mjs";
+import { validateReleaseArtifactManifest } from "./release-artifact-manifest.mjs";
 import {
   allowedIndependentApproverRoles,
   canonicalProvenanceInputs,
@@ -579,6 +580,22 @@ async function validateCiEvidenceBundle(reference, releaseCommit, state) {
       !validateMigrationLiveResult(entry.structuredResult, releaseCommit, state)
     ) {
       continue;
+    }
+    if (
+      validEvidence &&
+      lane.structuredKind === "release-artifact-manifest-v1"
+    ) {
+      try {
+        await validateReleaseArtifactManifest(
+          entry.structuredResult,
+          releaseCommit,
+        );
+      } catch (error) {
+        state.blockers.push(
+          `${id}: release artifact manifest is invalid (${safeError(error)})`,
+        );
+        continue;
+      }
     }
     if (
       validEvidence &&

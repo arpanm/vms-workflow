@@ -24,6 +24,7 @@
         <jackson-2-bom.version>2.21.5</jackson-2-bom.version>
         <jackson-bom.version>3.1.5</jackson-bom.version>
         <springdoc.version>3.0.3</springdoc.version>
+        <project.build.outputTimestamp>1980-01-01T00:00:02Z</project.build.outputTimestamp>
         <vms.build.directory>${project.basedir}/target</vms.build.directory>
     </properties>
 

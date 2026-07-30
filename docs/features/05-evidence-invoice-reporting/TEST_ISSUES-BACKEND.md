@@ -96,3 +96,22 @@ findings distinguish product blockers from remaining evidence gaps.
   proof.
 - `F05-TEST-002`, `F05-TEST-003` and the local/external portions of
   `F05-TEST-005` remain open and must not inherit the focused green result.
+
+## V45 retention and concurrency follow-up
+
+- `FinanceRetentionWorkerIT` passes **3/3**: no-schedule fail-closed,
+  authorized schedule/dry-run/explicit execution, held/reference decisions,
+  direct SQL/blob bypass denial and competing-approved-run exactly-once
+  disposal.
+- `FinanceCommittedConcurrencyIT` passes **2/2** and now includes overlapping
+  share-window contention in the package race.
+- `FinanceWorkflowIT` passes **9/9** with the effective upload-policy response.
+- Combined focused selector: **14/14**.
+- Expanded selector including F07 governance compatibility, database controls
+  and populated V44→V45 migration upgrade: **33/33**.
+
+This resolves the local retention-job hole and share portion of
+`F05-TEST-003`. Independent invoice transition and review-decision races,
+renderer crash injection and a durable non-transactional object-store deletion
+adapter remain open depth; production retention periods remain external
+approval/configuration rather than an invented local default.

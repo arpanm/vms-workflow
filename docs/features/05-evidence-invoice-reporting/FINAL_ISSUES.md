@@ -53,8 +53,8 @@ above and must remain `ACTION_REQUIRED` until independently evidenced.
 
 ## Final status addendum — 2026-07-30
 
-The local exception-policy/immutable-lineage and live-lease recovery issues are
-resolved and exercised: exact Finance **1/1**, finance system **4/4**. Aggregate
-Maven remains 340 executed with 2 failures and 1 error; aggregate browser
-remains **287/292** with exact recovery **5/5**. Performance/scale, controlled
-DR, F07-T057 and every G4 item above remain open.
+The local exception-policy/immutable-lineage, live-lease recovery and V45
+finance-retention issues are resolved and exercised: focused backend/shared
+**33/33**, intercepted browser **7/7**, finance system **4/4**, aggregate Maven
+**347/347** and aggregate browser **292/292** pass. Performance/scale,
+controlled DR, F07-T057 and every G4 item above remain open.

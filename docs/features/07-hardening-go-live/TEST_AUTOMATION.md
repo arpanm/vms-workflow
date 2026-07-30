@@ -26,6 +26,7 @@ Java/PostgreSQL integration and production acceptance prove different things.
 | Traceability/review controls | `npm run f07:self-test` | Exact 85-task/76-test inventory; differentiated requirement/PRD/schema/API/UI/runbook/rollback policy; five required independent review dimensions and explicit open-local-P0/P1 ledger. |
 | Release/ops schemas | `npm run f07:ops:check` | Checked-in JSON/schema/runbook consistency and fail-closed local decision. |
 | Supply chain | `npm run f07:supply-chain:run` | Trivy, npm audit, Semgrep, license checks, artifacts and CycloneDX SBOMs. |
+| Release artifacts | `node scripts/f07/release-artifact-manifest.mjs --expected-commit <40-hex> --supply-report-dir .f07-evidence/<run>/supply-chain --output .f07-evidence/<run>/release-artifact-manifest.json` | Exact-clean-commit provenance, frontend/backend checksums and SBOM references, current/previous Flyway compatibility, readiness routes and isolated second-build digest equality. |
 
 The review-control self-test rejects an incorrect schema/type, a 40-character
 Git tree object used as `reviewedThroughCommit`, a reviewed commit outside the
@@ -33,6 +34,14 @@ validated release ancestry, an ancestor-only review offered for a release
 decision, a missing structured closure dimension and a runbook fragment
 without an explicit anchor. Current focused results:
 `f07:self-test` **9/9 passed** and `f07:ops:check` **1/1 passed**.
+
+The T070 policy no longer treats canary/rollback evidence as an artifact
+manifest. It has its own action-required structured lane and exact
+`RELEASE-ARTIFACT-MANIFEST` case. The self-test rejects dirty provenance,
+missing checksums/SBOM/readiness data, stale database ranges, unequal rebuild
+digests and mismatched source epochs. `E2E-08` now requires all seven canonical
+F06 system cases, including
+`E2E-F06-SYS-007@f06-migration-system-chromium`.
 
 The GitHub workflow wraps each command in structured evidence, binds it to
 clean commit provenance and assembles a candidate manifest. The release gate

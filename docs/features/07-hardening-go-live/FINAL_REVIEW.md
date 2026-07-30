@@ -2,15 +2,13 @@
 
 ## Final integrated reconciliation — 2026-07-30
 
-**Local implementation:** complete through V43. **Green focused/static
-evidence:** system 7/7, self 9/9, operations 15 runbooks/6 alerts, 43 migration
-schemas, rollout and SDLC. **Preserved aggregate evidence:** Maven 340 with
-2 failures + 1 error then four focused recovery passes; browser 287/292 then
-5/5 recovery. **Wrapper:** release-schema unverified due to `EPERM` and an
-aborted 467 s silent retry. **Release:** `NO-GO / ACTION_REQUIRED`.
+**Local implementation:** complete through V45. **Green evidence:** system
+7/7, self 9/9, SDLC, Maven 347/347 and browser 292/292. **Pending evidence:**
+T057 real 24-hour soak, a completed post-fix T066/T067 DR reconciliation and
+exact-clean-commit T070 execution. **Release:** `NO-GO / ACTION_REQUIRED`.
 
-**Current local decision:** `LOCAL_IMPLEMENTATION_PRESENT /
-CURRENT_COMMIT_EVIDENCE_AND_REVIEW_PENDING`
+**Current local decision:** `LOCAL_IMPLEMENTATION_COMPLETE /
+LONG_RUNNING_AND_COMMIT_BOUND_EVIDENCE_PENDING`
 
 **Current production decision:** `NO-GO / ACTION_REQUIRED`
 

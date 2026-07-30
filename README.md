@@ -5,8 +5,9 @@ working tree contains the F00–F07 local product and hardening verticals.
 Lovable, Supabase, Cloudflare and TanStack Start server dependencies have been
 removed.
 
-The completed implementation is committed locally as `6f3e9c9`
-(`feat: finish F01-F07 governed product workflows`). It has not been pushed.
+The implementation baseline is committed locally as `6f3e9c9`
+(`feat: finish F01-F07 governed product workflows`). The current F05–F07
+completion pass is also kept local and is not pushed.
 
 ## Current status
 
@@ -26,9 +27,9 @@ issues and external-only gates is
 | F02 workforce/attendance | V35/V37 employee and serialized allocation lifecycle, governed workforce administration, overnight/split sessions, exact roster snapshots and month close with manager/self React flows | [F02 tasks](docs/features/02-workforce-attendance/TASKS.md), [fixes](docs/features/02-workforce-attendance/FIXES.md), [API](docs/features/02-workforce-attendance/API_DOCUMENTATION.md), [UI guide](docs/features/02-workforce-attendance/UI_DOCUMENTATION.md) |
 | F03 Delivery and Linear | V36/V38/V39 editable repeatable delivery drafts, revision/replay operations, delegated approval lineage and bounded cursor reconciliation with operator UI | [F03 tasks](docs/features/03-delivery-linear/TASKS.md), [codegen](docs/features/03-delivery-linear/CODEGEN.md), [API](docs/features/03-delivery-linear/API_DOCUMENTATION.md), [UI](docs/features/03-delivery-linear/UI_DOCUMENTATION.md) |
 | F04 Certification and confirmation | Provider-neutral Java/PostgreSQL + React vertical includes V40 private governed uploads/scans, exact-version withdrawal, cross-month inboxes and operations health; live provider/deployment gates remain external | [F04 tasks](docs/features/04-certification-confirmation/TASKS.md), [evidence](docs/features/04-certification-confirmation/CODEGEN.md), [API](docs/features/04-certification-confirmation/API_DOCUMENTATION.md), [UI](docs/features/04-certification-confirmation/UI_DOCUMENTATION.md) |
-| F05 evidence, invoice and reporting | Fresh focused evidence: natural scanner-readiness 1/1, committed package concurrency 2/2, accessibility 3/3 and isolated system 4/4; performance/scale and external release gates remain ACTION_REQUIRED | [F05 status](docs/FEATURE_STATUS.md), [F05 E2E catalog](docs/testing/E2E_REGRESSION_CASES.md), [F05 closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md) |
-| F06 historical migration | V41/V43 local code is complete, including retro outcomes, durable async/100k boundaries, tenant CSV/XLSX, OpenAPI/a11y and consumed-package correction routing; focused recovery and system evidence pass | [F06 status](docs/FEATURE_STATUS.md), [tasks](docs/features/06-historical-migration/TASKS.md), [tests](docs/features/06-historical-migration/TEST_CASES.md), [test issues](docs/features/06-historical-migration/TEST_ISSUES.md), [API](docs/features/06-historical-migration/API_DOCUMENTATION.md), [UI](docs/features/06-historical-migration/UI_DOCUMENTATION.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md) |
-| F07 hardening/go-live | Current production chain is V1–V44 (V42 repeated-reopen invariant; V43 durable migration queue; V44 checksum-safe function hardening); ordered product system verification passes 7/7 and repeatable local startup passes. External production gates remain NO-GO/ACTION_REQUIRED. | [status](docs/FEATURE_STATUS.md), [pending work](docs/PENDING_WORK.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md), [testing guide](docs/testing/README.md), [tasks](docs/features/07-hardening-go-live/TASKS.md), [tests](docs/features/07-hardening-go-live/TEST_CASES.md), [automation](docs/features/07-hardening-go-live/TEST_AUTOMATION.md), [review status](docs/features/07-hardening-go-live/FINAL_REVIEW.md), [open issues](docs/features/07-hardening-go-live/FINAL_ISSUES.md) |
+| F05 evidence, invoice and reporting | Local product complete, including governed finance-artifact retention/disposal in V45; focused backend/shared 33/33, intercepted browser 7/7 and system 4/4 pass. External scale/provider/release gates remain ACTION_REQUIRED. | [F05 status](docs/FEATURE_STATUS.md), [F05 E2E catalog](docs/testing/E2E_REGRESSION_CASES.md), [F05 closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md) |
+| F06 historical migration | Local product complete, including scan-before-parse quarantine, effective finalized roster reconciliation and stale-approval protection; focused backend 32/32, intercepted browser 8/8 and system 7/7 pass. | [F06 status](docs/FEATURE_STATUS.md), [tasks](docs/features/06-historical-migration/TASKS.md), [tests](docs/features/06-historical-migration/TEST_CASES.md), [test issues](docs/features/06-historical-migration/TEST_ISSUES.md), [API](docs/features/06-historical-migration/API_DOCUMENTATION.md), [UI](docs/features/06-historical-migration/UI_DOCUMENTATION.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md) |
+| F07 hardening/go-live | Current production chain is V1–V45 (V45 adds governed finance retention/disposal); ordered product system verification passes 7/7, the full regression is green and checksum-incompatible local databases are preserved with an automatically selected compatibility database. Production release and unfinished long-running/DR evidence remain NO-GO/ACTION_REQUIRED. | [status](docs/FEATURE_STATUS.md), [pending work](docs/PENDING_WORK.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md), [testing guide](docs/testing/README.md), [tasks](docs/features/07-hardening-go-live/TASKS.md), [tests](docs/features/07-hardening-go-live/TEST_CASES.md), [automation](docs/features/07-hardening-go-live/TEST_AUTOMATION.md), [review status](docs/features/07-hardening-go-live/FINAL_REVIEW.md), [open issues](docs/features/07-hardening-go-live/FINAL_ISSUES.md) |
 
 Production release remains blocked until the identity/BFF decision and staging
 tenant-isolation gate are complete. Local feature development uses explicit
@@ -70,11 +71,13 @@ database URL, issuer/JWKS URL, backend proxy target and frontend URL to every
 dependent process. The selected values are written to the ignored
 `.local-dev/runtime.env` file and printed after startup. `Ctrl+C` stops the
 Java/Node services while retaining the PostgreSQL container and named volume.
-Development fixtures use the dedicated `vms_workflow_local_v44` database,
+Development fixtures use the dedicated `vms_workflow_local_v45` database,
 keeping the normal `vms_workflow` database's Flyway history production-only.
-This schema-compatibility name preserves older local databases when an already
-applied migration must be restored to its immutable released checksum. Override
-it with `VMS_LOCAL_DATABASE` when an explicit compatible database is required.
+When Flyway detects an immutable-history checksum mismatch, the launcher
+preserves that database, derives a deterministic database name from the current
+production and fixture migration bytes, creates it if necessary, propagates its
+URL to the backend, and retries once. Override the default with
+`VMS_LOCAL_DATABASE` when an explicit compatible database is required.
 The local-only token defaults to the seeded `user-reliance` identity; set
 `VMS_LOCAL_SUBJECT` before `dev:all` to use another seeded development subject.
 The command loads the explicitly synthetic V1000+ development fixtures after
@@ -119,27 +122,24 @@ npm run e2e
 npm run regression
 ```
 
-The production Flyway chain is V1–V44: V42 enforces the repeated-reopen
-invariant, V43 provides the durable asynchronous migration queue and V44
-hardens the legacy V39/V40 trigger functions without changing their immutable
-released migrations. The final
-full Maven attempt executed 74 unit plus 266 integration tests (340 total) and
-ended with 2 failures and 1 error. Exact recovery selectors then passed Finance
-1/1, Migration 1/1 and Capacity 2/2; this is recovery evidence, not a claim
-that a clean 340/340 aggregate run occurred. The full browser attempt passed
-287/292; its exact recovery slice passed 5/5, likewise without claiming a clean
-full 292/292 run.
+The production Flyway chain is V1–V45: V42 enforces the repeated-reopen
+invariant, V43 provides the durable asynchronous migration queue, V44 hardens
+the legacy V39/V40 trigger functions without changing their immutable released
+migrations, and V45 adds governed finance-artifact retention/disposal.
+The final aggregate Maven verification passes 74 unit plus 273 integration
+tests (347/347), with zero failures, errors or skips. The final Playwright
+Chromium regression passes 292/292.
 
 Current frontend evidence passes typecheck, lint with 0 errors and 13 warnings
 (6 Fast Refresh and 7 existing hook-dependency warnings), Vitest 28 files and
-120/120 tests in 804 ms, and production build (3,042 modules, 2.80 s) with only
-the existing >500 kB chunk advisory. Current system lanes pass F05 finance 4/4,
-F06 migration 6/6 and F07 7/7. Static/harness evidence passes F07 self-test 9/9
-(45.037 s), operations checks (15 runbooks and 6 alerts), all 43 migration
-schemas, rollout schema, the eight-feature SDLC model-separation check and
-`git diff --check`. The `f07:release:schema` wrapper itself is not claimed as
-passing: sandbox bind failed with `EPERM` on `127.0.0.1`, and an escalated retry
-produced no output and was aborted after 467 seconds; its underlying gates pass.
+120/120 tests, and production build (3,042 modules) with only the existing
+>500 kB chunk advisory. Current system lanes pass F05 finance 4/4, F06
+migration 7/7 and F07 7/7. Static/harness evidence passes F07 self-test 9/9,
+the eight-feature SDLC model-separation check and `git diff --check`.
+F07-T057 remains a real 24-hour soak. F07-T066/T067 has a containerized,
+fail-closed rehearsal implementation, but its post-fix restore/reconciliation
+run was interrupted and is truthfully retained as unverified. Production
+identity/provider/legal/capacity/DR/manual approvals remain external.
 
 `npm run regression` combines frontend checks, Maven/Testcontainers
 PostgreSQL integration and Playwright Chromium browser-contract tests. The

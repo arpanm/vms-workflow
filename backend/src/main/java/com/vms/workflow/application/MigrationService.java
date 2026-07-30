@@ -221,8 +221,6 @@ public class MigrationService {
             throw new IllegalArgumentException("FILE_TEMPLATE_VERSION_UNSUPPORTED");
         }
         byte[] bytes = secureBytes(file);
-        List<MigrationCsvParser.Record> parsed = parse(bytes);
-        validateHeader(template, parsed.getFirst().fields());
         String hash = sha256(bytes);
         UUID existingJob = jdbc.query("""
             SELECT job.id
@@ -248,6 +246,14 @@ public class MigrationService {
                     ((Number) existing.get("version")).longValue());
             }
             return existing;
+        }
+
+        MigrationMalwareScanner.Verdict verdict =
+            scanner.inspect(bytes, hash);
+        metrics.recordScan(verdict.status().name());
+        if (verdict.status() == MigrationMalwareScanner.Verdict.Status.PASSED) {
+            List<MigrationCsvParser.Record> parsed = parse(bytes);
+            validateHeader(template, parsed.getFirst().fields());
         }
 
         UUID sourceId = UUID.randomUUID();
@@ -280,9 +286,6 @@ public class MigrationService {
             input.mode(), input.partialCommit(), input.parentJobId(),
             input.priorJobId(), subject, input.sourceType(),
             input.confidence(), input.sourceDescription());
-        MigrationMalwareScanner.Verdict verdict =
-            scanner.inspect(bytes, hash);
-        metrics.recordScan(verdict.status().name());
         if (verdict.status() !=
             MigrationMalwareScanner.Verdict.Status.PENDING) {
             jdbc.update("""
@@ -404,6 +407,14 @@ public class MigrationService {
                    reconciliation_hash, created_at
             FROM migration_approvals
             WHERE job_id = ?
+              AND decision = 'APPROVED'
+              AND reconciliation_id = (
+                SELECT report.id
+                FROM migration_reconciliation_reports report
+                WHERE report.job_id = ?
+                ORDER BY report.version DESC
+                LIMIT 1
+              )
             ORDER BY created_at
             """, (rs, ignored) -> {
                 Map<String, Object> approval = new LinkedHashMap<>();
@@ -420,7 +431,7 @@ public class MigrationService {
                 approval.put("createdAt", recordedAt);
                 approval.put("recordedAt", recordedAt);
                 return Collections.unmodifiableMap(approval);
-            }, jobId);
+            }, jobId, jobId);
         Map<String, Object> resultWithApprovals =
             new LinkedHashMap<>(result);
         resultWithApprovals.put("approvals", approvals);
@@ -866,6 +877,14 @@ public class MigrationService {
                 version = version + 1
             WHERE id = ? AND version = ?
             """, state, state, jobId, job.version());
+        JobContext resolved = context(jobId);
+        UUID reportId = reconcileInternal(resolved, subject);
+        audit(job.engagementId(), job.organizationId(), jobId,
+            "MIGRATION_ROW_CONFLICT_RESOLVED", subject,
+            Map.of(
+                "rowId", rowId,
+                "decision", input.decision(),
+                "reconciliationId", reportId));
         return job(subject, jobId);
     }
 
@@ -2173,7 +2192,8 @@ public class MigrationService {
                 || field.equals("attendance_date")
                 || field.equals("leave_date")
                 || field.equals("override_date")
-                || field.equals("holiday_date"))
+                || field.equals("holiday_date")
+                || field.equals("occurred_at"))
                 && !value.isBlank() && beforeMigrationStart(value)) {
                 findings.add(error("TEMPORAL_OUTSIDE_ENGAGEMENT", field,
                     "Historical transaction dates must be on or after 2026-06-01."));
@@ -2816,7 +2836,7 @@ public class MigrationService {
         String canonicalChecksum = sha256(String.join("", factHashes));
         Map<String, Object> coverage = reconciliationCoverage(job.id());
         Map<String, Object> exceptions =
-            reconciliationExceptions(job.id(), counts);
+            reconciliationExceptions(job.id(), counts, coverage);
         String reportHash = sha256(json(Map.of(
             "jobId", job.id(), "version", version,
             "sourceHash", sourceHash, "counts", counts,
@@ -2839,6 +2859,11 @@ public class MigrationService {
 
     private Map<String, Object> reconciliationCoverage(UUID jobId) {
         Map<String, Object> coverage = new LinkedHashMap<>(jdbc.queryForMap("""
+            WITH target AS (
+              SELECT engagement_month_id
+              FROM migration_jobs
+              WHERE id = ?
+            )
             SELECT
               count(*) FILTER (WHERE job.template_code = '01_employees'
                 AND row.state IN ('VALID', 'WARNING', 'COMMITTED'))
@@ -2869,42 +2894,15 @@ public class MigrationService {
                 AND row.normalized_payload->>'invoice_sha256'
                     ~ '^[0-9a-fA-F]{64}$'
                 AND row.state IN ('VALID', 'WARNING', 'COMMITTED'))
-                AS invoice_hash_links,
-              count(DISTINCT
-                (row.normalized_payload->>'employee_number') || ':' ||
-                CASE
-                  WHEN job.template_code = '07b_attendance_daily'
-                    THEN row.normalized_payload->>'attendance_date'
-                  WHEN job.template_code = '07a_attendance_punches'
-                    THEN (
-                      (row.normalized_payload->>'occurred_at')::timestamptz
-                      AT TIME ZONE
-                      (row.normalized_payload->>'timezone')
-                    )::date::text
-                END
-              ) FILTER (WHERE job.template_code IN (
-                '07a_attendance_punches', '07b_attendance_daily'))
-                AS expected_employee_days,
-              count(DISTINCT
-                (row.normalized_payload->>'employee_number') || ':' ||
-                CASE
-                  WHEN job.template_code = '07b_attendance_daily'
-                    THEN row.normalized_payload->>'attendance_date'
-                  WHEN job.template_code = '07a_attendance_punches'
-                    THEN (
-                      (row.normalized_payload->>'occurred_at')::timestamptz
-                      AT TIME ZONE
-                      (row.normalized_payload->>'timezone')
-                    )::date::text
-                END
-              ) FILTER (WHERE job.template_code IN (
-                '07a_attendance_punches', '07b_attendance_daily')
-                AND row.state IN ('VALID', 'WARNING', 'COMMITTED'))
-                AS imported_employee_days
+                AS invoice_hash_links
             FROM migration_rows row
             JOIN migration_jobs job ON job.id = row.job_id
+            CROSS JOIN target
             WHERE row.job_id = ?
-            """, jobId));
+               OR (target.engagement_month_id IS NOT NULL
+                   AND job.engagement_month_id =
+                       target.engagement_month_id)
+            """, jobId, jobId));
         String template = jdbc.queryForObject("""
             SELECT template_code FROM migration_jobs WHERE id = ?
             """, String.class, jobId);
@@ -2912,13 +2910,177 @@ public class MigrationService {
         coverage.put("attendanceAuthorityNonAdditive",
             Set.of("07a_attendance_punches", "07b_attendance_daily")
                 .contains(template));
+        coverage.putAll(attendanceCoverage(jobId));
         coverage.put("representedVsRecordedTimeSeparated", true);
+        return Collections.unmodifiableMap(coverage);
+    }
+
+    private Map<String, Object> attendanceCoverage(UUID jobId) {
+        Map<String, Object> result = jdbc.queryForMap("""
+            WITH target AS (
+              SELECT job.id AS job_id, job.engagement_id,
+                     job.engagement_month_id,
+                     month.month_start_date,
+                     (month.month_start_date + INTERVAL '1 month'
+                       - INTERVAL '1 day')::date AS month_end_date
+              FROM migration_jobs job
+              JOIN engagement_months month
+                ON month.id = job.engagement_month_id
+              WHERE job.id = ?
+            ),
+            latest_roster AS (
+              SELECT snapshot.id
+              FROM workforce_roster_snapshot_versions snapshot
+              JOIN target
+                ON target.engagement_month_id =
+                   snapshot.engagement_month_id
+              WHERE snapshot.status = 'FINALIZED'
+              ORDER BY snapshot.version DESC
+              LIMIT 1
+            ),
+            snapshot_expected AS (
+              SELECT DISTINCT employee.employee_number,
+                     day.work_date
+              FROM latest_roster roster
+              JOIN workforce_roster_snapshot_days day
+                ON day.snapshot_id = roster.id
+              JOIN employees employee ON employee.id = day.employee_id
+              WHERE day.expected_minutes > 0
+            ),
+            derived_expected AS (
+              SELECT DISTINCT employee.employee_number,
+                     day.value::date AS work_date
+              FROM target
+              CROSS JOIN LATERAL generate_series(
+                target.month_start_date,
+                target.month_end_date,
+                INTERVAL '1 day') AS day(value)
+              JOIN employee_project_allocations allocation
+                ON allocation.engagement_id = target.engagement_id
+               AND allocation.status IN ('PLANNED', 'ACTIVE')
+               AND allocation.valid_from <= day.value::date
+               AND (allocation.valid_to IS NULL
+                    OR allocation.valid_to >= day.value::date)
+              JOIN employees employee ON employee.id = allocation.employee_id
+               AND employee.join_date <= day.value::date
+              JOIN employee_versions employee_version
+                ON employee_version.employee_id = employee.id
+               AND employee_version.valid_from <= day.value::date
+               AND (employee_version.valid_to IS NULL
+                    OR employee_version.valid_to >= day.value::date)
+               AND employee_version.employment_status IN (
+                   'ACTIVE', 'ON_LEAVE')
+               AND employee_version.activation_status = 'ENABLED'
+               AND (employee_version.exit_date IS NULL
+                    OR employee_version.exit_date >= day.value::date)
+              JOIN employee_calendar_assignments assignment
+                ON assignment.employee_id = employee.id
+               AND assignment.valid_from <= day.value::date
+               AND (assignment.valid_to IS NULL
+                    OR assignment.valid_to >= day.value::date)
+              JOIN working_calendar_versions calendar
+                ON calendar.id = assignment.calendar_version_id
+               AND calendar.valid_from <= day.value::date
+               AND (calendar.valid_to IS NULL
+                    OR calendar.valid_to >= day.value::date)
+              JOIN working_calendar_weekdays weekday
+                ON weekday.calendar_version_id = calendar.id
+               AND weekday.iso_weekday =
+                   EXTRACT(ISODOW FROM day.value)::integer
+              LEFT JOIN calendar_holidays holiday
+                ON holiday.calendar_version_id = calendar.id
+               AND holiday.holiday_date = day.value::date
+              LEFT JOIN employee_date_overrides override
+                ON override.employee_id = employee.id
+               AND override.override_date = day.value::date
+              WHERE COALESCE(
+                override.expected_minutes,
+                holiday.expected_minutes,
+                weekday.expected_minutes) > 0
+                AND NOT EXISTS (SELECT 1 FROM latest_roster)
+            ),
+            expected AS (
+              SELECT employee_number, work_date FROM snapshot_expected
+              UNION ALL
+              SELECT employee_number, work_date FROM derived_expected
+            ),
+            imported AS (
+              SELECT DISTINCT
+                     row.normalized_payload->>'employee_number'
+                         AS employee_number,
+                     CASE
+                       WHEN job.template_code = '07b_attendance_daily'
+                         THEN (row.normalized_payload
+                           ->>'attendance_date')::date
+                       WHEN row.normalized_payload->>'occurred_at'
+                            ~ '(Z|[+-][0-9]{2}:[0-9]{2})$'
+                         THEN (
+                           (row.normalized_payload
+                             ->>'occurred_at')::timestamptz
+                           AT TIME ZONE
+                           (row.normalized_payload->>'timezone'))::date
+                       ELSE (row.normalized_payload
+                         ->>'occurred_at')::timestamp::date
+                     END AS work_date
+              FROM migration_rows row
+              JOIN migration_jobs job ON job.id = row.job_id
+              JOIN target
+                ON target.engagement_month_id = job.engagement_month_id
+              WHERE job.template_code IN (
+                  '07a_attendance_punches', '07b_attendance_daily')
+                AND row.state IN ('VALID', 'WARNING', 'COMMITTED')
+            ),
+            missing AS (
+              SELECT expected.employee_number, expected.work_date
+              FROM expected
+              LEFT JOIN imported
+                ON imported.employee_number = expected.employee_number
+               AND imported.work_date = expected.work_date
+              WHERE imported.employee_number IS NULL
+            )
+            SELECT
+              (SELECT count(*) FROM expected) AS expected_employee_days,
+              (SELECT count(*) FROM imported) AS imported_employee_days,
+              (SELECT count(*) FROM missing) AS missing_employee_days,
+              CASE
+                WHEN NOT EXISTS (SELECT 1 FROM target)
+                  THEN 'NOT_APPLICABLE'
+                WHEN EXISTS (SELECT 1 FROM latest_roster)
+                  THEN 'FINALIZED_ROSTER'
+                ELSE 'EFFECTIVE_MASTER_DATA'
+              END AS attendance_coverage_basis,
+              (
+                SELECT COALESCE(jsonb_agg(jsonb_build_object(
+                  'employeeNumber', sample.employee_number,
+                  'workDate', sample.work_date
+                ) ORDER BY sample.employee_number, sample.work_date),
+                '[]'::jsonb)
+                FROM (
+                  SELECT employee_number, work_date
+                  FROM missing
+                  ORDER BY employee_number, work_date
+                  LIMIT 200
+                ) sample
+              ) AS missing_employee_day_samples
+            """, jobId);
+        Map<String, Object> coverage = new LinkedHashMap<>();
+        coverage.put("expected_employee_days",
+            result.get("expected_employee_days"));
+        coverage.put("imported_employee_days",
+            result.get("imported_employee_days"));
+        coverage.put("missing_employee_days",
+            result.get("missing_employee_days"));
+        coverage.put("attendance_coverage_basis",
+            result.get("attendance_coverage_basis"));
+        coverage.put("missing_employee_day_samples", readJson(
+            String.valueOf(result.get("missing_employee_day_samples"))));
         return Collections.unmodifiableMap(coverage);
     }
 
     private Map<String, Object> reconciliationExceptions(
         UUID jobId,
-        Map<String, Object> counts
+        Map<String, Object> counts,
+        Map<String, Object> coverage
     ) {
         List<Map<String, Object>> findingCounts = jdbc.query("""
             SELECT finding.code, finding.severity, count(*)
@@ -2946,7 +3108,12 @@ public class MigrationService {
         return Map.of(
             "findingCounts", findingCounts,
             "lowConfidenceCount", counts.get("low_confidence"),
-            "lowConfidenceRows", lowConfidenceRows);
+            "lowConfidenceRows", lowConfidenceRows,
+            "missingExpectedEmployeeDays",
+                coverage.getOrDefault("missing_employee_days", 0),
+            "missingExpectedEmployeeDaySamples",
+                coverage.getOrDefault(
+                    "missing_employee_day_samples", List.of()));
     }
 
     private Map<String, Object> currentReconciliation(UUID jobId) {

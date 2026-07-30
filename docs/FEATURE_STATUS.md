@@ -8,31 +8,31 @@ The one-page queue of all unfinished local subfeatures, active findings,
 pending tests and external gates is
 [PENDING_WORK.md](PENDING_WORK.md).
 
-**Last updated:** 2026-07-30 (V44 local-start compatibility repair)
+**Last updated:** 2026-07-30 (final V45 F05–F07 completion pass)
 **Implementation commits:** `6f3e9c9` (F01–F07 product workflows) and
-`2709447` (repeatable local database startup/V44)
+`2709447` (repeatable local database startup/V44); the V45 completion pass is
+included in the final local closeout commit and is not pushed
 **Working-tree context:** The integrated worktree adds F02 employee/allocation
 lifecycle completion, F03 editable delivery drafts, F04 governed artifact
 upload/scan and withdrawal, F05 aggregate/concurrency hardening, F06
 registry-driven validation, and F07 typed release evidence. Production Flyway
-migrations now run through V44 (V42 is the repeated-reopen invariant, V43 is
-the durable asynchronous migration queue and V44 additively hardens the
-already-released V39/V40 functions). The latest frontend gate passes
+migrations now run through V45 (V42 is the repeated-reopen invariant, V43 is
+the durable asynchronous migration queue, V44 additively hardens the
+already-released V39/V40 functions and V45 governs finance-artifact
+retention/disposal). The latest frontend gate passes
 typecheck, 28 files/120 Vitest tests and the production build; the SDLC manifest
 gate passes all eight feature manifests and preserves distinct Sol
 codegen/Terra review models. Focused PostgreSQL evidence passes F02 24/24,
 F04 10/10, F06 19/19 and all agent-owned F03/F05 concurrency cases. The
 dynamic local launcher was browser-smoked end to end with authenticated seeded
 data and now selects/propagates PostgreSQL, JWKS, Spring and Vite ports, using a
-dedicated `vms_workflow_local_v44` fixture database. A real `dev:all` startup
-validated and applied all 50 production/local migrations, reached both Spring
-and Vite readiness, and preserved the prior checksum-incompatible local
-database rather than repairing or deleting its Flyway history.
-The final aggregate Maven attempt ran 74 unit plus 266 integration tests (340)
-and preserved 2 failures plus 1 error; exact recovery selectors subsequently
-passed Finance 1/1, Migration 1/1 and Capacity 2/2. The final browser aggregate
-passed 287/292 and its exact recovery slice passed 5/5. Neither recovery is
-represented as a clean aggregate rerun. Live providers, production
+dedicated `vms_workflow_local_v45` fixture database. A real stale-database
+`dev:all` startup preserved the checksum-incompatible database, selected a
+deterministic compatibility database, validated/applied all 51
+production/local migrations and reached Spring and Vite readiness.
+The final aggregate Maven verification passes 74 unit plus 273 integration
+tests (347/347), and the final browser aggregate passes 292/292. Live
+providers, production
 BFF/identity, legal/privacy decisions, production-like soak/DR/deployment and
 human approval remain external and must not be represented as local release
 acceptance.
@@ -43,19 +43,17 @@ acceptance.
 
 | Lane | Result | Interpretation |
 |---|---|---|
-| Full Maven | 74 unit + 266 integration = 340 executed; **2 failures + 1 error** | Failed aggregate row is retained. |
-| Maven exact recovery | Finance 1/1; Migration 1/1; Capacity 2/2 | Affected selectors pass; no clean 340/340 claim. |
-| Full browser | **287/292 passed** | Failed aggregate row is retained. |
-| Browser exact recovery | **5/5 passed** | Affected slice passes; no clean 292/292 claim. |
-| Frontend | typecheck pass; lint 0 errors/13 warnings; Vitest 28 files, 120/120 in 804 ms; build 3,042 modules in 2.80 s | Warnings are 6 Fast Refresh and 7 existing hook-dependency warnings; build has only the >500 kB advisory. |
-| System | F05 finance 4/4; F06 migration 6/6; F07 7/7 | Current ordered local-system evidence. |
-| Harness/static | F07 self-test 9/9 (45.037 s); operations 15 runbooks/6 alerts; 43 migrations; rollout schema; SDLC 8 features; diff check | All pass with no findings; SDLC preserves Sol codegen/Terra review separation. |
-| Release-schema wrapper | `listen EPERM 127.0.0.1`; escalated retry aborted after 467 s without output | Environmental wrapper limitation, not a product finding; wrapper is **not** claimed as passed, while its underlying gates pass. |
+| Full Maven | **74 unit + 273 integration = 347/347 passed** | Zero failures, errors or skips; BUILD SUCCESS. |
+| Full browser | **292/292 passed** | Final full Chromium regression after all implementation. |
+| Frontend | typecheck pass; lint 0 errors/13 warnings; Vitest 28 files, 120/120; build 3,042 modules | Warnings are 6 Fast Refresh and 7 existing hook-dependency warnings; build has only the >500 kB advisory. |
+| System | F05 finance 4/4; F06 migration 7/7; F07 7/7 | Current ordered local-system evidence. |
+| Focused completion | F05 backend/shared 33/33 and browser 7/7; F06 backend 32/32 and browser 8/8 | Feature completion slices pass. |
+| Harness/static | F07 self-test 9/9; SDLC 8 features; diff check | Pass; SDLC preserves Sol codegen/Terra review separation. |
 
-Remaining executable F07 work is F07-T057 (real 24-hour soak), F07-T066/T067
-(current recovery-boundary and DR drill) and F07-T070 (commit-bound
-artifact/provenance production). The requested implementation commit exists
-locally as `6f3e9c9`; nothing was pushed. External production gates remain
+Remaining evidence is F07-T057 (real 24-hour soak), F07-T066/T067 (a post-fix
+restore/reconciliation run; the prior attempts are preserved as failed or
+interrupted) and exact-clean-commit execution for F07-T070. These do not hide
+or reduce product flows. Nothing was pushed. External production gates remain
 `NO-GO / ACTION_REQUIRED`.
 
 | Feature | State | Completed subparts | Pending subparts | Automated evidence | Current failures |
@@ -65,9 +63,9 @@ locally as `6f3e9c9`; nothing was pushed. External production gates remain
 | F02 Workforce/attendance | Local product complete; external provider gates open | V35/V37 administration plus employee create/effective edit/disable/archive and serialized allocation create/edit/end/split lifecycle; overnight/split-session and roster-bound close; manager/self UI | Real greytHR, production IdP and controlled staging/load acceptance | **Latest focused:** 24/24 including two-session concurrency | None in focused lanes |
 | F03 Delivery/Linear | Local product complete; external provider gates open | V36/V38 plus V39 repeatable deliverables/criteria/dependencies/assignments, guarded editable drafts and cloned revisions; delegated approval/replay and bounded reconciliation operator UI | Live Linear/mail and controlled acceptance | Focused PostgreSQL and 25/25 delivery frontend tests pass | None in focused lanes |
 | F04 Certification/confirmation | Local provider-neutral product complete; release acceptance blocked | V11–V13 plus V40 exact-version withdrawal and private governed multipart evidence storage/metadata/hash/scan transitions; cross-month operations UI | Live sender/mailbox/object storage/scanner, production grants/SSO/provider/F05 consumer and deployed acceptance | **Latest focused:** 10/10 PostgreSQL | None in focused lanes |
-| F05 Evidence/invoice/reporting | Implemented locally; release acceptance blocked | Flyway V14–V16 finance schema, scoped APIs/OpenAPI, immutable exact invoice/package lineage, private storage/scan/render adapters, package/invoice/Procurement/payment/report/export workflows, React finance workspaces and evidence docs | Production provider/deployment/Procurement acceptance and production-like scale approval | **Fresh focused:** natural scanner-readiness 1/1; committed concurrency 2/2; accessibility 3/3; isolated Spring/Flyway/PostgreSQL system 4/4. Prior 154/154 backend, 88/88 frontend and 69/69 browser results remain historical. | No F05 failure in the fresh focused lanes; external performance/scale and G4 are ACTION_REQUIRED |
-| F06 Historical migration | Local code and focused verification complete; production cutover blocked | V17–V20/V41/V43, retro outcome ledger, ordered month transitions, Procurement envelopes, row/conflict UI, source declarations, stable codes/correlation, durable async worker, 100k bound, tenant CSV/XLSX, OpenAPI/a11y and consumed-package correction routing | Approved scanner/storage, controlled capacity window, source-owner sign-off, backup/restore and masked rehearsal | System **6/6**; exact Migration recovery **1/1**; migration accessibility recovery **2/2** plus OpenAPI focused evidence | No unresolved local product failure; clean aggregate Maven/browser reruns are not claimed |
-| F07 Hardening/go-live | Local implementation committed; production release blocked | V42/V43 product migrations, V44 checksum-safe hardening, repeatable dynamic local startup, exact review fixes, least privilege, retention/legal hold, flags, telemetry, capacity and release/DR/supply-chain harness, role support guide | F07-T057, T066/T067, T070 and all external production gates | Frontend **120/120**; product system **7/7**; repeated startup **2/2**; self-test **9/9**; operations/migration/rollout/SDLC gates pass; Maven/browser split recovery evidence recorded above | Release-schema wrapper environment-blocked; provider/legal/identity/deployment/soak/DR/manual/UAT approval remains `ACTION_REQUIRED / NO-GO` |
+| F05 Evidence/invoice/reporting | Local product complete; release acceptance blocked | Existing finance flows plus V45 governed finance-artifact retention/disposal, effective upload policy and typed concurrency handling | Production provider/deployment/Procurement acceptance and production-like scale approval | Backend/shared **33/33**; browser **7/7**; system **4/4**; full aggregate green | No unresolved local product failure |
+| F06 Historical migration | Local product complete; production cutover blocked | Existing migration flows plus scan-before-parse quarantine, latest effective finalized roster reconciliation, version reporting and stale-approval protection | Approved production scanner/storage, controlled capacity window, source-owner sign-off and masked rehearsal | Backend **32/32**; browser **8/8**; system **7/7**; full aggregate green | No unresolved local product failure |
+| F07 Hardening/go-live | Local implementation complete; production release blocked | V42–V45 controls, repeatable dynamic/checksum-compatible local startup, release manifest/provenance and containerized DR harness | T057, verified post-fix T066/T067, exact-clean-commit T070 execution and all external production gates | Frontend **120/120**; Maven **347/347**; browser **292/292**; product system **7/7**; self-test **9/9**; SDLC passes | DR rehearsal evidence remains unverified; provider/legal/identity/deployment/soak/manual/UAT approval remains `ACTION_REQUIRED / NO-GO` |
 
 ## Open issues and blockers
 

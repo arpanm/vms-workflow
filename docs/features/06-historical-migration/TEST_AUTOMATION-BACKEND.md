@@ -36,3 +36,16 @@ The independent-review rerun extended that result to **3/3 unit, 15/15
 hash-only confirmation association, metadata-only invoice semantics,
 conditional allocation approvals, deduplicated findings and local timestamp
 plus IANA-zone commit behavior.
+
+The completion-audit command expands the focused lane to:
+
+```bash
+mvn -B -f backend/pom.xml \
+  -Dtest=MigrationCsvParserTest,MigrationOpenApiIT,MigrationWorkflowIT,MigrationAtomicCommitIT,MigrationDomainAdapterIT,MigrationRecoveryWorkerIT \
+  test
+```
+
+Result: **32/32 passed**. New cases cover scan-before-parse quarantine,
+finalized-roster/effective-master expected-day reconciliation, employment and
+pre-start boundaries, and report/sign-off invalidation after conflict
+resolution.

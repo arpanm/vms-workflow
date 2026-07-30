@@ -1,6 +1,6 @@
-import { generateKeyPairSync, sign } from "node:crypto";
+import { createHash, generateKeyPairSync, sign } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { createServer as createHttpServer } from "node:http";
 import { createServer as createNetServer } from "node:net";
 import { dirname, join } from "node:path";
@@ -9,9 +9,9 @@ import { fileURLToPath } from "node:url";
 const repositoryRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const composeFile = join(repositoryRoot, "backend", "compose.yaml");
 const composeProject = "vms-workflow-local";
-const localDatabase = databaseNameEnvironment(
+let localDatabase = databaseNameEnvironment(
   "VMS_LOCAL_DATABASE",
-  "vms_workflow_local_v44",
+  "vms_workflow_local_v45",
 );
 const argumentsSet = new Set(process.argv.slice(2));
 const dependenciesOnly = argumentsSet.has("--dependencies-only");
@@ -101,31 +101,23 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
   });
 }
 
-const backendResult = await startServiceAtOrAbove({
-  label: "Spring backend",
-  initialPort: numberEnvironment("VMS_BACKEND_PORT", 8080),
-  timeoutMilliseconds: 180_000,
-  url: (port) => `http://127.0.0.1:${port}/actuator/health`,
-  command: "mvn",
-  args: () => ["-f", "backend/pom.xml", "spring-boot:run"],
-  environment: (port) => ({
-    ...baseRuntimeEnvironment,
-    SERVER_ADDRESS: "127.0.0.1",
-    SERVER_PORT: String(port),
-    SPRING_FLYWAY_LOCATIONS: [
-      "classpath:db/migration",
-      `filesystem:${join(
-        repositoryRoot,
-        "backend/src/test/resources/db/testdata",
-      )}`,
-    ].join(","),
-    SPRING_PROFILES_ACTIVE: "local",
-    VMS_FINANCE_CURSOR_SIGNING_SECRET:
-      "local-development-cursor-signing-secret-32-bytes",
-    VMS_FINANCE_LOCAL_SCANNER_ENABLED: "true",
-    VMS_MIGRATION_LOCAL_SCANNER_ENABLED: "true",
-  }),
-});
+let backendResult;
+try {
+  backendResult = await startBackend(baseRuntimeEnvironment);
+} catch (error) {
+  if (!isFlywayHistoryMismatch(error)) throw error;
+  const incompatibleDatabase = localDatabase;
+  localDatabase = await compatibilityDatabaseName();
+  console.warn("");
+  console.warn(
+    `Database ${incompatibleDatabase} has incompatible Flyway history; `
+      + "it was preserved unchanged.",
+  );
+  console.warn(`Retrying with compatibility database ${localDatabase}.`);
+  await ensureLocalDatabase();
+  Object.assign(baseRuntimeEnvironment, databaseEnvironment());
+  backendResult = await startBackend(baseRuntimeEnvironment);
+}
 const backendPort = backendResult.port;
 watchChild("backend", backendResult.child);
 
@@ -194,6 +186,32 @@ function databaseNameEnvironment(name, fallback) {
     );
   }
   return value;
+}
+
+function databaseEnvironment() {
+  return {
+    VMS_DATABASE_URL:
+      `jdbc:postgresql://127.0.0.1:${postgresPort}/${localDatabase}`,
+    VMS_LOCAL_DATABASE: localDatabase,
+  };
+}
+
+async function compatibilityDatabaseName() {
+  const directories = [
+    join(repositoryRoot, "backend/src/main/resources/db/migration"),
+    join(repositoryRoot, "backend/src/test/resources/db/testdata"),
+  ];
+  const hash = createHash("sha256");
+  for (const directory of directories) {
+    const names = (await readdir(directory))
+      .filter((name) => name.endsWith(".sql"))
+      .sort();
+    for (const name of names) {
+      hash.update(name);
+      hash.update(await readFile(join(directory, name)));
+    }
+  }
+  return `vms_workflow_local_${hash.digest("hex").slice(0, 12)}`;
 }
 
 async function nextAvailablePort(start) {
@@ -451,14 +469,50 @@ async function startServiceAtOrAbove({
       /address already in use|port (?:\d+ )?was already in use|port is already in use|EADDRINUSE/i
         .test(diagnostic);
     if (!portConflict) {
-      throw new Error(
+      const error = new Error(
         `${label} exited before becoming ready on port ${port}.`,
       );
+      error.startupDiagnostic = diagnostic;
+      throw error;
     }
     console.log(`${label} port ${port} is occupied; trying ${port + 1}.`);
     port += 1;
   }
   throw new Error(`No usable ${label} port exists at or above ${initialPort}.`);
+}
+
+function isFlywayHistoryMismatch(error) {
+  const diagnostic = error?.startupDiagnostic ?? "";
+  return /Migrations have failed validation|Migration checksum mismatch|resolved migration not applied/i
+    .test(diagnostic);
+}
+
+function startBackend(baseEnvironment) {
+  return startServiceAtOrAbove({
+    label: "Spring backend",
+    initialPort: numberEnvironment("VMS_BACKEND_PORT", 8080),
+    timeoutMilliseconds: 180_000,
+    url: (port) => `http://127.0.0.1:${port}/actuator/health`,
+    command: "mvn",
+    args: () => ["-f", "backend/pom.xml", "spring-boot:run"],
+    environment: (port) => ({
+      ...baseEnvironment,
+      SERVER_ADDRESS: "127.0.0.1",
+      SERVER_PORT: String(port),
+      SPRING_FLYWAY_LOCATIONS: [
+        "classpath:db/migration",
+        `filesystem:${join(
+          repositoryRoot,
+          "backend/src/test/resources/db/testdata",
+        )}`,
+      ].join(","),
+      SPRING_PROFILES_ACTIVE: "local",
+      VMS_FINANCE_CURSOR_SIGNING_SECRET:
+        "local-development-cursor-signing-secret-32-bytes",
+      VMS_FINANCE_LOCAL_SCANNER_ENABLED: "true",
+      VMS_MIGRATION_LOCAL_SCANNER_ENABLED: "true",
+    }),
+  });
 }
 
 async function waitForUrlOrExit(url, child, timeoutMilliseconds) {

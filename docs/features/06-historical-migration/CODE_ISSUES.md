@@ -2,10 +2,11 @@
 
 ## Final integrated reconciliation — 2026-07-30
 
-The reviewed local F06 implementation issues are closed through V43. Current
-focused evidence passes system 6/6 and migration/OpenAPI recovery 1/1. Do not
-erase the integrated Maven 340 (2 failures + 1 error) or browser 287/292 rows.
-External source-owner, provider, scale, cutover and DR gates remain open.
+The reviewed local F06 implementation issues are closed through V45. Current
+focused evidence passes backend 32/32, intercepted browser 8/8 and system 7/7;
+the subsequent aggregate Maven 347/347 and browser 292/292 runs pass. Earlier
+failed rows remain preserved in the regression ledger. External source-owner,
+provider, scale, cutover and DR gates remain open.
 
 ## Post-codegen disposition
 

@@ -44,3 +44,10 @@ The workspace includes loading, empty, denied, stale/version-conflict, invalid,
 partial, failed, cancelled and rolled-back states. Statuses use text and icons;
 tables, forms and actions are keyboard operable. `ACTION_REQUIRED` means a real
 production rehearsal or source-owner decision is not configured—not success.
+
+The reconciliation card now shows imported versus roster/calendar-derived
+expected employee-days. When coverage is incomplete, it announces the missing
+count and shows the first ten scoped employee/date exceptions (the API retains
+a bounded 200-item sample). Resolving a conflict immediately creates a new
+report and removes prior sign-offs from the active view, making re-approval
+mandatory. Quarantined sources never display parsed row content.

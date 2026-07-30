@@ -89,6 +89,18 @@ class FinanceWorkflowIT {
         throws Exception {
         SubmittedFixture fixture = submittedInvoice();
 
+        mvc.perform(get("/api/v1/finance/invoices/{id}", fixture.invoiceId())
+                .with(token("user-arrow")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.uploadPolicy.policyVersion")
+                .value("f05-policy-v1"))
+            .andExpect(jsonPath("$.uploadPolicy.retentionPolicy")
+                .value("FINANCE_EVIDENCE"))
+            .andExpect(jsonPath("$.uploadPolicy.allowedClassifications[0]")
+                .value("CONFIDENTIAL"))
+            .andExpect(jsonPath("$.uploadPolicy.maximumUploadBytes")
+                .value(26214400));
+
         assertEquals(1, count("""
             SELECT count(*) FROM invoices WHERE id = ?
             """, fixture.invoiceId()));

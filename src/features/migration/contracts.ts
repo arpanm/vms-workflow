@@ -68,6 +68,14 @@ export type Reconciliation = {
   lowConfidenceRows: number;
   expectedEmployeeDays: number;
   importedEmployeeDays: number;
+  coverage: {
+    missing_employee_days: number;
+    missing_employee_day_samples: Array<{
+      employeeNumber: string;
+      workDate: string;
+    }>;
+    [key: string]: unknown;
+  };
   approvals: MigrationApproval[];
 };
 

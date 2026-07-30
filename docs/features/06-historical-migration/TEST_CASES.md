@@ -138,3 +138,27 @@ integration = 17/17 passed**.
 
 Current focused result: **3/3 unit, 15/15 workflow integration and 1/1
 all-template adapter integration tests passed**.
+
+## Completion-audit regression cases
+
+- `T-MIG-048` — The scanner verdict is obtained before any CSV parse or header
+  validation. A quarantined EICAR fixture with malformed CSV persists no
+  staging rows and validation returns `SOURCE_SCAN_NOT_PASSED`.
+- `T-MIG-049` — Expected employee-days prefer the latest immutable finalized
+  roster; otherwise they derive from effective engagement allocation,
+  employment lifecycle, calendar weekdays, holidays and date overrides.
+  Imported days and bounded missing-day exceptions are counted independently.
+- `T-MIG-050` — A raw attendance event before 1 June 2026 is invalid with
+  `TEMPORAL_OUTSIDE_ENGAGEMENT` on `occurred_at`.
+- `T-MIG-051` — Resolving a duplicate conflict creates a new immutable
+  reconciliation/report hash, records an audit event and invalidates approvals
+  attached to the prior report.
+- `T-MIG-052` — Job responses expose only `APPROVED` sign-offs attached to the
+  current reconciliation; stale and rejected decisions cannot satisfy client
+  commit readiness.
+- `E2E-F06-SYS-007` — Real Vite/Spring/PostgreSQL execution proves a
+  quarantined malformed source cannot reach parsing or validation.
+
+Completion-audit evidence: **32/32 focused backend tests**, **2/2 migration
+presentation tests**, TypeScript typecheck, and **7/7 real-system Playwright**
+passed.

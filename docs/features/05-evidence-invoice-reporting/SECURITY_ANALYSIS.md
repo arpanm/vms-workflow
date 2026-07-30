@@ -16,12 +16,17 @@ external provider acceptance remain pending.
   and finance mutation/export/download rate limits with security events.
 - No salary, CTC, employee rates, markup, margin, payroll or employee-level
   invoice allocation in F05 contracts or calculations.
+- Finance-content retention is fail-closed without an authorized,
+  organization-scoped schedule; immutable dry-run candidates precede explicit
+  execution, which rechecks legal hold/references and preserves disposal proof.
 
 ## Remaining controls to prove or finish
 
 - Per-report/persona export field-mask parity and authority-snapshot use.
 - Natural exception authorization, cross-tenant/SOD and replay denial paths.
-- Controlled audited legal-hold/scanner state transitions.
+- Non-transactional external object-store deletion requires a durable
+  provider-specific pending/retry/finalize workflow before retention disposal
+  can be enabled outside the PostgreSQL adapter.
 - Database-role/RLS, accessibility, load/DR and full-stack browser evidence.
 - Approved storage/scanner/renderer/ERP/SSO/grants/retention configuration in
   an external non-production acceptance environment.

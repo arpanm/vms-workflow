@@ -14,4 +14,17 @@ public interface FinancePrivateStorageAdapter {
     void store(UUID artifactId, byte[] content);
 
     byte[] read(UUID artifactId);
+
+    /**
+     * Removes private bytes after the caller has recorded its governed,
+     * same-transaction retention transition. Implementations that cannot make
+     * deletion atomic with the metadata transaction must return {@code false}
+     * from {@link #transactionalDeleteSupported()} and use a durable
+     * provider-specific pending/retry workflow instead.
+     */
+    void delete(UUID artifactId);
+
+    default boolean transactionalDeleteSupported() {
+        return false;
+    }
 }

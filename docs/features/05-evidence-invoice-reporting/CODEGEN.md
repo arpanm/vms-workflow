@@ -49,5 +49,22 @@ ERP/AP integration. Those remain G4 external acceptance gates.
   version, source/freshness and `LIVE` temporal mode.
 - The React adapter consumes that contract, remains compatible with the prior
   projection and honors server `snapshotMode` report definitions.
-- No Flyway change was required; V39 remains available for a future schema
-  change.
+- That dashboard-contract audit required no Flyway change; the later retention
+  work is the additive V45 described below.
+
+## 2026-07-30 retention and policy-contract code generation
+
+- Additive V45 extends the existing organization-scoped, immutable F07
+  schedule/dry-run/execution model with finance export/evidence content classes,
+  narrow runtime grants and same-transaction disposal guards without changing
+  V1–V44. It seeds no duration.
+- The governed API creates an authorized schedule, records a reviewable dry-run
+  candidate report, and explicitly executes eligible candidates.
+  `FinanceRetentionWorker` applies only those approved candidates, rechecks
+  holds/references and emits audit/event/outbox facts for local byte disposal.
+- `FinancePrivateStorageAdapter` makes transactional deletion an explicit
+  capability; only the PostgreSQL implementation opts in.
+- Invoice reads expose effective upload policy. React uses the server policy
+  for classification and retention instead of a hard-coded fixture value.
+- Overlapping concurrent package-share creation returns the typed
+  `PACKAGE_SHARE_WINDOW_CONFLICT` domain conflict.

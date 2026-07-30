@@ -72,3 +72,17 @@ external and are not represented as locally complete.
   authority arbitration and domain commit.
 - Focused evidence passed: 3 registry/parser unit tests, 15 migration-workflow
   PostgreSQL tests and 1 all-template domain-adapter PostgreSQL test.
+
+## 2026-07-30 — Completion-audit reconciliation and quarantine closure
+
+- Moved malware inspection ahead of every CSV parse/header operation. Pending
+  and quarantined sources remain private and produce no staging rows.
+- Replaced self-referential attendance counts with the latest finalized roster
+  snapshot, or effective allocation/calendar/holiday/override and employment
+  truth when no snapshot exists. Reports expose bounded missing-day exceptions.
+- Added pre-start rejection for raw attendance timestamps.
+- Row conflict decisions now create a new immutable reconciliation and audit
+  event. Only approved sign-offs for that newest report are returned, so stale
+  or rejected approvals cannot make the UI appear commit-ready.
+- Added real-system quarantine ordering, expected-day and stale-reconciliation
+  regression evidence.

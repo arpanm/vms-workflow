@@ -2,11 +2,10 @@
 
 ## Final integrated reconciliation — 2026-07-30
 
-Preserved final split evidence: Maven 74 unit + 266 integration = 340 executed,
-2 failures + 1 error; exact Finance 1/1, Migration 1/1 and Capacity 2/2
-recovery passes (four tests). Browser 287/292; exact recovery 5/5. System 7/7,
-self-test 9/9 and operations/migration/rollout schemas pass. No clean 340/340
-or 292/292 aggregate claim is made.
+Final evidence: Maven 74 unit + 273 integration = 347/347, browser 292/292,
+system 7/7 and self-test 9/9 pass. Earlier failed/recovery rows remain in the
+append-only regression catalog. The T066/T067 post-fix DR rehearsal and T057
+24-hour soak remain unverified, so no production GO claim is made.
 
 **Requirements:** PRD 14, 16, 20 and 22; RQ-033–RQ-035
 **Test data rule:** synthetic multi-tenant data only; no production secrets,

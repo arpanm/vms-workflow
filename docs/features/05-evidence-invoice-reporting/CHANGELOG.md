@@ -1,5 +1,22 @@
 # F05 — Change log
 
+## 2026-07-30 — Governed retention and upload-policy contract
+
+- Added V45 finance-content classes to the existing organization-scoped,
+  versioned schedule/dry-run/explicit-execution model, with narrow database
+  guards/grants and no seeded duration.
+- Added approved-candidate disposal for due unreferenced/unheld local
+  PostgreSQL bytes while preserving immutable metadata/hash/lineage.
+- Kept all content disposal fail-closed pending an authorized schedule and
+  blocked non-transactional provider deletion from local execution.
+- Exposed effective invoice upload policy and removed the stale client
+  retention default.
+- Added retention and package-share committed concurrency coverage plus typed
+  share-window conflict handling.
+- Expanded finance/shared-governance Maven passed **33/33**, including the
+  populated V44→V45 upgrade; TypeScript typecheck passed and intercepted F05
+  Playwright passed **7/7**.
+
 ## 2026-07-30 — Codegen hardening and recovery
 
 - Versioned an explicit exceptionable-readiness rule set and made invoice

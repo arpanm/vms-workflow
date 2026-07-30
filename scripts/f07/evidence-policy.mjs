@@ -19,6 +19,8 @@ const liveMigrationCommand =
   /^node scripts\/f07\/migration-live-rehearsal\.mjs --execute --base-ref [0-9a-f]{40} --release-commit [0-9a-f]{40}$/;
 const operationalArtifactCommand =
   /^node scripts\/f07\/operational-report\.mjs --kind (?:load|soak-24h|dr|rollout) --input \.f07-evidence\/inputs\/[A-Za-z0-9._-]+\.json$/;
+const releaseArtifactCommand =
+  /^node scripts\/f07\/release-artifact-manifest\.mjs --expected-commit [0-9a-f]{40} --supply-report-dir \.f07-evidence\/[A-Za-z0-9._/-]+\/supply-chain --output \.f07-evidence\/[A-Za-z0-9._/-]+\/release-artifact-manifest\.json$/;
 const postDeployRegressionCommand =
   /^node scripts\/f07\/post-deploy-regression\.mjs --evidence-dir [A-Za-z0-9_./-]+$/;
 
@@ -43,6 +45,12 @@ const laneCommands = {
     commandPattern: operationalArtifactCommand,
     evidenceParser: "structured",
     structuredKind: "dr-rehearsal-v1",
+  },
+  "F07-CI-RELEASE-ARTIFACTS": {
+    actionRequiredWhenAbsent: true,
+    commandPattern: releaseArtifactCommand,
+    evidenceParser: "structured",
+    structuredKind: "release-artifact-manifest-v1",
   },
   "F07-CI-E2E-ACCESSIBILITY": {
     command:
@@ -194,8 +202,11 @@ const groups = {
     "F07-T064", "F07-T065", "F07-T066", "F07-T067",
     "F07-DR-002", "F07-DR-003", "T-DR-001",
   ],
+  "F07-CI-RELEASE-ARTIFACTS": [
+    "F07-T070",
+  ],
   "F07-CI-ROLLOUT": [
-    "F07-T070", "F07-T072", "F07-T073", "F07-T075",
+    "F07-T072", "F07-T073", "F07-T075",
     "F07-ROL-002",
   ],
   "F07-CI-POST-DEPLOY": ["F07-T074"],
@@ -398,7 +409,7 @@ const explicitCaseRequirements = {
     "F07-A11Y-003@f07-compatibility-android",
     "F07-A11Y-003@f07-compatibility-ios",
   ],
-  "F07-T070": ["ROLLOUT-CANARY", "ROLLOUT-ROLLBACK"],
+  "F07-T070": ["RELEASE-ARTIFACT-MANIFEST"],
   "F07-T071": [
     "com.vms.workflow.integration.F07FeatureFlagObservabilityIT#scopeDependencyWindowAndAuditAreServerAuthoritative",
     "com.vms.workflow.integration.F07FeatureFlagObservabilityIT#directClientInputCannotCreateAuthorityOrBypassRbac",
@@ -624,6 +635,7 @@ const explicitCaseRequirements = {
     "E2E-F06-SYS-004@f06-migration-system-chromium",
     "E2E-F06-SYS-005@f06-migration-system-chromium",
     "E2E-F06-SYS-006@f06-migration-system-chromium",
+    "E2E-F06-SYS-007@f06-migration-system-chromium",
   ],
   "E2E-09": [
     "E2E-09@f05-finance-system-chromium",

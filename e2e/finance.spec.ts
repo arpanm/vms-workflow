@@ -66,6 +66,9 @@ test("[E2E-F05-FIN-002] document upload, exact readiness and submission preserve
   );
 
   await expect(page.getByRole("heading", { name: "Invoice AF-2026-071" })).toBeVisible();
+  await expect(page.getByLabel("Retention policy"))
+    .toHaveValue("FINANCE_EVIDENCE");
+  await expect(page.getByText("Controlled by f05-policy-v1.")).toBeVisible();
   await page.getByLabel("Invoice file").setInputFiles({
     name: "replacement-invoice.pdf",
     mimeType: "application/pdf",

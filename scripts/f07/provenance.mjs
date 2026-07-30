@@ -111,7 +111,7 @@ export async function createProvenance(inputs, options = {}) {
   }
   const sourceDateEpoch =
     process.env.SOURCE_DATE_EPOCH ??
-    String(Math.floor(new Date(git.commitTimestamp).getTime() / 1000));
+    "315532802";
   return {
     architecture: "Java 25 / Spring Boot 4.1.0 / Maven / PostgreSQL / Vite React",
     artifacts,

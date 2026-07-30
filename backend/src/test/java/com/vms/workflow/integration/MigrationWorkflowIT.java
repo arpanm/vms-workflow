@@ -393,6 +393,38 @@ class MigrationWorkflowIT {
     }
 
     @Test
+    void quarantinedSourceIsNeverParsedOrHeaderValidated()
+        throws Exception {
+        int rowsBefore = count("SELECT count(*) FROM migration_rows");
+        String quarantined = """
+            salary,malformed
+            EICAR-STANDARD-ANTIVIRUS-TEST-FILE,"unterminated
+            """;
+        JsonNode job = mapper.readTree(mvc.perform(uploadRequest(
+                    "01_employees", quarantined, JULY,
+                    "quarantined-malformed.csv"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.scanStatus").value("QUARANTINED"))
+                .andReturn().getResponse().getContentAsString());
+
+        mvc.perform(post(
+                "/api/v1/migrations/jobs/{jobId}/validate",
+                job.path("id").asText())
+                .with(token("user-arrow"))
+                .header("If-Match", job.path("version").asText())
+                .header("Idempotency-Key",
+                    "quarantined-source-must-not-parse")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"expectedVersion":%d}
+                    """.formatted(job.path("version").asLong())))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("SOURCE_SCAN_NOT_PASSED"));
+        assertEquals(rowsBefore,
+            count("SELECT count(*) FROM migration_rows"));
+    }
+
+    @Test
     void schemaValidationRejectsIncompleteAndMalformedTemplateRows()
         throws Exception {
         String csv = String.join(",",
@@ -499,6 +531,80 @@ class MigrationWorkflowIT {
     }
 
     @Test
+    void conflictResolutionVersionsReconciliationAndInvalidatesPriorApprovals()
+        throws Exception {
+        JsonNode job = validate(uploadEmployee("AF-MIG-RECON-VERSION", JULY));
+        String priorReport = job.path("reconciliation")
+            .path("reconciliationId").asText();
+        approve(job, "user-arrow", "MIGRATION_LEAD",
+            "resolution-prior-lead");
+        approve(job, "user-governance", "GOVERNANCE",
+            "resolution-prior-governance");
+        UUID jobId = UUID.fromString(job.path("id").asText());
+        UUID rowId = jdbc.queryForObject("""
+            SELECT id FROM migration_rows WHERE job_id = ?
+            """, UUID.class, jobId);
+        jdbc.update("""
+            UPDATE migration_rows SET state = 'DUPLICATE_CONFLICT'
+            WHERE id = ?
+            """, rowId);
+        jdbc.update("""
+            UPDATE migration_jobs
+            SET valid_count = 0, invalid_count = 1,
+                version = version + 1
+            WHERE id = ?
+            """, jobId);
+        long conflictVersion = jdbc.queryForObject("""
+            SELECT version FROM migration_jobs WHERE id = ?
+            """, Long.class, jobId);
+
+        JsonNode resolved = mapper.readTree(mvc.perform(post(
+                    "/api/v1/migrations/jobs/{jobId}/rows/{rowId}/resolution",
+                    jobId, rowId)
+                .with(token("user-arrow"))
+                .header("If-Match", Long.toString(conflictVersion))
+                .header("Idempotency-Key", "resolve-and-reconcile")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "expectedVersion":%d,
+                      "decision":"KEEP_EXISTING",
+                      "reason":"Retain the already governed canonical record"
+                    }
+                    """.formatted(conflictVersion)))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString());
+        String currentReport = resolved.path("reconciliation")
+            .path("reconciliationId").asText();
+        assertNotEquals(priorReport, currentReport);
+        assertEquals(2, count("""
+            SELECT count(*) FROM migration_reconciliation_reports
+            WHERE job_id = ?
+            """, jobId));
+        assertEquals(0, count("""
+            SELECT count(*)
+            FROM migration_approvals approval
+            JOIN migration_reconciliation_reports report
+              ON report.id = approval.reconciliation_id
+            WHERE approval.job_id = ?
+              AND report.id = ?::uuid
+            """, jobId, currentReport));
+
+        mvc.perform(post("/api/v1/migrations/jobs/{jobId}/commit", jobId)
+                .with(token("user-arrow"))
+                .header("If-Match", resolved.path("version").asText())
+                .header("Idempotency-Key",
+                    "stale-resolution-approvals-must-not-commit")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"expectedVersion":%d,"partialCommit":false}
+                    """.formatted(resolved.path("version").asLong())))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code")
+                .value("MIGRATION_DUAL_APPROVAL_REQUIRED"));
+    }
+
+    @Test
     void rawAndDailyAttendanceCannotBothOwnOneEmployeeDay()
         throws Exception {
         seedAttendancePredecessors();
@@ -547,6 +653,57 @@ class MigrationWorkflowIT {
             SELECT count(*) FROM migration_attendance_authorities
             WHERE engagement_id = ? AND attendance_date = '2026-07-08'
             """, ENGAGEMENT));
+    }
+
+    @Test
+    void attendanceReconciliationDerivesExpectedDaysAndRejectsPreStartPunches()
+        throws Exception {
+        seedAttendancePredecessors();
+        String header = String.join(",",
+            templates.require("07a_attendance_punches").headers());
+        String valid = header + "\r\n"
+            + "1,ARROWFOUNDRY,PUNCH-MIG-COVERAGE,AF-001,CHECK_IN,"
+            + "2026-07-08T09:00:00,Asia/Kolkata,OTHER,"
+            + "synthetic-raw,,,Governed historical import,"
+            + "SYNTHETIC-EVIDENCE,\r\n";
+        JsonNode reconciled = validate(upload(
+            "07a_attendance_punches", valid, JULY,
+            "attendance-coverage.csv"));
+        assertEquals(23, reconciled.path("reconciliation")
+            .path("expectedEmployeeDays").asInt());
+        assertEquals(1, reconciled.path("reconciliation")
+            .path("importedEmployeeDays").asInt());
+        assertEquals(22, reconciled.path("reconciliation")
+            .path("coverage").path("missing_employee_days").asInt());
+        assertEquals("EFFECTIVE_MASTER_DATA", reconciled
+            .path("reconciliation").path("coverage")
+            .path("attendance_coverage_basis").asText());
+        UUID reportId = UUID.fromString(reconciled.path("reconciliation")
+            .path("reconciliationId").asText());
+        assertEquals(22, jdbc.queryForObject("""
+            SELECT (exceptions->>'missingExpectedEmployeeDays')::integer
+            FROM migration_reconciliation_reports WHERE id = ?
+            """, Integer.class, reportId));
+
+        String beforeStart = header + "\r\n"
+            + "1,ARROWFOUNDRY,PUNCH-MIG-PRESTART,AF-001,CHECK_IN,"
+            + "2026-05-31T23:00:00+05:30,Asia/Kolkata,OTHER,"
+            + "synthetic-raw,,,Invalid pre-start punch,"
+            + "SYNTHETIC-EVIDENCE,\r\n";
+        JsonNode invalid = validate(upload(
+            "07a_attendance_punches", beforeStart, JUNE,
+            "attendance-prestart.csv"));
+        assertEquals(1, invalid.path("invalidCount").asInt());
+        assertEquals(22, invalid.path("reconciliation")
+            .path("expectedEmployeeDays").asInt());
+        assertEquals("FINALIZED_ROSTER", invalid.path("reconciliation")
+            .path("coverage").path("attendance_coverage_basis").asText());
+        assertEquals(1, count("""
+            SELECT count(*) FROM migration_row_findings
+            WHERE job_id = ?::uuid
+              AND code = 'TEMPORAL_OUTSIDE_ENGAGEMENT'
+              AND field_name = 'occurred_at'
+            """, invalid.path("id").asText()));
     }
 
     @Test

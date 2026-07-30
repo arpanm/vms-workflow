@@ -14,7 +14,8 @@ presentation; the Java API makes every authorization decision.
 ## Main user flows
 
 1. **Vendor evidence and invoice:** create primary/correction/credit/debit
-   metadata, upload file plus classification/retention/source, wait for scan,
+   metadata, upload file using the server-returned classification and
+   read-only retention policy (the browser must not invent either), wait for scan,
    inspect all readiness blockers and their source/version/CTA, then generate
    a package and submit the exact eligible package/readiness/invoice versions.
 2. **Procurement decision:** view immutable manifest/history/diff, choose

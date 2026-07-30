@@ -35,6 +35,11 @@ credentials, raw evidence, signed URLs or personal commercial data.
 | Reporting/exports | `GET /dashboard`, `/reports`, `POST /exports`, `POST /exports/{id}/download`, replay route | Persona-scoped definitions/metrics, asynchronous private artifacts, progress and authorized recovery. |
 | Downloads | Package artifact and export download POST routes | Authorization, scan, integrity, expiry and audit checked by server; attachment body only. |
 
+Invoice detail responses include `uploadPolicy` with the effective policy
+version, allowlisted MIME types, maximum bytes, classifications and required
+retention class. Clients must render and submit that server contract; they must
+not invent a retention/classification value.
+
 ## State and lineage rules
 
 Invoices, packages, readiness runs, reviews, queries and payments are
@@ -63,6 +68,18 @@ Export workers claim durable rows with an expiring lease. A rendered result is
 committed only while the same worker still owns a live lease; an expired claim
 is recoverable by a replacement worker, and stale completion/failure cannot
 overwrite that replacement claim.
+
+Package generation/readiness are synchronous governed mutations, not job
+resources. Notification side effects are transactional outbox contracts.
+Finance content retention uses the existing governance endpoints:
+`POST /api/v1/governance/retention/schedules`,
+`POST /api/v1/governance/retention/runs/dry-run`, and
+`POST /api/v1/governance/retention/runs/{runId}/execute`. V45 adds
+`FINANCE_EXPORT_CONTENT` and `FINANCE_EVIDENCE_CONTENT`; schedules are
+organization-scoped/versioned and contain server-derived authority evidence.
+No duration is seeded. Dry-run records eligible/held/referenced/not-due
+candidates, and explicit execution rechecks state before transactionally
+deleting local PostgreSQL bytes while preserving metadata/hash/lineage.
 
 The Procurement control tower uses the same
 `SNAPSHOT_MEMBERSHIP_VALUES_LIVE_AT_READ` contract: the set of month IDs is

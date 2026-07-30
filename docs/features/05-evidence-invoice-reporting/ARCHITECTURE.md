@@ -14,6 +14,9 @@ flowchart LR
   Proc --> Journal
   Reports --> Worker["Leased export worker"]
   Worker --> Private
+  Retention["Governed retention dry-run / execute API"] --> Disposer["Approved-candidate disposer"]
+  Disposer --> Private
+  Retention --> Ledger["Versioned schedule + append-only run / candidate / proof"]
 ```
 
 ## Design rules
@@ -26,6 +29,17 @@ flowchart LR
   transactional service boundaries with audit/outbox/idempotency facts.
 - Private artifacts are scan/hash authorized before package/export/download.
   Local provider adapters are intentionally not production acceptance.
+- V45 retention removes only explicitly dry-run-approved, due,
+  unreferenced/unheld local PostgreSQL bytes. It reuses the organization-scoped
+  F07 versioned schedule and execution model and seeds no duration. Immutable
+  metadata, hashes and lineage remain. Transactional deletion
+  is an explicit storage-adapter capability; external object stores require a
+  durable pending/delete/retry/finalize implementation rather than pretending
+  a remote delete rolls back with PostgreSQL.
+- Package/readiness execute synchronously under version, idempotency and row
+  locks. Export is a background worker; content retention requires explicit
+  governed dry-run and execution. Notification
+  delivery is an outbox integration contract, not a locally delivered fact.
 - React/TanStack is a typed consumer. It stores no provider credential or
   signed URL and preserves opaque server pagination.
 - Finance list pagination is database keyset based. Its HMAC cursor binds the

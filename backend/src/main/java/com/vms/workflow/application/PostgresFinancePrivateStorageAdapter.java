@@ -46,4 +46,19 @@ public class PostgresFinancePrivateStorageAdapter
         }
         return value;
     }
+
+    @Override
+    public void delete(UUID artifactId) {
+        if (jdbc.update("""
+            DELETE FROM f05_private_artifact_blobs
+            WHERE artifact_id = ?
+            """, artifactId) != 1) {
+            throw new EntityNotFoundException("Private artifact not found.");
+        }
+    }
+
+    @Override
+    public boolean transactionalDeleteSupported() {
+        return true;
+    }
 }

@@ -86,6 +86,9 @@ export function verifyAuthenticatedManifest(manifest, authentication, integrityK
 
 export function validateTarMembers(names, verboseLines = []) {
   for (const name of names) {
+    if (name === "./") {
+      continue;
+    }
     const normalized = name.replace(/^\.\//, "");
     if (
       !normalized ||
@@ -234,7 +237,41 @@ async function validateRetryAuthorization(path, context, signingKey) {
   return true;
 }
 
-function databaseConnection(rawUrl, suffix) {
+export function validatePostgresClientContainerName(name) {
+  if (
+    typeof name !== "string" ||
+    !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/.test(name)
+  ) {
+    throw new Error("PostgreSQL client container name is invalid");
+  }
+  return name;
+}
+
+function validatePostgresClientContainer(name) {
+  validatePostgresClientContainerName(name);
+  if (!commandExists("docker")) {
+    throw new Error("docker is required for containerized PostgreSQL clients");
+  }
+  const inspected = run("docker", [
+    "inspect",
+    "--format",
+    "{{.Config.Image}}|{{.State.Running}}",
+    name,
+  ]);
+  const [image, running] = inspected.stdout.trim().split("|");
+  if (
+    inspected.status !== 0 ||
+    running !== "true" ||
+    !/^[^\s@]+@sha256:[0-9a-f]{64}$/.test(image ?? "")
+  ) {
+    throw new Error(
+      "PostgreSQL client container must be running from a digest-pinned image",
+    );
+  }
+  return { image, name };
+}
+
+function databaseConnection(rawUrl, suffix, clientContainer) {
   const normalized = rawUrl.replace(/^jdbc:/, "");
   const url = new URL(normalized);
   if (url.protocol !== "postgresql:" && url.protocol !== "postgres:") {
@@ -248,6 +285,7 @@ function databaseConnection(rawUrl, suffix) {
     throw new Error(`database name must end with ${suffix}`);
   }
   return {
+    clientContainer,
     descriptor: redactDatabaseUrl(normalized),
     env: {
       ...process.env,
@@ -267,12 +305,123 @@ function requireTools(tools) {
   }
 }
 
+function containerDatabaseArgs(command, args, connection) {
+  return [
+    "exec",
+    "--env",
+    `PGDATABASE=${connection.env.PGDATABASE}`,
+    "--env",
+    "PGHOST=127.0.0.1",
+    "--env",
+    `PGPASSWORD=${connection.env.PGPASSWORD}`,
+    "--env",
+    "PGPORT=5432",
+    "--env",
+    `PGUSER=${connection.env.PGUSER}`,
+    connection.clientContainer.name,
+    command,
+    ...args,
+  ];
+}
+
 function runDatabase(command, args, connection) {
-  const result = run(command, args, { env: connection.env });
+  const result = connection.clientContainer
+    ? run("docker", containerDatabaseArgs(command, args, connection))
+    : run(command, args, { env: connection.env });
   if (result.status !== 0) {
     throw new Error(`${command} failed; database details and credentials are not echoed`);
   }
   return result.stdout;
+}
+
+function requireDatabaseTools(tools, connection) {
+  if (!connection.clientContainer) {
+    requireTools(tools);
+    return;
+  }
+  for (const tool of tools) {
+    runDatabase(tool, ["--version"], connection);
+  }
+}
+
+function copyFromDatabaseContainer(connection, containerPath, hostPath) {
+  const copied = run("docker", [
+    "cp",
+    `${connection.clientContainer.name}:${containerPath}`,
+    hostPath,
+  ]);
+  if (copied.status !== 0) {
+    throw new Error("containerized PostgreSQL client output could not be copied");
+  }
+}
+
+function copyToDatabaseContainer(connection, hostPath, containerPath) {
+  const copied = run("docker", [
+    "cp",
+    hostPath,
+    `${connection.clientContainer.name}:${containerPath}`,
+  ]);
+  if (copied.status !== 0) {
+    throw new Error("restore input could not be copied to the PostgreSQL client");
+  }
+}
+
+function removeDatabaseContainerFile(connection, containerPath) {
+  if (connection.clientContainer) {
+    run("docker", [
+      "exec",
+      connection.clientContainer.name,
+      "rm",
+      "-f",
+      containerPath,
+    ]);
+  }
+}
+
+function dumpDatabase(connection, hostPath) {
+  if (!connection.clientContainer) {
+    runDatabase(
+      "pg_dump",
+      ["--format=custom", "--no-owner", "--no-acl", "--file", hostPath],
+      connection,
+    );
+    return;
+  }
+  const containerPath = `/tmp/f07-backup-${randomUUID()}.dump`;
+  try {
+    runDatabase(
+      "pg_dump",
+      ["--format=custom", "--no-owner", "--no-acl", "--file", containerPath],
+      connection,
+    );
+    copyFromDatabaseContainer(connection, containerPath, hostPath);
+  } finally {
+    removeDatabaseContainerFile(connection, containerPath);
+  }
+}
+
+function restoreDatabase(connection, hostPath) {
+  if (!connection.clientContainer) {
+    runDatabase(
+      "pg_restore",
+      ["--exit-on-error", "--no-owner", "--no-acl", "--dbname",
+        connection.descriptor.database, hostPath],
+      connection,
+    );
+    return;
+  }
+  const containerPath = `/tmp/f07-restore-${randomUUID()}.dump`;
+  try {
+    copyToDatabaseContainer(connection, hostPath, containerPath);
+    runDatabase(
+      "pg_restore",
+      ["--exit-on-error", "--no-owner", "--no-acl", "--dbname",
+        connection.descriptor.database, containerPath],
+      connection,
+    );
+  } finally {
+    removeDatabaseContainerFile(connection, containerPath);
+  }
 }
 
 const countSql = `
@@ -401,6 +550,7 @@ async function backup(args) {
       destructive: false,
       requiredEnvironment: [
         "F07_SOURCE_DATABASE_URL (loopback database ending _f07_source)",
+        "--postgres-client-container <digest-pinned running PostgreSQL container> (optional when host clients are absent)",
         "F07_BACKUP_PASSPHRASE (at least 24 characters)",
         "F07_BACKUP_INTEGRITY_KEY (independent, at least 32 characters)",
         "F07_SOURCE_OBJECT_ROOT (optional explicit local content root)",
@@ -408,7 +558,10 @@ async function backup(args) {
       result: "ACTION_REQUIRED",
     };
   }
-  requireTools(["pg_dump", "psql", "openssl"]);
+  const clientContainer = args["postgres-client-container"]
+    ? validatePostgresClientContainer(String(args["postgres-client-container"]))
+    : null;
+  requireTools(["openssl"]);
   const passphrase = process.env.F07_BACKUP_PASSPHRASE ?? "";
   const integrityKey = process.env.F07_BACKUP_INTEGRITY_KEY ?? "";
   const passphraseKeyId = process.env.F07_BACKUP_PASSPHRASE_ID ?? "";
@@ -445,7 +598,12 @@ async function backup(args) {
   await mkdir(dirname(output), { recursive: true, mode: 0o700 });
   await assertNewDirectory(output);
   await mkdir(output, { mode: 0o700 });
-  const source = databaseConnection(process.env.F07_SOURCE_DATABASE_URL, "_f07_source");
+  const source = databaseConnection(
+    process.env.F07_SOURCE_DATABASE_URL,
+    "_f07_source",
+    clientContainer,
+  );
+  requireDatabaseTools(["pg_dump", "psql"], source);
   const dumpPlain = resolve(output, ".database.dump");
   const dumpEncrypted = resolve(output, "database.dump.enc");
   const objectPlain = resolve(output, ".objects.tar");
@@ -453,11 +611,7 @@ async function backup(args) {
   const started = Date.now();
   let objectInventory = [];
   try {
-    runDatabase(
-      "pg_dump",
-      ["--format=custom", "--no-owner", "--no-acl", "--file", dumpPlain],
-      source,
-    );
+    dumpDatabase(source, dumpPlain);
     encryptFile(dumpPlain, dumpEncrypted, passphrase);
 
     if (process.env.F07_SOURCE_OBJECT_ROOT) {
@@ -705,6 +859,7 @@ async function restore(args) {
       destructive: false,
       requiredEnvironment: [
         "F07_DRILL_DATABASE_URL (empty loopback database ending _f07_drill)",
+        "--postgres-client-container <same digest-pinned running PostgreSQL container> (optional when host clients are absent)",
         "F07_CONFIRM_EMPTY_TARGET (exact target database name)",
         "F07_BACKUP_PASSPHRASE",
         "F07_BACKUP_INTEGRITY_KEY (independent, at least 32 characters)",
@@ -714,7 +869,10 @@ async function restore(args) {
       result: "ACTION_REQUIRED",
     };
   }
-  requireTools(["pg_restore", "psql", "openssl"]);
+  const clientContainer = args["postgres-client-container"]
+    ? validatePostgresClientContainer(String(args["postgres-client-container"]))
+    : null;
+  requireTools(["openssl"]);
   if (!args.input || !args.output) {
     throw new Error("--input backup directory and --output report path are required");
   }
@@ -777,7 +935,12 @@ async function restore(args) {
   if (!process.env.F07_DRILL_DATABASE_URL) {
     throw new Error("F07_DRILL_DATABASE_URL is required");
   }
-  const target = databaseConnection(process.env.F07_DRILL_DATABASE_URL, "_f07_drill");
+  const target = databaseConnection(
+    process.env.F07_DRILL_DATABASE_URL,
+    "_f07_drill",
+    clientContainer,
+  );
+  requireDatabaseTools(["pg_restore", "psql"], target);
   if (process.env.F07_CONFIRM_EMPTY_TARGET !== target.descriptor.database) {
     throw new Error("F07_CONFIRM_EMPTY_TARGET must equal the isolated target database name");
   }
@@ -842,11 +1005,7 @@ async function restore(args) {
   const started = Date.now();
   try {
     decryptFile(encryptedDump, temporaryDump, passphrase);
-    runDatabase(
-      "pg_restore",
-      ["--exit-on-error", "--no-owner", "--no-acl", "--dbname", target.descriptor.database, temporaryDump],
-      target,
-    );
+    restoreDatabase(target, temporaryDump);
   } finally {
     await rm(dumpTemporary.root, { force: true, recursive: true });
   }

@@ -57,3 +57,22 @@ PostgreSQL 18 database with Flyway V1–V16 plus synthetic test migrations.
 Historical issue registers preserve findings and remediation traceability.
 No local G0–G3 failure remains. Performance/scale evidence and external G4
 provider/deployment approvals remain release-hardening work.
+
+## 2026-07-30 retention and upload-policy fixes
+
+- Added V45 finance-content record classes to the existing organization-scoped
+  F07 schedule/dry-run/explicit-execution lifecycle. V45 seeds no duration.
+  Direct blob/state bypass fails; dry-run reports held/referenced candidates;
+  concurrent approved executions produce one disposal.
+- Preserved artifact metadata/hash/lineage after disposal and emitted an
+  immutable retention transition, audit, domain event and outbox fact.
+- Both finance record classes remain fail-closed until an authorized schedule
+  version is configured. External non-transactional storage cannot opt into
+  local disposal without a durable provider deletion state machine.
+- Replaced the UI's stale hard-coded retention value with the effective
+  policy returned on invoice reads.
+- Converted overlapping package-share database conflicts into a safe typed
+  domain conflict and added a committed two-caller race.
+- Corrected architecture/status text: package/readiness are synchronous
+  governed mutations; notifications are outbox contracts; export is the local
+  background worker and content retention requires governed dry-run/execute.

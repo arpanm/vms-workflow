@@ -378,6 +378,13 @@ export type PaymentEvent = {
 export type InvoiceView = InvoiceSummary & {
   etag: string;
   readOnly: boolean;
+  uploadPolicy: {
+    policyVersion: string;
+    allowedMimeTypes: string[];
+    maximumUploadBytes: number;
+    allowedClassifications: string[];
+    retentionPolicy: string;
+  };
   representedMetadata: InvoiceRepresentedMetadata;
   currentDocument: InvoiceDocumentMetadata | null;
   versions: InvoiceVersionSummary[];

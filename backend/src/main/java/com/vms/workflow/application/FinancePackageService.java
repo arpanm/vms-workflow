@@ -4,6 +4,7 @@ import com.vms.workflow.api.DomainConflictException;
 import com.vms.workflow.security.FinanceAuthorizationService;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -591,14 +592,20 @@ public class FinancePackageService {
             return shareView(replay);
         }
         UUID shareId = UUID.randomUUID();
-        jdbc.update("""
-            INSERT INTO evidence_package_shares(
-                id, package_version_id, recipient_subject, access_scope,
-                expires_at, created_by_subject, correlation_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, shareId, packageId, recipientSubject, normalizedScope,
-            Timestamp.from(expiresAt.toInstant()), subject,
-            journal.correlationId());
+        try {
+            jdbc.update("""
+                INSERT INTO evidence_package_shares(
+                    id, package_version_id, recipient_subject, access_scope,
+                    expires_at, created_by_subject, correlation_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, shareId, packageId, recipientSubject, normalizedScope,
+                Timestamp.from(expiresAt.toInstant()), subject,
+                journal.correlationId());
+        } catch (DataIntegrityViolationException conflict) {
+            throw new DomainConflictException(
+                "PACKAGE_SHARE_WINDOW_CONFLICT",
+                "An overlapping active package share already exists.");
+        }
         journal.audit(row.monthId(), "PACKAGE_SHARED", "EVIDENCE_PACKAGE",
             packageId, (long) row.version(), "SUCCESS",
             reason, subject, authority(authorityScope),

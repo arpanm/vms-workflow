@@ -120,6 +120,13 @@ function invoiceView(options: FinanceApiOptions, version = 4) {
     permissions: permissions(options),
     etag: `"${version}"`,
     readOnly: options.readOnly ?? false,
+    uploadPolicy: {
+      policyVersion: "f05-policy-v1",
+      allowedMimeTypes: ["application/pdf", "image/jpeg", "image/png"],
+      maximumUploadBytes: 20_000_000,
+      allowedClassifications: ["CONFIDENTIAL"],
+      retentionPolicy: "FINANCE_EVIDENCE",
+    },
     representedMetadata: {
       invoiceNumber: "AF-2026-071",
       invoiceDate: "2026-07-25",

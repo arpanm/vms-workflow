@@ -991,6 +991,16 @@ public class FinanceInvoiceService {
             "APPROVED_FOR_PROCESSING", "PAYMENT_INITIATED", "PAID",
             "CLOSED", "SUPERSEDED", "CANCELLED")
             .contains(row.state()));
+        FinancePolicyService.Policy uploadPolicy =
+            policies.active(engagementId, subject);
+        base.put("uploadPolicy", map(
+            "policyVersion", uploadPolicy.label(),
+            "allowedMimeTypes", uploadPolicy.allowedMimeTypes().stream()
+                .sorted().toList(),
+            "maximumUploadBytes", uploadPolicy.maximumUploadBytes(),
+            "allowedClassifications",
+            uploadPolicy.allowedClassifications().stream().sorted().toList(),
+            "retentionPolicy", uploadPolicy.retentionClass()));
         base.put("representedMetadata", representedMetadata(row));
         base.put("currentDocument", document(row.id()));
         base.put("versions", versions(row.id()));

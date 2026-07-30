@@ -14,6 +14,10 @@ test("[E2E-08] validates, reconciles, dual-approves and commits a staged histori
   await expect(page.getByText("employees-june.csv", { exact: true }).first()).toBeVisible();
   await page.getByRole("button", { name: "Validate staged rows" }).click();
   await expect(page.getByText("MIG-REF-EMPLOYEE-NOT-FOUND")).toBeVisible();
+  await expect(page.getByText(
+    "1 expected employee-days are missing",
+  )).toBeVisible();
+  await expect(page.getByText("AF-001 · 2026-06-03")).toBeVisible();
   await expect(page.getByText("Migration-lead approval is required.")).toBeVisible();
 
   await page.getByRole("button", { name: "Approve as migration lead" }).click();

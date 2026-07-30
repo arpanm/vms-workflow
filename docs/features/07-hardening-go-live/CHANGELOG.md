@@ -1,5 +1,38 @@
 # F07 — Changelog
 
+## 2026-07-30 — Final V45 integration closeout
+
+- Added governed finance-artifact retention/disposal through V45 and completed
+  the F06 quarantine, effective-roster reconciliation and stale-approval flows.
+- Made `dev:all` preserve a checksum-incompatible database, derive/create a
+  deterministic compatible database and retry with every dependent URL
+  updated.
+- Final frontend 120/120, Maven 347/347, browser 292/292, F05 system 4/4, F06
+  system 7/7, F07 system 7/7, self-test 9/9 and SDLC checks pass.
+- Added the deterministic T070 artifact-manifest contract and containerized
+  T066/T067 rehearsal. The latter failed closed twice on archive-root
+  validation; validation/cleanup are fixed, but the post-fix run was
+  interrupted before reconciliation and remains `ACTION_REQUIRED`.
+
+## 2026-07-30 — T070 reproducible artifact contract
+
+- Added a dedicated action-required release-artifact lane instead of using
+  rollout simulation as a proxy for T070.
+- Added an exact-clean-commit manifest containing deterministic frontend and
+  backend digests, per-artifact CycloneDX references, build metadata, the
+  dynamically derived current/previous additive Flyway range and public
+  health/liveness/readiness routes.
+- Fixed the canonical build epoch at `315532802`
+  (`1980-01-01T00:00:02Z`) in provenance and Maven configuration. Manifest
+  execution rebuilds frontend and backend into isolated temporary outputs and
+  fails closed unless both digests equal the release artifacts.
+- Added adversarial self-tests for dirty provenance, missing checksum/SBOM,
+  stale database compatibility, missing readiness route, rebuild mismatch and
+  epoch mismatch. Added `E2E-F06-SYS-007` to canonical `E2E-08` evidence.
+- Focused isolated reproduction matched both artifacts. T070 remains open until
+  the structured manifest runs on the final clean commit; no provenance was
+  synthesized from the current dirty worktree.
+
 ## 2026-07-30 — V44 checksum-safe local startup
 
 - Restored the immutable released contents of V39 and V40, moving their
