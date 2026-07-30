@@ -28,7 +28,7 @@ runs:
 - the finance and migration local-system suites pass 4/4 and 6/6;
 - the full browser matrix passes 274/274 after the preserved 268/274 first
   run and exact 7/7 failed-slice rerun;
-- production schema history is current through V33. V1000+ migrations are test
+- production schema history is current through V38. V1000+ migrations are test
   fixtures only;
 - the definitive complete Maven R3 passes 73 unit + 217 integration tests
   (290/290), zero failures/errors/skips, in 03:21. The earlier R2 215/217
@@ -48,9 +48,12 @@ the overall production decision remain open/`NO-GO`.
 - [ ] **F07-T002 — LOCAL:** Add a CI/local release-gate command that rejects
   missing evidence, failed P0/P1 tests, unowned exceptions, expired risk
   acceptances and unlinked mandatory requirements.
-- [ ] **F07-T003 — LOCAL:** Map every F07 task and test to PRD sections,
-  RQ-033–RQ-035, schema/Flyway impact, API/UI impact, runbook and rollback
-  evidence; update the repository status source from the manifest.
+- [x] **F07-T003 — LOCAL:** Map every F07 task and test to PRD sections,
+  the applicable subset of RQ-033–RQ-035, schema/Flyway impact, API/UI impact,
+  runbook and rollback evidence; update the repository status source from the
+  manifest. The release gate validates the canonical
+  [traceability matrix](traceability-matrix.json) for all 85 tasks and 76
+  tests and rejects missing/orphaned policy.
 - [ ] **F07-T004 — LOCAL:** Implement the production-readiness configuration
   registry with `NOT_CONFIGURED`, `CONFIGURED_UNVERIFIED`, `VERIFIED` and
   `EXPIRED_ACTION_REQUIRED` states, owning role, evidence reference, effective

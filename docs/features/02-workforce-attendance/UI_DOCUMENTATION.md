@@ -1,5 +1,9 @@
 # F02 UI documentation
 
+## Employee administration completion (2026-07-30)
+
+The directory exposes **Add employee**. The profile exposes effective-dated **Edit master fields**, **Archive employee**, and allocation **Add**, **Edit**, **End**, and **Split** commands. Server conflicts remain visible; the browser never estimates concurrent allocation safety.
+
 ## Workforce administration
 
 `/workforce/administration` provides manager controls for employee aliases,

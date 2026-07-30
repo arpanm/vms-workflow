@@ -1,5 +1,13 @@
 # F04 API Documentation
 
+## Draft withdrawal and governed evidence (2026-07-30)
+
+- `POST /submissions/{submissionId}/withdraw` is exact-versioned and idempotent; only a `DRAFT` may become `WITHDRAWN`.
+- `POST /months/{monthId}/artifacts` accepts multipart bytes and classification. The server safe-names, hashes, and records `PENDING` metadata while keeping local object keys private.
+- `POST /artifacts/{artifactId}/scans` explicitly invokes the local scanner. PostgreSQL allows only `PENDING` to `PASSED`, `FAILED`, or `UNKNOWN`; other metadata remains immutable.
+
+Live storage/scanner providers remain external adapters, not fabricated integrations.
+
 ## Contract rules
 
 All F04 routes are rooted at `/api/v1/certification`, use authenticated server-resolved authority, and return a server version/`ETag` for versioned resources. Consequential mutations require `If-Match`, `Idempotency-Key`, and the matching expected version in the body. Typed validation/state/version errors are safe Problem Details with a normalized correlation ID; scope and authority denial is non-disclosing.

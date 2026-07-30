@@ -15,7 +15,9 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -61,6 +63,14 @@ public class DeliveryPlanController {
     PlanView create(@AuthenticationPrincipal Jwt jwt,
                     @Valid @RequestBody CreatePlanRequest request) {
         return delivery.create(jwt.getSubject(), request);
+    }
+
+    @PutMapping("/plans/{planId}")
+    @Operation(summary = "Replace the exact current draft or draft revision with a complete plan")
+    PlanView update(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID planId,
+                    @RequestHeader("If-Match") int expectedVersion,
+                    @Valid @RequestBody CreatePlanRequest request) {
+        return delivery.update(jwt.getSubject(), planId, expectedVersion, request);
     }
 
     @PostMapping("/plans/{planId}/submit")

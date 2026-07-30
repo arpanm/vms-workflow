@@ -24,3 +24,19 @@
 - CSV parsing has bounded field/row handling and quoted-field coverage.
 - Source hashes, row hashes, represented timestamp, provenance links, optimistic job versioning, and compensating rollback intent are present.
 - The controller consistently requires `If-Match` for consequential job changes.
+
+## 2026-07-30 independent-review resolution
+
+The follow-up findings are closed in code and focused PostgreSQL tests:
+
+- confirmation decisions resolve evidence by exact SHA-256 and scope; arbitrary
+  filenames cannot authorize a decision;
+- allocation approval actor/time values are conditional as one pair;
+- missing invoice bytes/hash leave the artifact link null and never synthesize
+  a byte hash;
+- validation findings are deduplicated by stable identity; and
+- requirement-18 local timestamps plus IANA timezone work through validation
+  and commit.
+
+Production mailbox/object-store verification remains an external deployment
+gate and is not inferred from these local tests.

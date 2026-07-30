@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { Search, Users } from "lucide-react";
+import { Plus, Search, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
@@ -7,6 +7,9 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -15,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useEmployees } from "@/features/workforce/hooks";
+import { useCreateEmployee, useEmployees } from "@/features/workforce/hooks";
 import type { EmployeeSummary } from "@/features/workforce/domain";
 import { WorkforceQueryBoundary } from "@/features/workforce/query-boundary";
 import { OrganizationScope } from "@/features/workforce/scope-selectors";
@@ -66,6 +69,8 @@ function EmployeeDirectory() {
 function EmployeeTable({ organizationId }: { organizationId: string }) {
   const query = useEmployees(organizationId);
   const [search, setSearch] = useState("");
+  const [createOpen, setCreateOpen] = useState(false);
+  const createEmployee = useCreateEmployee(organizationId);
   const employees = query.data ?? EMPTY_EMPLOYEES;
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -82,15 +87,52 @@ function EmployeeTable({ organizationId }: { organizationId: string }) {
   return (
     <WorkforceQueryBoundary queries={[query]}>
       <div className="space-y-4">
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            aria-label="Search employees"
-            className="pl-9"
-            placeholder="Search name, number or work email…"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="relative max-w-md flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              aria-label="Search employees"
+              className="pl-9"
+              placeholder="Search name, number or work email…"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+          </div>
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild><Button><Plus className="mr-2 h-4 w-4" />Add employee</Button></DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Create employee</DialogTitle></DialogHeader>
+              <form className="grid gap-4" onSubmit={(event) => {
+                event.preventDefault();
+                const data = new FormData(event.currentTarget);
+                void createEmployee.mutateAsync({
+                  organizationId,
+                  employeeNumber: String(data.get("employeeNumber")),
+                  firstName: String(data.get("firstName")),
+                  lastName: String(data.get("lastName")),
+                  displayName: String(data.get("displayName")),
+                  workEmail: String(data.get("workEmail")),
+                  joinDate: String(data.get("joinDate")),
+                  designation: String(data.get("designation") || ""),
+                  attendanceSourceMode: String(data.get("attendanceSourceMode")) as "INTERNAL_AUTHORITATIVE",
+                }).then(() => setCreateOpen(false));
+              }}>
+                <FormField label="Employee number" name="employeeNumber" />
+                <div className="grid grid-cols-2 gap-3"><FormField label="First name" name="firstName" /><FormField label="Last name" name="lastName" /></div>
+                <FormField label="Display name" name="displayName" />
+                <FormField label="Work email" name="workEmail" type="email" />
+                <div className="grid grid-cols-2 gap-3"><FormField label="Join date" name="joinDate" type="date" /><FormField label="Designation" name="designation" /></div>
+                <div className="grid gap-2"><Label htmlFor="attendance-source">Attendance source</Label>
+                  <Select name="attendanceSourceMode" defaultValue="INTERNAL_AUTHORITATIVE">
+                    <SelectTrigger id="attendance-source"><SelectValue /></SelectTrigger>
+                    <SelectContent><SelectItem value="INTERNAL_AUTHORITATIVE">Internal authoritative</SelectItem><SelectItem value="HYBRID_TRANSITION">Hybrid transition</SelectItem><SelectItem value="HISTORICAL_IMPORT">Historical import</SelectItem></SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" disabled={createEmployee.isPending}>{createEmployee.isPending ? "Creating…" : "Create employee"}</Button>
+                {createEmployee.error && <p role="alert" className="text-sm text-destructive">{createEmployee.error.message}</p>}
+              </form>
+            </DialogContent>
+          </Dialog>
         </div>
         <Card>
           <CardContent className="p-0">
@@ -162,4 +204,8 @@ function EmployeeTable({ organizationId }: { organizationId: string }) {
       </div>
     </WorkforceQueryBoundary>
   );
+}
+
+function FormField({ label, name, type = "text" }: { label: string; name: string; type?: string }) {
+  return <div className="grid gap-2"><Label htmlFor={`employee-${name}`}>{label}</Label><Input id={`employee-${name}`} name={name} type={type} required={name !== "designation"} /></div>;
 }

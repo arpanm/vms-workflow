@@ -45,6 +45,25 @@ class MigrationCsvParserTest {
         assertEquals("13_approval_history", registry.all().getLast().code());
         assertTrue(registry.require("07b_attendance_daily")
             .dependencies().contains("06_leave_requests"));
+        assertTrue(registry.all().stream().allMatch(template ->
+            !template.requiredFields().isEmpty()
+                && template.headers().containsAll(template.requiredFields())));
+        assertTrue(registry.require("08_deliverables").requiredFields()
+            .containsAll(java.util.List.of(
+                "plan_external_id", "deliverable_code", "title",
+                "acceptance_criteria")));
+        assertTrue(!registry.require("07a_attendance_punches")
+            .requiredFields().contains("evidence_reference"));
+        assertTrue(!registry.require("11_business_confirmations")
+            .requiredFields().contains("evidence_sha256"));
+        assertTrue(!registry.require("11_business_confirmations")
+            .requiredFields().contains("evidence_filename"));
+        assertTrue(!registry.require("02_employee_allocations")
+            .requiredFields().contains("approved_by_email"));
+        assertTrue(!registry.require("02_employee_allocations")
+            .requiredFields().contains("represented_approval_at"));
+        assertTrue(!registry.require("12_invoices")
+            .requiredFields().contains("invoice_sha256"));
         byte[] sample = registry.safeSample("01_employees");
         assertEquals(
             registry.require("01_employees").generatedSampleSha256(),

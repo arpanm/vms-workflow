@@ -158,17 +158,25 @@ export function normalizeDashboard(value: unknown): FinanceDashboard {
   const refreshedAt = text(raw.refreshedAt);
   const metrics: DashboardMetric[] = array(raw.metrics).map((item) => {
     const metric = object(item);
+    const unavailable = typeof metric.availability === "string"
+      ? metric.availability !== "AVAILABLE"
+      : metric.unavailable === true;
     return {
-      metricId: text(metric.metricCode),
-      label: text(metric.displayName, text(metric.metricCode)),
-      displayValue: String(metric.value ?? ""),
-      unavailable: metric.availability !== "AVAILABLE",
-      definitionVersion: String(metric.version ?? "unavailable"),
-      policyVersion: "f05-metric-dictionary",
+      metricId: text(metric.metricCode, text(metric.metricId)),
+      label: text(
+        metric.displayName,
+        text(metric.label, text(metric.metricCode, text(metric.metricId))),
+      ),
+      displayValue: String(metric.value ?? metric.displayValue ?? ""),
+      unavailable,
+      definitionVersion: String(
+        metric.version ?? metric.definitionVersion ?? "unavailable",
+      ),
+      policyVersion: text(metric.policyVersion, "f05-metric-dictionary"),
       sourceLabel: text(metric.sourceLabel, "F05 scoped facts"),
       freshness: freshness(metric.freshness),
-      temporalMode: "LIVE",
-      refreshedAt,
+      temporalMode: metric.temporalMode === "SNAPSHOT" ? "SNAPSHOT" : "LIVE",
+      refreshedAt: text(metric.refreshedAt, refreshedAt),
     };
   });
   return {
@@ -218,9 +226,11 @@ export function normalizeReports(value: unknown): ReportsWorkspace {
         .filter((format): format is ReportDefinition["availableFormats"][number] =>
           format === "CSV" || format === "XLSX" || format === "PDF" || format === "JSON",
         ),
-      snapshotMode: modes.length > 1
+      snapshotMode: definition.snapshotMode === "SELECTABLE" || modes.length > 1
         ? "SELECTABLE"
-        : modes[0] === "SNAPSHOT" ? "SNAPSHOT" : "CURRENT",
+        : definition.snapshotMode === "SNAPSHOT" || modes[0] === "SNAPSHOT"
+          ? "SNAPSHOT"
+          : "CURRENT",
     };
   });
   const rawPage = object(raw.exports);

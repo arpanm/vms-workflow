@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev",
+    "dev:dependencies": "node scripts/local-dev.mjs --dependencies-only",
+    "dev:all": "node scripts/local-dev.mjs",
+    "dev:down": "node scripts/local-dev.mjs --down",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",

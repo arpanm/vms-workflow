@@ -261,6 +261,89 @@ public class DeliveryPlanningService {
     }
 
     @Transactional
+    public PlanView update(
+        String subject,
+        UUID planId,
+        int expectedVersion,
+        CreatePlanRequest request
+    ) {
+        authorization.requirePlan(subject, planId, DeliveryAuthorizationService.PLAN_MANAGE);
+        validatePlanRequest(request);
+        CurrentVersion current = currentVersionForUpdate(planId);
+        if (!"DRAFT".equals(current.state())) {
+            throw new DomainConflictException("Only a draft plan can be edited.");
+        }
+        if (current.editVersion() != expectedVersion) {
+            throw new DomainConflictException(
+                "STALE_PLAN_VERSION",
+                "The plan changed. Refresh the exact current version before editing.");
+        }
+        UUID monthId = jdbc.queryForObject("""
+            SELECT engagement_month_id FROM delivery_plans WHERE id = ?
+            """, UUID.class, planId);
+        if (!request.engagementMonthId().equals(monthId)) {
+            throw notFound();
+        }
+        jdbc.update("""
+            UPDATE delivery_plan_versions
+            SET title = ?, summary = ?, business_outcomes = ?,
+                coordinator_subject = ?, baseline_type = ?, quorum_mode = ?,
+                quorum_required = ?, checksum = NULL,
+                optimistic_version = optimistic_version + 1
+            WHERE id = ?
+            """, request.title(), request.summary(), request.businessOutcomes(),
+            request.coordinatorSubject(), request.baselineType(),
+            request.quorumMode(), request.quorumRequired(), current.versionId());
+        jdbc.update("""
+            DELETE FROM delivery_plan_approvers WHERE plan_version_id = ?
+            """, current.versionId());
+        insertApprovers(current.versionId(), request.approverSubjects());
+        jdbc.update("""
+            DELETE FROM delivery_recipient_snapshots WHERE plan_version_id = ?
+            """, current.versionId());
+        insertRecipients(current.versionId(), request.recipients().arrowFoundry(),
+            request.recipients().relianceStakeholders(),
+            request.recipients().procurementCc());
+
+        Map<String, ExistingDeliverable> existing = jdbc.query("""
+            SELECT stable.deliverable_code, stable.id, version.id
+            FROM delivery_deliverables stable
+            JOIN delivery_deliverable_versions version
+              ON version.deliverable_id = stable.id
+            WHERE stable.plan_id = ? AND version.plan_version_id = ?
+            """, rs -> {
+                Map<String, ExistingDeliverable> result = new java.util.LinkedHashMap<>();
+                while (rs.next()) {
+                    result.put(rs.getString(1), new ExistingDeliverable(
+                        rs.getObject(2, UUID.class), rs.getObject(3, UUID.class)));
+                }
+                return result;
+            }, planId, current.versionId());
+        Set<String> retainedCodes = new HashSet<>();
+        for (DeliverableRequest deliverable : request.deliverables()) {
+            retainedCodes.add(deliverable.deliverableCode());
+            ExistingDeliverable persisted = existing.get(deliverable.deliverableCode());
+            if (persisted == null) {
+                insertDeliverable(planId, current.versionId(), deliverable);
+            } else {
+                updateDraftDeliverable(
+                    persisted.versionId(), deliverable);
+            }
+        }
+        for (Map.Entry<String, ExistingDeliverable> entry : existing.entrySet()) {
+            if (!retainedCodes.contains(entry.getKey())) {
+                deleteDraftDeliverable(entry.getValue().versionId());
+            }
+        }
+        ensureNoDependencyCycle(current.versionId());
+        audit(planId, current.versionId(), "PLAN_DRAFT_UPDATED", subject,
+            json(Map.of("version", current.version(),
+                "editVersion", current.editVersion() + 1,
+                "deliverableCount", request.deliverables().size())));
+        return planView(planId);
+    }
+
+    @Transactional
     public PlanView submit(String subject, UUID planId) {
         authorization.requirePlan(subject, planId, DeliveryAuthorizationService.PLAN_SUBMIT);
         CurrentVersion current = currentVersionForUpdate(planId);
@@ -942,6 +1025,98 @@ public class DeliveryPlanningService {
         }
     }
 
+    private void updateDraftDeliverable(
+        UUID deliverableVersionId,
+        DeliverableRequest request
+    ) {
+        jdbc.update("""
+            UPDATE delivery_deliverable_versions
+            SET project_id = ?, title = ?, description = ?,
+                business_objective = ?, product_owner_subject = ?,
+                vendor_owner_subject = ?, priority = ?,
+                target_completion_date = ?, evidence_expectations = ?,
+                dependency_none_declared = ?, risk_and_assumptions = ?,
+                delivery_category = ?, link_exception_reason = ?
+            WHERE id = ?
+            """, request.projectId(), request.title(), request.description(),
+            request.businessObjective(), request.productOwnerSubject(),
+            request.vendorOwnerSubject(), request.priority(),
+            request.targetCompletionDate(), request.evidenceExpectations(),
+            request.dependencyNoneDeclared(), request.riskAndAssumptions(),
+            request.deliveryCategory(), request.linkExceptionReason(),
+            deliverableVersionId);
+        jdbc.update("""
+            DELETE FROM delivery_acceptance_criteria WHERE deliverable_version_id = ?
+            """, deliverableVersionId);
+        jdbc.update("""
+            DELETE FROM delivery_dependencies WHERE deliverable_version_id = ?
+            """, deliverableVersionId);
+        jdbc.update("""
+            DELETE FROM delivery_employee_assignments WHERE deliverable_version_id = ?
+            """, deliverableVersionId);
+        insertDeliverableChildren(deliverableVersionId, request);
+    }
+
+    private void deleteDraftDeliverable(UUID deliverableVersionId) {
+        jdbc.update("""
+            DELETE FROM linear_issue_links WHERE deliverable_version_id = ?
+            """, deliverableVersionId);
+        jdbc.update("""
+            DELETE FROM delivery_acceptance_criteria WHERE deliverable_version_id = ?
+            """, deliverableVersionId);
+        jdbc.update("""
+            DELETE FROM delivery_dependencies WHERE deliverable_version_id = ?
+            """, deliverableVersionId);
+        jdbc.update("""
+            DELETE FROM delivery_employee_assignments WHERE deliverable_version_id = ?
+            """, deliverableVersionId);
+        jdbc.update("""
+            DELETE FROM delivery_execution_projections WHERE deliverable_version_id = ?
+            """, deliverableVersionId);
+        jdbc.update("""
+            DELETE FROM delivery_deliverable_versions WHERE id = ?
+            """, deliverableVersionId);
+    }
+
+    private void insertDeliverableChildren(
+        UUID deliverableVersionId,
+        DeliverableRequest request
+    ) {
+        int sequence = 1;
+        for (CriterionRequest criterion : request.criteria()) {
+            jdbc.update("""
+                INSERT INTO delivery_acceptance_criteria
+                    (id, deliverable_version_id, sequence, statement,
+                     validation_method, expected_result, mandatory)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, UUID.randomUUID(), deliverableVersionId, sequence++,
+                criterion.statement(), criterion.validationMethod(),
+                criterion.expectedResult(), criterion.mandatory());
+        }
+        for (DependencyRequest dependency : request.dependencies()) {
+            jdbc.update("""
+                INSERT INTO delivery_dependencies
+                    (id, deliverable_version_id, dependency_type,
+                     depends_on_deliverable_id, description, owner_subject,
+                     target_resolution_date, blocking)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, UUID.randomUUID(), deliverableVersionId, dependency.type(),
+                dependency.dependsOnDeliverableId(), dependency.description(),
+                dependency.ownerSubject(), dependency.targetResolutionDate(),
+                dependency.blocking());
+        }
+        for (AssignmentRequest assignment : request.assignments()) {
+            jdbc.update("""
+                INSERT INTO delivery_employee_assignments
+                    (id, deliverable_version_id, employee_id, effective_from,
+                     effective_to, exception_reason)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """, UUID.randomUUID(), deliverableVersionId, assignment.employeeId(),
+                assignment.effectiveFrom(), assignment.effectiveTo(),
+                assignment.exceptionReason());
+        }
+    }
+
     private void cloneDeliverables(UUID sourceVersionId, UUID targetVersionId, String subject) {
         List<CloneDeliverable> source = jdbc.query("""
             SELECT deliverable.id, deliverable.deliverable_id
@@ -1018,9 +1193,11 @@ public class DeliveryPlanningService {
     private PlanView planView(UUID planId) {
         PlanRow row = jdbc.query("""
             SELECT plan.id, plan.engagement_month_id, plan.current_version_id,
-                   version.version, version.state, version.title, version.summary,
+                   version.version, version.optimistic_version, version.state,
+                   version.title, version.summary,
                    version.business_outcomes, version.coordinator_subject,
-                   version.baseline_type, version.checksum, version.prior_version_id,
+                   version.baseline_type, version.quorum_mode, version.quorum_required,
+                   version.checksum, version.prior_version_id,
                    version.revision_reason, version.revision_impact,
                    version.created_by_subject, version.created_at,
                    version.submitted_at, version.frozen_at,
@@ -1038,12 +1215,15 @@ public class DeliveryPlanningService {
                     rs.getObject("engagement_month_id", UUID.class),
                     rs.getObject("current_version_id", UUID.class),
                     rs.getInt("version"),
+                    rs.getInt("optimistic_version"),
                     rs.getString("state"),
                     rs.getString("title"),
                     rs.getString("summary"),
                     rs.getString("business_outcomes"),
                     rs.getString("coordinator_subject"),
                     rs.getString("baseline_type"),
+                    rs.getString("quorum_mode"),
+                    rs.getInt("quorum_required"),
                     rs.getString("checksum"),
                     rs.getObject("prior_version_id", UUID.class),
                     rs.getString("revision_reason"),
@@ -1062,13 +1242,24 @@ public class DeliveryPlanningService {
             ? completenessBlockers(row.currentVersionId()) : List.of();
         return new PlanView(
             row.id(), row.engagementMonthId(), row.currentVersionId(), row.version(),
+            row.editVersion(),
             row.state(), row.title(), row.summary(), row.businessOutcomes(),
-            row.coordinatorSubject(), row.baselineType(), row.checksum(),
+            row.coordinatorSubject(), row.baselineType(), row.quorumMode(),
+            row.quorumRequired(), configuredApprovers(row.currentVersionId()), row.checksum(),
             row.priorVersionId(), row.revisionReason(), row.revisionImpact(),
             row.createdBySubject(), row.createdAt(), row.submittedAt(), row.frozenAt(),
             blockers, recipients(row.currentVersionId()),
             deliverables(row.currentVersionId()), approvals(row.currentVersionId()),
             row.baselineId(), row.commitmentStatus());
+    }
+
+    private List<String> configuredApprovers(UUID versionId) {
+        return jdbc.queryForList("""
+            SELECT approver_subject
+            FROM delivery_plan_approvers
+            WHERE plan_version_id = ?
+            ORDER BY approver_subject
+            """, String.class, versionId);
     }
 
     private List<DeliverableView> deliverables(UUID versionId) {
@@ -1405,7 +1596,8 @@ public class DeliveryPlanningService {
 
     private CurrentVersion currentVersionForUpdate(UUID planId) {
         CurrentVersion current = jdbc.query("""
-            SELECT version.id, version.version, version.state, version.checksum,
+            SELECT version.id, version.version, version.optimistic_version,
+                   version.state, version.checksum,
                    version.quorum_mode, version.quorum_required
             FROM delivery_plans plan
             JOIN delivery_plan_versions version ON version.id = plan.current_version_id
@@ -1415,6 +1607,7 @@ public class DeliveryPlanningService {
                 ? new CurrentVersion(
                     rs.getObject("id", UUID.class),
                     rs.getInt("version"),
+                    rs.getInt("optimistic_version"),
                     rs.getString("state"),
                     rs.getString("checksum"),
                     rs.getString("quorum_mode"),
@@ -1505,6 +1698,7 @@ public class DeliveryPlanningService {
     private record CurrentVersion(
         UUID versionId,
         int version,
+        int editVersion,
         String state,
         String checksum,
         String quorumMode,
@@ -1512,17 +1706,23 @@ public class DeliveryPlanningService {
     ) {
     }
 
+    private record ExistingDeliverable(UUID stableId, UUID versionId) {
+    }
+
     private record PlanRow(
         UUID id,
         UUID engagementMonthId,
         UUID currentVersionId,
         int version,
+        int editVersion,
         String state,
         String title,
         String summary,
         String businessOutcomes,
         String coordinatorSubject,
         String baselineType,
+        String quorumMode,
+        int quorumRequired,
         String checksum,
         UUID priorVersionId,
         String revisionReason,

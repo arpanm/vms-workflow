@@ -114,3 +114,17 @@ Seed two organizations; one organization with two engagements/two projects; acti
 | PRD 14/16 release controls | T-STOR-001–006, T-F05-SEC-001–004, T-F05-JOB-001, T-F05-PERF-001, T-F05-DR-001, external E2E gates |
 
 F05 is locally complete only when every non-external case has automated evidence or an approved, time-bounded exception; Flyway/Testcontainers, API/OpenAPI, React/Playwright, security/RLS, accessibility, F01–F04 regression and quality-command gates pass; and G0–G3 in `TASKS.md` are satisfied. Production invoice evidence additionally requires G4 and both explicitly external acceptance cases. A mock, fixture, PDF preview, email/transport receipt or UI-only result cannot close those gates.
+
+## Completion-audit permanent regressions
+
+- `T-REP-001-DASHBOARD-CONTRACT` — Java publishes the metric DTO consumed by
+  React with explicit availability and live semantics.
+- `T-REP-002-FULL-SCOPE` — a 55-month fixture proves dashboard totals cover
+  the complete authorized scope, not only the first 50-row tower page.
+- `T-REP-006-DOWNLOAD-GUARDS` — expired and checksum-mismatched exports are
+  denied without a successful download audit fact.
+- `T-F05-JOB-001-COMMITTED-RACE` — two independently committed worker threads
+  compete for one export; PostgreSQL leasing produces one ready artifact,
+  domain event and outbox effect.
+- `E2E-F05-SYS-001` now checks the real Java metric response and visible React
+  metric label before the vendor invoice/package journey.

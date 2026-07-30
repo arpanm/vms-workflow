@@ -218,6 +218,46 @@ class FinanceExportWorkerIT {
     }
 
     @Test
+    void expiredAndChecksumMismatchedExportsCannotBeDownloaded()
+        throws Exception {
+        UUID expiredExport = requestJsonExport(
+            "INVOICE_READINESS", "expired-download");
+        UUID corruptExport = requestJsonExport(
+            "INVOICE_READINESS", "corrupt-download");
+        assertEquals(2, worker.processExports());
+
+        jdbc.update("""
+            UPDATE f05_report_exports
+            SET expires_at = CURRENT_TIMESTAMP - INTERVAL '1 second'
+            WHERE id = ?
+            """, expiredExport);
+        mvc.perform(post("/api/v1/finance/exports/{id}/download",
+                    expiredExport)
+                .with(token("user-finance-ap")))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("EXPORT_NOT_DOWNLOADABLE"));
+
+        jdbc.update("""
+            UPDATE f05_report_exports
+            SET result_hash = repeat('a', 64)
+            WHERE id = ?
+            """, corruptExport);
+        mvc.perform(post("/api/v1/finance/exports/{id}/download",
+                    corruptExport)
+                .with(token("user-finance-ap")))
+            .andExpect(status().isConflict())
+            .andExpect(jsonPath("$.code").value("EXPORT_INTEGRITY_FAILED"));
+
+        assertEquals(0, jdbc.queryForObject("""
+            SELECT COUNT(*)
+            FROM f05_audit_events
+            WHERE object_type = 'REPORT_EXPORT'
+              AND object_id IN (?, ?)
+              AND action = 'REPORT_EXPORT_DOWNLOADED'
+            """, Integer.class, expiredExport, corruptExport));
+    }
+
+    @Test
     void everyPublishedReportDefinitionHasAnExecutableSpecificQuery() {
         Map<String, String> reports = Map.ofEntries(
             Map.entry("ATTENDANCE_COMPLIANCE", "finance.read"),

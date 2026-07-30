@@ -1,5 +1,18 @@
 # F03 Backend Test Automation
 
+## Draft/revision editor completion
+
+- `DeliveryLinearIT#completePlanSubmitsFreezesQueuesCommitmentAndRevisesByClone`
+  freezes version 1, creates version 2, replaces the exact draft through the
+  guarded API, verifies repeated criteria and server-returned edit/quorum
+  metadata, and confirms that revision comparison reports the changed plan and
+  deliverable content.
+- `src/features/delivery/api.test.ts` verifies the encoded plan resource and
+  `If-Match` edit-version header.
+- The existing F03 Playwright create/revision cases remain the regression base;
+  the builder preserves those accessible labels while adding repeatable item
+  controls.
+
 `DeliveryLinearIT` and `DeliveryApprovalConcurrencyIT` use Spring Boot, MockMvc, Flyway and Testcontainers
 PostgreSQL 18. Its provider metadata is recorded test data; no test calls a live
 Linear workspace or mail provider. Test-only fixtures are isolated in

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type {
+  CreateEmployeeInput,
   CreateLeaveRequestInput,
   CreateRegularizationInput,
 } from "./domain";
@@ -103,6 +104,108 @@ export function useAllocations(employeeId: string) {
     queryKey: workforceKeys.allocations(employeeId),
     queryFn: () => workforceApi.allocations(employeeId),
     enabled: Boolean(employeeId),
+  });
+}
+
+export function useCreateEmployee(organizationId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateEmployeeInput) => workforceApi.createEmployee(input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: workforceKeys.employees(organizationId),
+      }),
+  });
+}
+
+export function useEditEmployee(employeeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof workforceApi.editEmployee>[1]) =>
+      workforceApi.editEmployee(employeeId, input),
+    onSuccess: (employee) => {
+      queryClient.setQueryData(workforceKeys.employee(employeeId), employee);
+      return queryClient.invalidateQueries({ queryKey: ["workforce", "employees"] });
+    },
+  });
+}
+
+export function useArchiveEmployee(employeeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof workforceApi.archiveEmployee>[1]) =>
+      workforceApi.archiveEmployee(employeeId, input),
+    onSuccess: (employee) => {
+      queryClient.setQueryData(workforceKeys.employee(employeeId), employee);
+      return queryClient.invalidateQueries({ queryKey: ["workforce", "employees"] });
+    },
+  });
+}
+
+export function useDisableEmployeeAccess(employeeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof workforceApi.disableEmployeeAccess>[1]) =>
+      workforceApi.disableEmployeeAccess(employeeId, input),
+    onSuccess: (employee) => {
+      queryClient.setQueryData(workforceKeys.employee(employeeId), employee);
+      return queryClient.invalidateQueries({ queryKey: ["workforce", "employees"] });
+    },
+  });
+}
+
+export function useCreateAllocation(employeeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: Parameters<typeof workforceApi.createAllocation>[1]) =>
+      workforceApi.createAllocation(employeeId, input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: workforceKeys.allocations(employeeId) }),
+  });
+}
+
+export function useEditAllocation(employeeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      allocationId,
+      input,
+    }: {
+      allocationId: string;
+      input: Parameters<typeof workforceApi.editAllocation>[2];
+    }) => workforceApi.editAllocation(employeeId, allocationId, input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: workforceKeys.allocations(employeeId) }),
+  });
+}
+
+export function useEndAllocation(employeeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      allocationId,
+      input,
+    }: {
+      allocationId: string;
+      input: Parameters<typeof workforceApi.endAllocation>[2];
+    }) => workforceApi.endAllocation(employeeId, allocationId, input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: workforceKeys.allocations(employeeId) }),
+  });
+}
+
+export function useSplitAllocation(employeeId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      allocationId,
+      input,
+    }: {
+      allocationId: string;
+      input: Parameters<typeof workforceApi.splitAllocation>[2];
+    }) => workforceApi.splitAllocation(employeeId, allocationId, input),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: workforceKeys.allocations(employeeId) }),
   });
 }
 

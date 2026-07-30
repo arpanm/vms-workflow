@@ -1,5 +1,10 @@
 # F04 Changelog
 
+## 2026-07-30 — draft withdrawal and local artifact boundary
+
+- Added exact-version, idempotent draft withdrawal API/UI.
+- Added provider-neutral local object storage, SHA-256 metadata, safe naming, explicit scan initiation, and a database transition guard.
+
 ## 2026-07-29 — Cross-month work and operations completion
 
 - Replaced UUID-only entry as the primary flow with server-scoped

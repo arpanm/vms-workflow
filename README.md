@@ -20,9 +20,9 @@ issues and external-only gates is
 | F00 foundation and SDLC harness | Implemented locally; staging backup/smoke inputs remain external blockers | [F00 tasks](docs/features/00-foundation/TASKS.md), [changelog](docs/features/00-foundation/CHANGELOG.md) |
 | F01 Java identity/core administration | V34 product vertical and governed F04 reopen bridge implemented; focused PostgreSQL verification passes 45/45 | [F01 tasks](docs/features/01-identity-core/TASKS.md), [codegen](docs/features/01-identity-core/CODEGEN.md), [architecture](docs/features/01-identity-core/ARCHITECTURE.md), [API](docs/features/01-identity-core/API_DOCUMENTATION.md), [UI](docs/features/01-identity-core/UI_DOCUMENTATION.md) |
 | F01 production identity/provisioning | Blocked until an OIDC provider, same-origin BFF login endpoint and approved user/role provisioning path are selected/configured | [fix disposition](docs/features/01-identity-core/FIXES.md) |
-| F02 workforce/attendance | V35 plus V37 complete governed workforce administration, breaks, versioned shift rules, overnight/split sessions, exact roster readiness/snapshots and roster-bound month close with manager/self React flows | [F02 tasks](docs/features/02-workforce-attendance/TASKS.md), [fixes](docs/features/02-workforce-attendance/FIXES.md), [API](docs/features/02-workforce-attendance/API_DOCUMENTATION.md), [UI guide](docs/features/02-workforce-attendance/UI_DOCUMENTATION.md) |
-| F03 Delivery and Linear | V36 plus V38 complete revision/replay operations, delegated approval lineage and bounded scheduled cursor reconciliation with checkpoint/retry/partial-error evidence and operator UI | [F03 tasks](docs/features/03-delivery-linear/TASKS.md), [codegen](docs/features/03-delivery-linear/CODEGEN.md), [API](docs/features/03-delivery-linear/API_DOCUMENTATION.md), [UI](docs/features/03-delivery-linear/UI_DOCUMENTATION.md) |
-| F04 Certification and confirmation | Provider-neutral Java/PostgreSQL + React vertical now includes cross-month work inboxes, operations health, exact-version replay and actionable certification/confirmation landing pages; live provider/deployment gates remain external | [F04 tasks](docs/features/04-certification-confirmation/TASKS.md), [evidence](docs/features/04-certification-confirmation/CODEGEN.md), [API](docs/features/04-certification-confirmation/API_DOCUMENTATION.md), [UI](docs/features/04-certification-confirmation/UI_DOCUMENTATION.md) |
+| F02 workforce/attendance | V35/V37 employee and serialized allocation lifecycle, governed workforce administration, overnight/split sessions, exact roster snapshots and month close with manager/self React flows | [F02 tasks](docs/features/02-workforce-attendance/TASKS.md), [fixes](docs/features/02-workforce-attendance/FIXES.md), [API](docs/features/02-workforce-attendance/API_DOCUMENTATION.md), [UI guide](docs/features/02-workforce-attendance/UI_DOCUMENTATION.md) |
+| F03 Delivery and Linear | V36/V38/V39 editable repeatable delivery drafts, revision/replay operations, delegated approval lineage and bounded cursor reconciliation with operator UI | [F03 tasks](docs/features/03-delivery-linear/TASKS.md), [codegen](docs/features/03-delivery-linear/CODEGEN.md), [API](docs/features/03-delivery-linear/API_DOCUMENTATION.md), [UI](docs/features/03-delivery-linear/UI_DOCUMENTATION.md) |
+| F04 Certification and confirmation | Provider-neutral Java/PostgreSQL + React vertical includes V40 private governed uploads/scans, exact-version withdrawal, cross-month inboxes and operations health; live provider/deployment gates remain external | [F04 tasks](docs/features/04-certification-confirmation/TASKS.md), [evidence](docs/features/04-certification-confirmation/CODEGEN.md), [API](docs/features/04-certification-confirmation/API_DOCUMENTATION.md), [UI](docs/features/04-certification-confirmation/UI_DOCUMENTATION.md) |
 | F05 evidence, invoice and reporting | Locally quality-gated, including 4/4 isolated system cases and exact E2E-06/E2E-09 evidence; performance/scale and external release gates remain ACTION_REQUIRED | [F05 status](docs/FEATURE_STATUS.md), [F05 E2E catalog](docs/testing/E2E_REGRESSION_CASES.md), [F05 closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md) |
 | F06 historical migration | Locally quality-gated: 172/172 backend, 90/90 Vitest, 74/74 combined Playwright and 6/6 real local system journeys; production scanner/storage/capacity/rehearsal gates remain ACTION_REQUIRED | [F06 status](docs/FEATURE_STATUS.md), [tasks](docs/features/06-historical-migration/TASKS.md), [tests](docs/features/06-historical-migration/TEST_CASES.md), [review](docs/features/06-historical-migration/FINAL_REVIEW.md), [API](docs/features/06-historical-migration/API_DOCUMENTATION.md), [UI](docs/features/06-historical-migration/UI_DOCUMENTATION.md) |
 | F07 hardening/go-live | V1–V33 local lanes pass: frontend 92/92 + static/build, Maven R3/R4 290/290, focused backend 73+45, capacity 73+2, systems 7/7 + 4/4 + 6/6, browser 274/274 and exact supply-chain zero findings; Terra reviews closed and clean migration/supply evidence is bound to `eda3eb8`. External production gates remain NO-GO/ACTION_REQUIRED. | [status](docs/FEATURE_STATUS.md), [pending work](docs/PENDING_WORK.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md), [testing guide](docs/testing/README.md), [tasks](docs/features/07-hardening-go-live/TASKS.md), [tests](docs/features/07-hardening-go-live/TEST_CASES.md), [automation](docs/features/07-hardening-go-live/TEST_AUTOMATION.md), [review status](docs/features/07-hardening-go-live/FINAL_REVIEW.md), [open issues](docs/features/07-hardening-go-live/FINAL_ISSUES.md) |
@@ -56,10 +56,39 @@ Spring Boot 4.1.0 / Java 25 / Maven
 Prerequisites: Java 25, Maven 3.9+, Node.js/npm, and Docker.
 
 ```bash
-docker compose -f backend/compose.yaml up -d
-mvn -f backend/pom.xml spring-boot:run
 npm install
-npm run dev
+npm run dev:all
+```
+
+`dev:all` starts PostgreSQL, a local JWKS endpoint, the Spring backend and the
+Vite frontend. It checks ports `5432`, `9000`, `8080` and `3000` in turn; when
+one is occupied it selects the next available port and propagates the resolved
+database URL, issuer/JWKS URL, backend proxy target and frontend URL to every
+dependent process. The selected values are written to the ignored
+`.local-dev/runtime.env` file and printed after startup. `Ctrl+C` stops the
+Java/Node services while retaining the PostgreSQL container and named volume.
+Development fixtures use the dedicated `vms_workflow_local` database, keeping
+the normal `vms_workflow` database's Flyway history production-only. The
+local-only token defaults to the seeded `user-reliance` identity; set
+`VMS_LOCAL_SUBJECT` before `dev:all` to use another seeded development subject.
+The command loads the explicitly synthetic V1000+ development fixtures after
+the production V1+ Flyway chain. These fixtures are local-only and are never
+part of a production deployment.
+
+To start only PostgreSQL, or to stop the retained local dependency container:
+
+```bash
+npm run dev:dependencies
+npm run dev:down
+```
+
+The local Compose project is explicitly named `vms-workflow-local`, preventing
+collisions with unrelated repositories whose directory is also named
+`backend`. Direct Compose use remains supported and accepts an explicit port:
+
+```bash
+VMS_POSTGRES_PORT=5433 docker compose \
+  --project-name vms-workflow-local -f backend/compose.yaml up -d
 ```
 
 The PostgreSQL 18 named volume is mounted at `/var/lib/postgresql`, matching
@@ -84,7 +113,7 @@ npm run e2e
 npm run regression
 ```
 
-The production Flyway chain is V1–V34 in the active F01 worktree. F07 focused backend evidence passes 73
+The production Flyway chain is V1–V40 in the integrated worktree. F07 focused backend evidence passes 73
 unit plus 45 integration tests; its capacity lane passes 73 + 2, the
 F07/finance/migration system lanes pass 7/7, 4/4 and 6/6, and the complete
 browser matrix passes 274/274. Definitive complete Maven R3 passes 73 unit +

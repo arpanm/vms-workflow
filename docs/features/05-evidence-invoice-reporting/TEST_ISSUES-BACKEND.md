@@ -79,3 +79,20 @@ findings distinguish product blockers from remaining evidence gaps.
   and keep `T-STOR-006`, `E2E-F05-PROVIDER-001`, and
   `E2E-F05-PROVIDER-002` explicitly external.
 - **Disposition:** Open.
+
+## 2026-07-30 focused audit update
+
+- `F05-TEST-001` is no longer accurate as a blanket “no fresh run” statement:
+  main/test compilation plus `FinanceSecurityIT` 5/5,
+  `FinancePaginationIT` 2/2 and `FinanceExportWorkerIT` 5/5 passed in this
+  focused audit. This is not a fresh full `mvn verify`.
+- `F05-TEST-004` is partially reduced: expired export download and altered
+  result-checksum denial are now permanent passing cases. Storage/renderer
+  fault injection, worker restart, concurrent claim and lease loss remain open.
+- `F05-TEST-003` is partially reduced by
+  `FinanceCommittedConcurrencyIT`: a non-transactional two-worker export race
+  commits exactly one artifact/event/outbox effect. Competing package, invoice,
+  review and share mutations still need equivalent independent-connection
+  proof.
+- `F05-TEST-002`, `F05-TEST-003` and the local/external portions of
+  `F05-TEST-005` remain open and must not inherit the focused green result.

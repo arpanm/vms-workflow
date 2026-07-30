@@ -24,8 +24,10 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Instant;
 import java.time.OffsetDateTime;
+import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -37,6 +39,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -56,6 +59,24 @@ public class MigrationService {
     private static final Set<String> TERMINAL = Set.of(
         "COMPLETED", "COMPLETED_WITH_ERRORS", "FAILED", "CANCELLED",
         "ROLLED_BACK");
+    private static final Set<String> DATE_FIELDS = Set.of(
+        "join_date", "exit_date", "valid_from", "valid_to",
+        "holiday_date", "override_date", "effective_date", "leave_date",
+        "attendance_date", "target_completion_date",
+        "vendor_completion_date",
+        "invoice_date", "billing_start_date", "billing_end_date");
+    private static final Set<String> TIMESTAMP_FIELDS = Set.of(
+        "represented_at", "represented_approval_at", "requested_at",
+        "represented_decision_at", "occurred_at", "first_in_at",
+        "last_out_at", "source_finalized_at", "source_updated_at",
+        "represented_plan_approved_at", "historical_snapshot_at",
+        "historical_completed_at", "historical_canceled_at",
+        "historical_updated_at", "represented_certification_at",
+        "request_sent_at", "represented_response_at",
+        "represented_uploaded_at", "represented_submitted_at",
+        "represented_procurement_at", "represented_payment_at");
+    private static final Set<String> HASH_FIELDS = Set.of(
+        "evidence_sha256", "invoice_sha256");
 
     private final JdbcTemplate jdbc;
     private final ObjectMapper mapper;
@@ -540,6 +561,7 @@ public class MigrationService {
                 state = "VALID";
                 valid++;
             }
+            findings = deduplicateFindings(findings);
             String sourceType = normalizedSource(values.get("source_system"));
             String confidence = normalizedConfidence(values.get("confidence"),
                 template.code());
@@ -1682,7 +1704,9 @@ public class MigrationService {
         Map<String, String> values
     ) {
         List<Finding> findings = new ArrayList<>();
-        required(values, "template_version", findings);
+        for (String field : template.requiredFields()) {
+            required(values, field, findings);
+        }
         if (!MigrationTemplateRegistry.VERSION.equals(values.get("template_version"))) {
             findings.add(error("FILE_TEMPLATE_VERSION_UNSUPPORTED",
                 "template_version", "Template version must be exactly 1."));
@@ -1703,6 +1727,26 @@ public class MigrationService {
                 findings.add(error("FIELD_INVALID_EMAIL", field,
                     "Email format is invalid."));
             }
+            if (DATE_FIELDS.contains(field) && !value.isBlank()) {
+                date(value, field, findings);
+            }
+            if (TIMESTAMP_FIELDS.contains(field) && !value.isBlank()) {
+                timestamp(value, field, values.get("timezone"), findings);
+            }
+            if (Set.of("billing_month", "proposed_carry_forward_month")
+                .contains(field) && !value.isBlank()) {
+                try {
+                    YearMonth.parse(value);
+                } catch (RuntimeException exception) {
+                    findings.add(error("FIELD_INVALID_DATE", field,
+                        "Billing month must use ISO YYYY-MM."));
+                }
+            }
+            if (HASH_FIELDS.contains(field) && !value.isBlank()
+                && !value.matches("^[0-9a-fA-F]{64}$")) {
+                findings.add(error("FIELD_INVALID_HASH", field,
+                    "Evidence hash must be SHA-256."));
+            }
             if ((field.equals("billing_month")
                 || field.equals("attendance_date")
                 || field.equals("leave_date")
@@ -1717,6 +1761,7 @@ public class MigrationService {
                     "Control or markup content is not accepted."));
             }
         }
+        validateConditionalFields(template.code(), values, findings);
         validateReferences(job, values, findings);
         switch (template.code()) {
             case "01_employees" -> validateEmployee(values, findings);
@@ -1881,12 +1926,15 @@ public class MigrationService {
         required(values, "event_type", findings);
         required(values, "occurred_at", findings);
         zone(values.get("timezone"), "timezone", findings);
-        if (!Set.of("IN", "OUT", "BREAK_START", "BREAK_END")
+        if (!Set.of(
+            "IN", "OUT", "CHECK_IN", "CHECK_OUT",
+            "BREAK_START", "BREAK_END")
             .contains(values.get("event_type"))) {
             findings.add(error("FIELD_INVALID_ENUM", "event_type",
                 "Attendance event type is invalid."));
         }
-        timestamp(values.get("occurred_at"), "occurred_at", findings);
+        timestamp(values.get("occurred_at"), "occurred_at",
+            values.get("timezone"), findings);
     }
 
     private void validateDaily(
@@ -1897,9 +1945,11 @@ public class MigrationService {
         integerRange(values, "expected_minutes", 0, 1440, findings);
         integerRange(values, "net_worked_minutes", 0, 1440, findings);
         OffsetDateTime first = timestamp(
-            values.get("first_in_at"), "first_in_at", findings);
+            values.get("first_in_at"), "first_in_at",
+            values.get("timezone"), findings);
         OffsetDateTime last = timestamp(
-            values.get("last_out_at"), "last_out_at", findings);
+            values.get("last_out_at"), "last_out_at",
+            values.get("timezone"), findings);
         if (first != null && last != null && last.isBefore(first)) {
             findings.add(error("ATTENDANCE_EVENT_ORDER_INVALID",
                 "last_out_at", "Last-out cannot precede first-in."));
@@ -1949,7 +1999,7 @@ public class MigrationService {
             && values.getOrDefault("evidence_sha256", "").isBlank()) {
             findings.add(error("CONFIRMATION_EVIDENCE_MISSING",
                 "evidence_sha256",
-                "Original confirmation decisions require hashed evidence."));
+                "Original confirmation decisions require the SHA-256 of separately uploaded evidence."));
         }
     }
 
@@ -1960,13 +2010,84 @@ public class MigrationService {
         for (String field : List.of(
             "engagement_code", "billing_month", "invoice_number",
             "invoice_date", "billing_start_date", "billing_end_date",
-            "invoice_filename", "invoice_sha256")) {
+            "invoice_filename")) {
             required(values, field, findings);
         }
         String sha = values.getOrDefault("invoice_sha256", "");
         if (!sha.isBlank() && !sha.matches("^[0-9a-fA-F]{64}$")) {
             findings.add(error("FIELD_INVALID_HASH", "invoice_sha256",
                 "Invoice document hash must be SHA-256."));
+        }
+    }
+
+    private void validateConditionalFields(
+        String templateCode,
+        Map<String, String> values,
+        List<Finding> findings
+    ) {
+        switch (templateCode) {
+            case "02_employee_allocations" -> {
+                if (numberGreaterThan(values.get("allocation_percent"), 100)) {
+                    required(values, "override_reason", findings);
+                }
+                boolean hasApprover = !values.getOrDefault(
+                    "approved_by_email", "").isBlank();
+                boolean hasApprovalTime = !values.getOrDefault(
+                    "represented_approval_at", "").isBlank();
+                if (hasApprover || hasApprovalTime) {
+                    required(values, "approved_by_email", findings);
+                    required(values, "represented_approval_at", findings);
+                }
+            }
+            case "06_leave_requests" -> {
+                String decision = values.getOrDefault(
+                    "decision_status", "");
+                if (!decision.isBlank()
+                    && !Set.of("PENDING", "NOT_DECIDED")
+                        .contains(decision.toUpperCase(Locale.ROOT))) {
+                    required(values, "represented_decision_at", findings);
+                    required(values, "approver_email", findings);
+                }
+            }
+            case "07a_attendance_punches" -> {
+                if (!values.getOrDefault(
+                    "supersedes_event_external_id", "").isBlank()) {
+                    required(values, "justification", findings);
+                    required(values, "evidence_reference", findings);
+                }
+            }
+            case "08_deliverables" -> {
+                if ("APPROVED".equalsIgnoreCase(
+                    values.getOrDefault("plan_status", ""))) {
+                    required(values,
+                        "represented_plan_approved_at", findings);
+                    required(values, "plan_approved_by_email", findings);
+                }
+            }
+            case "10_delivery_certifications" -> {
+                if (!values.getOrDefault(
+                    "client_certification_decision", "").isBlank()) {
+                    required(values,
+                        "client_certification_comment", findings);
+                    required(values, "product_owner_email", findings);
+                    required(values,
+                        "represented_certification_at", findings);
+                }
+            }
+            default -> {
+                // No additional conditional field contract.
+            }
+        }
+    }
+
+    private boolean numberGreaterThan(String raw, int boundary) {
+        if (raw == null || raw.isBlank()) {
+            return false;
+        }
+        try {
+            return Double.parseDouble(raw) > boundary;
+        } catch (NumberFormatException exception) {
+            return false;
         }
     }
 
@@ -2051,9 +2172,16 @@ public class MigrationService {
         if ("07a_attendance_punches".equals(job.templateCode())) {
             String timezone = String.valueOf(payload.get("timezone"));
             try {
-                date = OffsetDateTime.parse(dateValue)
-                    .atZoneSameInstant(java.time.ZoneId.of(timezone))
-                    .toLocalDate();
+                java.time.ZoneId zone = java.time.ZoneId.of(timezone);
+                try {
+                    date = OffsetDateTime.parse(dateValue)
+                        .atZoneSameInstant(zone)
+                        .toLocalDate();
+                } catch (RuntimeException noOffset) {
+                    date = LocalDateTime.parse(dateValue)
+                        .atZone(zone)
+                        .toLocalDate();
+                }
             } catch (RuntimeException exception) {
                 throw new DomainConflictException(
                     "ATTENDANCE_TIMEZONE_INVALID",
@@ -2722,7 +2850,10 @@ public class MigrationService {
         String field,
         List<Finding> findings
     ) {
-        if (values.getOrDefault(field, "").isBlank()) {
+        if (values.getOrDefault(field, "").isBlank()
+            && findings.stream().noneMatch(finding ->
+                "FIELD_REQUIRED".equals(finding.code())
+                    && field.equals(finding.field()))) {
             findings.add(error("FIELD_REQUIRED", field,
                 "A required field is missing."));
         }
@@ -2750,16 +2881,48 @@ public class MigrationService {
         String field,
         List<Finding> findings
     ) {
+        return timestamp(value, field, null, findings);
+    }
+
+    private OffsetDateTime timestamp(
+        String value,
+        String field,
+        String timezone,
+        List<Finding> findings
+    ) {
         if (value == null || value.isBlank()) {
             return null;
         }
         try {
             return OffsetDateTime.parse(value);
         } catch (RuntimeException exception) {
+            try {
+                if (timezone != null && !timezone.isBlank()) {
+                    return LocalDateTime.parse(value)
+                        .atZone(java.time.ZoneId.of(timezone))
+                        .toOffsetDateTime();
+                }
+            } catch (RuntimeException ignored) {
+                // The stable timestamp or timezone finding is added below.
+            }
             findings.add(error("FIELD_INVALID_TIMESTAMP", field,
-                "Timestamp must include an explicit UTC offset."));
+                "Timestamp must include a UTC offset or a validated IANA timezone."));
             return null;
         }
+    }
+
+    private List<Finding> deduplicateFindings(List<Finding> findings) {
+        Map<String, Finding> unique = new LinkedHashMap<>();
+        for (Finding finding : findings) {
+            String key = String.join("\u001f",
+                finding.severity(),
+                finding.code(),
+                Objects.toString(finding.field(), ""),
+                Objects.toString(finding.dependencyTemplate(), ""),
+                Objects.toString(finding.dependencyKeyHash(), ""));
+            unique.putIfAbsent(key, finding);
+        }
+        return new ArrayList<>(unique.values());
     }
 
     private void zone(

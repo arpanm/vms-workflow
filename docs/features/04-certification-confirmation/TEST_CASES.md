@@ -1,5 +1,14 @@
 # F04 — Certification and Confirmation Test Cases
 
+## Withdrawal/artifact completion regression
+
+- `F04-WITHDRAW-001`: exact-version draft withdrawal records status, audit, event, and idempotency facts without deletion.
+- `F04-WITHDRAW-002`: submitted/stale/cross-scope withdrawal is rejected.
+- `F04-ARTIFACT-001`: upload records safe SHA-256 metadata as `PENDING`; explicit scan returns `PASSED`.
+- `F04-ARTIFACT-002`: malware/missing bytes become `FAILED`/`UNKNOWN` and never become evidence choices.
+- `F04-ARTIFACT-003`: PostgreSQL rejects all artifact rewrites outside the one-way scan transition.
+- `F04-ARTIFACT-004`: EICAR/executable or checksum-mismatched content becomes `FAILED` and is never selectable evidence.
+
 **Traceability:** RQ-018–RQ-023, RQ-030–RQ-031; PRD 08–09, 13–16, 20–22.
 **Test boundary:** Execute local cases with JUnit 5, Spring Boot Test + MockMvc/WebTestClient, Testcontainers PostgreSQL, fake/recorded email/object-storage/scan/inbound adapters, and Playwright against the Vite React application. No local case requires a live Linear workspace, production email account, real sender, controlled mailbox, production SSO/OTP, or provider secret. Cases explicitly marked **external acceptance** require the approved tenant provider configuration and must not be counted as passed from a mock.
 

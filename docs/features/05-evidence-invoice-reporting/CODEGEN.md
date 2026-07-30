@@ -40,3 +40,14 @@ Local adapters deliberately fail closed when their production provider is not
 configured. They are not evidence of a deployed object store, malware service,
 renderer, retention/legal-hold operation, SSO/grants, Procurement process, or
 ERP/AP integration. Those remain G4 external acceptance gates.
+
+## 2026-07-30 completion-audit code generation
+
+- `FinanceGovernanceService.dashboard` now aggregates the complete authorized
+  engagement scope in PostgreSQL rather than the first 50-row tower page.
+- Java emits the React metric contract with explicit availability, dictionary
+  version, source/freshness and `LIVE` temporal mode.
+- The React adapter consumes that contract, remains compatible with the prior
+  projection and honors server `snapshotMode` report definitions.
+- No Flyway change was required; V39 remains available for a future schema
+  change.

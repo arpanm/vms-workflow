@@ -1,5 +1,11 @@
 # F02 changelog
 
+## 2026-07-30 — employee/allocation completion
+
+- Added employee create, effective master edit, and archive UI/API flows.
+- Added allocation create/edit/end/split UI/API flows.
+- Serialized allocation mutations and added two-session committed-sum regression coverage.
+
 ## 2026-07-29 — Local governance completion
 
 - Added immutable effective employee aliases and deliverable allocations

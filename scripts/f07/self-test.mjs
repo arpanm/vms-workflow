@@ -72,6 +72,11 @@ import {
   buildAggregate,
 } from "./post-deploy-regression.mjs";
 import {
+  hasRunbookAnchor,
+  validateReviewEvidence,
+  validateTraceability,
+} from "./traceability.mjs";
+import {
   gitMetadata,
   readJson,
   repoPath,
@@ -115,24 +120,96 @@ async function releaseGateTests(temporary) {
       stableJson(localRecordIds),
     "canonical record evidence policy must cover every and only local record ID",
   );
-  const intentionallyUnverified = new Set([
-    "F07-REV-001",
-    "F07-T082",
-  ]);
-  for (const unimplemented of intentionallyUnverified) {
+  for (const [recordId, policy] of Object.entries(recordEvidencePolicy)) {
     assert(
-      recordEvidencePolicy[unimplemented].requiredCases.length === 0,
-      `${unimplemented} incomplete local evidence must remain ACTION_REQUIRED`,
+      policy.requiredCases.length > 0,
+      `${recordId} must be bound to exact machine-observed cases`,
     );
   }
-  for (const [recordId, policy] of Object.entries(recordEvidencePolicy)) {
-    if (!intentionallyUnverified.has(recordId)) {
-      assert(
-        policy.requiredCases.length > 0,
-        `${recordId} must be bound to exact machine-observed cases`,
-      );
-    }
-  }
+  const traceability = await validateTraceability({
+    ...inventory,
+    taskIds: Array.from(
+      {length: inventory.taskIdRange.to - inventory.taskIdRange.from + 1},
+      (_, index) =>
+        `${inventory.taskIdRange.prefix}${String(inventory.taskIdRange.from + index).padStart(3, "0")}`,
+    ),
+  });
+  assert(
+    traceability.result === "PASS" && traceability.records.size === 161,
+    `every F07 task/test must have complete canonical impacts: ${traceability.findings.join("; ")}`,
+  );
+  const reviewEvidence = await validateReviewEvidence();
+  assert(
+    reviewEvidence.result === "PASS",
+    `independent review evidence is incomplete: ${reviewEvidence.findings.join("; ")}`,
+  );
+  const malformedReviewSchema = await validateReviewEvidence({
+    evidence: {...reviewEvidence.evidence, schemaVersion: 1},
+  });
+  assert(
+    malformedReviewSchema.result === "FAIL" &&
+      malformedReviewSchema.findings.some((finding) =>
+        finding.includes("schemaVersion 2"),
+      ),
+    "review evidence must reject stale schema/type contracts",
+  );
+  const treeObject = run("git", ["rev-parse", "HEAD^{tree}"]).stdout.trim();
+  const nonCommitReview = await validateReviewEvidence({
+    evidence: {
+      ...reviewEvidence.evidence,
+      reviewedThroughCommit: treeObject,
+      closureDispositions: reviewEvidence.evidence.closureDispositions.map(
+        (entry) => ({...entry, reviewedThroughCommit: treeObject}),
+      ),
+    },
+  });
+  assert(
+    nonCommitReview.result === "FAIL" &&
+      nonCommitReview.findings.includes(
+        "reviewedThroughCommit must resolve to a Git commit object",
+      ),
+    "review evidence must validate the Git object type, not only SHA syntax",
+  );
+  const nonAncestorReview = await validateReviewEvidence({
+    evidence: reviewEvidence.evidence,
+    headRef: protectedMigrationBaseCommit,
+  });
+  assert(
+    nonAncestorReview.result === "FAIL" &&
+      nonAncestorReview.findings.includes(
+        "reviewedThroughCommit must be an ancestor of the validated release",
+      ),
+    "review evidence must reject a real commit outside release ancestry",
+  );
+  const missingDisposition = await validateReviewEvidence({
+    evidence: {
+      ...reviewEvidence.evidence,
+      closureDispositions:
+        reviewEvidence.evidence.closureDispositions.slice(1),
+    },
+  });
+  assert(
+    missingDisposition.result === "FAIL" &&
+      missingDisposition.findings.some((finding) =>
+        finding.startsWith("closure disposition is missing:"),
+      ),
+    "review evidence must require structured closure for every dimension",
+  );
+  const runbookText = await readFile(
+    repoPath("docs/operations/F07-RUNBOOKS.md"),
+    "utf8",
+  );
+  assert(
+    hasRunbookAnchor(
+      runbookText,
+      "docs/operations/F07-RUNBOOKS.md#rb-14-security-incident-and-evidence-preservation",
+    ) &&
+      !hasRunbookAnchor(
+        runbookText,
+        "docs/operations/F07-RUNBOOKS.md#missing-review-anchor",
+      ),
+    "traceability must validate exact runbook anchors, not only files",
+  );
   const aggregateDirectory = resolve(temporary, "post-deploy-aggregate");
   await mkdir(aggregateDirectory, { recursive: true });
   const missingAggregate = await aggregateEvidence(aggregateDirectory);
@@ -600,11 +677,14 @@ async function releaseGateTests(temporary) {
     syntheticDecision.verdict !== "GO" &&
       syntheticDecision.blockers.some((blocker) =>
         blocker.includes("CI lane metadata or command is not allowlisted"),
-      ) &&
-      syntheticDecision.blockers.includes(
-        "release decision requires a clean tracked and untracked worktree",
       ),
-    "synthetic CI commands and a dirty decision-time worktree must never produce GO",
+    "synthetic CI commands must never produce GO",
+  );
+  assert(
+    syntheticDecision.blockers.includes(
+      "release decision requires a clean tracked and untracked worktree",
+    ) === gitMetadata().worktreeDirty,
+    "decision-time worktree cleanliness must be evaluated from the actual repository state",
   );
   assert(
     syntheticDecision.errors.some((error) =>
@@ -1797,6 +1877,8 @@ async function executeSelfTests(temporary) {
         "F07-SELF-SUPPLY-POLICY",
         "F07-SELF-OPS-DOCS",
         "F07-SELF-CI-CONTRACT",
+        "F07-SELF-TRACEABILITY",
+        "F07-SELF-REVIEW-CONTROL",
       ].map((id) => ({
         durationMs: Math.max(0, Math.round(performance.now() - started)),
         id,
@@ -1817,6 +1899,8 @@ async function executeSelfTests(temporary) {
         "policy-bound load cardinalities/budgets and forged-report rejection",
         "fail-closed timeout/missing-executable command evidence",
         "loopback-only load harness and 15-runbook schema",
+        "complete differentiated task/test impact traceability",
+        "five-dimension independent review and issue-ledger evidence",
       ],
       kind: "f07-self-test-v1",
       result: "PASS",

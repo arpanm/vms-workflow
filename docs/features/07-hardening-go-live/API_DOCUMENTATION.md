@@ -102,6 +102,6 @@ deployment decision.
 OpenAPI document contains the F07 routes. `F07HttpHardeningIT` verifies health,
 headers and CORS. Those contracts are included in the green focused backend
 gate (73 unit + 45 integration tests). The production schema is current
-through V33. Definitive complete Maven R3 passes 73 unit + 217 integration
+through V38. Definitive complete Maven R3 passes 73 unit + 217 integration
 tests (290/290), zero failures/errors/skips. Production OIDC/provider/deployment
 acceptance remains `ACTION_REQUIRED / NO-GO`.

@@ -1,5 +1,6 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
-import { LockKeyhole, Save, Send } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { LockKeyhole, Save, Send, Undo2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
@@ -18,6 +19,7 @@ import {
   LinearSnapshotPanel,
   VersionNotice,
 } from "@/features/certification/components";
+import { certificationApi } from "@/features/certification/api";
 import type {
   DeliveryOutcome,
   MonthCertificationView,
@@ -26,10 +28,12 @@ import type {
   SubmissionItemInput,
 } from "@/features/certification/contracts";
 import {
+  certificationKeys,
   useCertificationMonth,
   useClarification,
   useSaveSubmission,
   useSubmitSubmission,
+  useWithdrawSubmission,
 } from "@/features/certification/hooks";
 import {
   deliveryOutcomeOptions,
@@ -77,6 +81,7 @@ function VendorSubmissionPage() {
 }
 
 function VendorWorkspace({ month }: { month: MonthCertificationView }) {
+  const queryClient = useQueryClient();
   const initialDraft = draftFromMonth(month);
   const [summary, setSummary] = useState(initialDraft.summary);
   const [declarationAccepted, setDeclarationAccepted] = useState(initialDraft.declarationAccepted);
@@ -86,6 +91,12 @@ function VendorWorkspace({ month }: { month: MonthCertificationView }) {
   const reconciledVersion = useRef(serverVersionKey);
   const save = useSaveSubmission(month.monthId);
   const submit = useSubmitSubmission(month.monthId);
+  const withdraw = useWithdrawSubmission(month.monthId, month.submission?.id ?? "");
+  const artifactInput = useRef<HTMLInputElement>(null);
+  const artifactClassification = useRef<HTMLSelectElement>(null);
+  const [artifactPending, setArtifactPending] = useState(false);
+  const [artifactError, setArtifactError] = useState<Error | null>(null);
+  const [artifactStatus, setArtifactStatus] = useState("");
   const readOnly =
     month.locked ||
     month.stale ||
@@ -192,6 +203,60 @@ function VendorWorkspace({ month }: { month: MonthCertificationView }) {
       </Card>
 
       <LinearSnapshotPanel snapshots={month.linearSnapshots ?? []} />
+
+      <Card>
+        <CardHeader><CardTitle className="text-base">Governed evidence upload</CardTitle></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="grid gap-1"><Label htmlFor="evidence-file">Evidence file</Label><Input ref={artifactInput} id="evidence-file" name="evidenceFile" type="file" disabled={readOnly} /></div>
+            <div className="grid gap-1"><Label htmlFor="evidence-classification">Classification</Label>
+              <select ref={artifactClassification} id="evidence-classification" name="classification" defaultValue="CONFIDENTIAL" className="h-9 rounded-md border bg-background px-3 text-sm" disabled={readOnly}>
+                <option value="INTERNAL">Internal</option><option value="CONFIDENTIAL">Confidential</option><option value="RESTRICTED">Restricted</option>
+              </select>
+            </div>
+            <Button type="button" variant="outline" disabled={readOnly || artifactPending} onClick={async () => {
+              const file = artifactInput.current?.files?.[0];
+              if (!file) {
+                setArtifactError(new Error("Choose an evidence file first."));
+                return;
+              }
+              setArtifactPending(true);
+              setArtifactError(null);
+              setArtifactStatus("Uploading evidence…");
+              try {
+                // File remains an event-local value. It is never stored in React or
+                // TanStack Query mutation state.
+                const uploaded = await certificationApi.uploadArtifact(
+                  month.monthId,
+                  file,
+                  (artifactClassification.current?.value ?? "CONFIDENTIAL") as
+                    | "PUBLIC"
+                    | "INTERNAL"
+                    | "CONFIDENTIAL"
+                    | "RESTRICTED",
+                );
+                setArtifactStatus("Scanning uploaded evidence…");
+                const scanned = await certificationApi.scanArtifact(uploaded.id);
+                setArtifactStatus(`Scan ${scanned.scanStatus.toLowerCase()}.`);
+                if (artifactInput.current) artifactInput.current.value = "";
+                await queryClient.invalidateQueries({
+                  queryKey: certificationKeys.month(month.monthId),
+                });
+              } catch (error) {
+                setArtifactError(error instanceof Error ? error : new Error("Evidence upload failed."));
+                setArtifactStatus("");
+              } finally {
+                setArtifactPending(false);
+              }
+            }}>
+              {artifactPending ? "Uploading and scanning…" : "Upload and initiate scan"}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground">The browser sends bytes once. Object paths remain server-side; only scan-passed safe metadata becomes selectable.</p>
+          {artifactStatus && <p role="status" className="text-xs text-muted-foreground">{artifactStatus}</p>}
+          <CertificationMutationError error={artifactError} />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -461,7 +526,7 @@ function VendorWorkspace({ month }: { month: MonthCertificationView }) {
               Submitted content cannot be overwritten. Respond to an open clarification below.
             </p>
           )}
-          <CertificationMutationError error={save.error ?? submit.error} />
+          <CertificationMutationError error={save.error ?? submit.error ?? withdraw.error} />
           <div className="flex flex-wrap gap-2">
             <Button type="submit" disabled={readOnly || save.isPending}>
               <Save className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -487,6 +552,29 @@ function VendorWorkspace({ month }: { month: MonthCertificationView }) {
                 : submit.isPending
                   ? "Submitting exact version…"
                   : "Submit exact version"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={
+                !month.submission ||
+                month.submission.status !== "DRAFT" ||
+                dirty ||
+                withdraw.isPending
+              }
+              onClick={() => {
+                if (!month.submission) return;
+                const reason = window.prompt("Why is this draft being withdrawn?");
+                if (reason?.trim()) {
+                  withdraw.mutate({
+                    expectedSubmissionVersion: month.submission.version,
+                    reason: reason.trim(),
+                  });
+                }
+              }}
+            >
+              <Undo2 className="mr-2 h-4 w-4" aria-hidden="true" />
+              {withdraw.isPending ? "Withdrawing…" : "Withdraw draft"}
             </Button>
           </div>
           <p id="submit-exact-help" className="text-xs text-muted-foreground">

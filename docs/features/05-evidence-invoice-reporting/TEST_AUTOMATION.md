@@ -48,3 +48,20 @@ PostgreSQL path with local metadata storage/scanning and synthetic identities;
 it does not prove production OIDC, external storage/scanner/renderer, AP/ERP or
 deployment grants. Those provider journeys remain external cases in
 `TEST_CASES.md`.
+
+## 2026-07-30 focused completion-audit evidence
+
+This audit ran focused checks, not a new full regression:
+
+- Java main/test compilation: passed.
+- finance adapter Vitest: **4/4 passed**; frontend typecheck: passed.
+- `FinanceSecurityIT`: **5/5 passed**.
+- `FinancePaginationIT`: **2/2 passed**, including 55-row full-scope totals.
+- `FinanceExportWorkerIT`: **5/5 passed**, including expired and checksum-
+  mismatched download denial.
+- `FinanceCommittedConcurrencyIT`: **1/1 passed** outside a test-managed
+  transaction; two worker threads committed one artifact/event/outbox effect.
+
+`E2E-F05-SYS-001` contains the permanent live dashboard assertion. Its prior
+3/3 result is historical; the updated source is part of the next coordinated
+system run.

@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
@@ -487,9 +488,9 @@ public final class MigrationDomainAdapter {
     ) {
         UUID employee = employeeId(
             organizationId, required(value, "employee_number"));
-        OffsetDateTime occurred =
-            OffsetDateTime.parse(required(value, "occurred_at"));
         ZoneId zone = ZoneId.of(required(value, "timezone"));
+        OffsetDateTime occurred = timestamp(
+            required(value, "occurred_at"), zone);
         LocalDate workDate = occurred.atZoneSameInstant(zone).toLocalDate();
         String eventType = punchType(required(value, "event_type"));
         UUID eventId = UUID.randomUUID();
@@ -966,6 +967,42 @@ public final class MigrationDomainAdapter {
         MappedAuthority authority = mappedAuthority(
             engagementId, required(value, "actor_email"),
             "CLIENT_PRODUCT_OWNER", null, represented);
+        String evidenceHash = required(value, "evidence_sha256")
+            .toLowerCase(Locale.ROOT);
+        String evidenceFilename = value.getOrDefault(
+            "evidence_filename", "");
+        UUID evidenceArtifact = jdbc.query("""
+            SELECT artifact.id
+            FROM evidence_artifacts artifact
+            WHERE artifact.engagement_id = ?
+              AND artifact.engagement_month_id = ?
+              AND artifact.sha256 = ?
+              AND artifact.scan_status IN ('PASSED', 'NOT_REQUIRED')
+              AND artifact.retention_status <> 'DISPOSED'
+              AND (
+                CAST(? AS VARCHAR) = ''
+                OR lower(COALESCE(artifact.original_name, artifact.safe_name))
+                    = lower(?)
+                OR lower(artifact.safe_name) = lower(?)
+              )
+            ORDER BY artifact.recorded_at DESC, artifact.id
+            LIMIT 2
+            """, rs -> {
+                UUID match = null;
+                int count = 0;
+                while (rs.next()) {
+                    match = rs.getObject(1, UUID.class);
+                    count++;
+                }
+                return count == 1 ? match : null;
+            }, engagementId, monthId, evidenceHash, evidenceFilename,
+            evidenceFilename, evidenceFilename);
+        if (evidenceArtifact == null) {
+            throw new DomainConflictException(
+                "CONFIRMATION_EVIDENCE_NOT_VERIFIED",
+                "Confirmation evidence must resolve uniquely by SHA-256 "
+                    + "to a retained, scan-approved artifact in this month.");
+        }
         List<UUID> eligibleProjects = jdbc.query("""
             SELECT project_id
             FROM confirmation_request_eligibility
@@ -983,6 +1020,9 @@ public final class MigrationDomainAdapter {
         authoritySnapshot.put("source", "TRUSTED_MIGRATION");
         authoritySnapshot.put("reviewedBy", actor);
         authoritySnapshot.put("historicalAuthority", authority.snapshot());
+        authoritySnapshot.put("evidenceArtifactId",
+            evidenceArtifact.toString());
+        authoritySnapshot.put("evidenceSha256", evidenceHash);
         authoritySnapshot.put(
             "projectScope",
             projectId == null ? "ENGAGEMENT_WIDE" : projectId.toString());
@@ -991,15 +1031,15 @@ public final class MigrationDomainAdapter {
             INSERT INTO business_confirmation_actions
               (id, request_id, request_version, actor_subject,
                actor_authority_snapshot, project_id, action, comment, source,
-               verification_status, represented_at, action_hash,
+               verification_status, session_evidence_hash, represented_at, action_hash,
                idempotency_key)
             VALUES (?, ?, ?, ?, CAST(? AS JSONB), ?, ?, NULLIF(?, ''),
-                    'TRUSTED_MIGRATION', 'MANUAL_REVIEWED', ?, ?, ?)
+                    'TRUSTED_MIGRATION', 'MANUAL_REVIEWED', ?, ?, ?, ?)
             """, id, request, requestVersion, authority.subject(),
             json(authoritySnapshot), projectId,
             confirmationAction(value.get("decision")),
             value.get("review_comment"),
-            represented,
+            evidenceHash, represented,
             MigrationTemplateRegistry.sha256(json(value)), idempotencyKey);
         return new DomainEffect(
             "business_confirmation_actions", id, requestVersion, request);
@@ -1065,29 +1105,37 @@ public final class MigrationDomainAdapter {
                 WHERE id = ?
                 """, version, invoice);
         }
-        UUID artifact = UUID.randomUUID();
         String filename = required(value, "invoice_filename");
-        String contentHash = required(value, "invoice_sha256")
-            .toLowerCase(Locale.ROOT);
-        String objectVersion = "migration-" + invoice + "-v" + version;
-        jdbc.update("""
-            INSERT INTO f05_private_artifacts
-              (id, engagement_month_id, owner_organization_id, logical_type,
-               safe_name, media_type, byte_size, content_hash, object_key,
-               object_version, classification, retention_class, scan_status,
-               provider_status, source, represented_at, uploaded_by_subject,
-               correlation_id)
-            VALUES (?, ?, ?, 'INVOICE_DOCUMENT', ?, 'application/octet-stream',
-                    0, ?, ?, ?, 'CONFIDENTIAL', 'FINANCE_SEVEN_YEARS',
-                    'UNKNOWN', 'LOCAL_METADATA_ONLY',
-                    'HISTORICAL_MIGRATION', ?, ?, ?)
-            """, artifact, monthId, organizationId, filename, contentHash,
-            "historical-migration/invoices/" + invoice + "/" + version
-                + "/" + filename,
-            objectVersion,
-            optionalTimestamp(value.get("represented_uploaded_at")),
-            actor, UUID.randomUUID());
+        String suppliedHash = value.getOrDefault("invoice_sha256", "");
+        boolean verifiedDocumentHash = !suppliedHash.isBlank();
+        UUID artifact = null;
+        if (verifiedDocumentHash) {
+            artifact = UUID.randomUUID();
+            String contentHash = suppliedHash.toLowerCase(Locale.ROOT);
+            String objectVersion = "migration-" + invoice + "-v" + version;
+            jdbc.update("""
+                INSERT INTO f05_private_artifacts
+                  (id, engagement_month_id, owner_organization_id, logical_type,
+                   safe_name, media_type, byte_size, content_hash, object_key,
+                   object_version, classification, retention_class, scan_status,
+                   provider_status, source, represented_at, uploaded_by_subject,
+                   correlation_id)
+                VALUES (?, ?, ?, 'INVOICE_DOCUMENT', ?,
+                        'application/octet-stream', 0, ?, ?, ?,
+                        'CONFIDENTIAL', 'FINANCE_SEVEN_YEARS', 'UNKNOWN',
+                        'LOCAL_METADATA_ONLY', 'HISTORICAL_MIGRATION', ?, ?, ?)
+                """, artifact, monthId, organizationId, filename, contentHash,
+                "historical-migration/invoices/" + invoice + "/" + version
+                    + "/" + filename,
+                objectVersion,
+                optionalTimestamp(value.get("represented_uploaded_at")),
+                actor, UUID.randomUUID());
+        }
         UUID invoiceVersion = UUID.randomUUID();
+        Map<String, Object> metadataManifest = new LinkedHashMap<>(value);
+        metadataManifest.put("documentHashStatus",
+            verifiedDocumentHash ? "SUPPLIED_SHA256"
+                : "UNVERIFIED_METADATA_ONLY");
         jdbc.update("""
             INSERT INTO invoice_versions
               (id, invoice_id, version, document_artifact_id,
@@ -1095,8 +1143,9 @@ public final class MigrationDomainAdapter {
                created_by_subject, correlation_id)
             VALUES (?, ?, ?, ?, CAST(? AS JSONB), ?,
                     'HISTORICAL_MIGRATION', ?, ?, ?)
-            """, invoiceVersion, invoice, version, artifact, json(value),
-            MigrationTemplateRegistry.sha256(json(value)),
+            """, invoiceVersion, invoice, version, artifact,
+            json(metadataManifest),
+            MigrationTemplateRegistry.sha256(json(metadataManifest)),
             optionalTimestamp(value.get("represented_uploaded_at")),
             actor, UUID.randomUUID());
         effects.add(inserted(
@@ -1362,6 +1411,16 @@ public final class MigrationDomainAdapter {
     private OffsetDateTime optionalTimestamp(String raw) {
         return raw == null || raw.isBlank()
             ? null : OffsetDateTime.parse(raw);
+    }
+
+    private OffsetDateTime timestamp(String raw, ZoneId timezone) {
+        try {
+            return OffsetDateTime.parse(raw);
+        } catch (RuntimeException exception) {
+            return LocalDateTime.parse(raw)
+                .atZone(timezone)
+                .toOffsetDateTime();
+        }
     }
 
     private String textValue(Map<String, Object> value, String field) {

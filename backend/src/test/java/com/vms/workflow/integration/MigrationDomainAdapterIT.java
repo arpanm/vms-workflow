@@ -2,6 +2,7 @@ package com.vms.workflow.integration;
 
 import com.vms.workflow.application.MigrationDomainAdapter;
 import com.vms.workflow.application.MigrationDomainAdapter.DomainEffect;
+import com.vms.workflow.api.DomainConflictException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,6 +20,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest(properties = {
@@ -321,6 +323,36 @@ class MigrationDomainAdapterIT {
 
         seedConfirmationPrerequisites(
             certifiedBaseline, certificationSubmission);
+        UUID confirmationEvidence = UUID.randomUUID();
+        String confirmationEvidenceHash = "b".repeat(64);
+        jdbc.update("""
+            INSERT INTO evidence_artifacts
+              (id, engagement_id, engagement_month_id, artifact_kind,
+               object_key, object_version, original_name, safe_name,
+               declared_mime_type, sniffed_mime_type, size_bytes, sha256,
+               classification, scan_status, source, uploader_subject,
+               provider_status)
+            VALUES (?, ?, ?, 'OBJECT', ?, 'immutable-v1',
+                    'confirmation-response.eml', 'confirmation-response.eml',
+                    'message/rfc822', 'message/rfc822', 512, ?,
+                    'CONFIDENTIAL', 'PASSED', 'MIGRATION', ?,
+                    'AVAILABLE')
+            """, confirmationEvidence, ENGAGEMENT, CERTIFICATION_MONTH,
+            "migration/confirmation/" + confirmationEvidence,
+            confirmationEvidenceHash, ACTOR);
+        DomainConflictException unverifiedEvidence = assertThrows(
+            DomainConflictException.class,
+            () -> apply(CERTIFICATION_MONTH,
+                "11_business_confirmations", values(
+                    "actor_email", "ravi@reliance.example",
+                    "represented_response_at", "2026-07-02T09:30:00Z",
+                    "decision", "CONFIRMED",
+                    "evidence_filename", "arbitrary-filename.eml",
+                    "evidence_sha256", confirmationEvidenceHash,
+                    "review_comment", "Must not trust the filename"
+                )));
+        assertEquals("CONFIRMATION_EVIDENCE_NOT_VERIFIED",
+            unverifiedEvidence.getCode());
 
         DomainEffect confirmation = only(apply(
             CERTIFICATION_MONTH,
@@ -328,6 +360,8 @@ class MigrationDomainAdapterIT {
                 "actor_email", "ravi@reliance.example",
                 "represented_response_at", "2026-07-02T09:30:00Z",
                 "decision", "CONFIRMED",
+                "evidence_filename", "confirmation-response.eml",
+                "evidence_sha256", confirmationEvidenceHash,
                 "review_comment", "Historical response verified"
             )));
         assertEquals("business_confirmation_actions", confirmation.table());
@@ -337,6 +371,14 @@ class MigrationDomainAdapterIT {
             """, confirmation.recordId()));
         assertEquals("CONFIRM", text("""
             SELECT action FROM business_confirmation_actions WHERE id = ?
+            """, confirmation.recordId()));
+        assertEquals(confirmationEvidenceHash, text("""
+            SELECT session_evidence_hash
+            FROM business_confirmation_actions WHERE id = ?
+            """, confirmation.recordId()));
+        assertEquals(confirmationEvidence.toString(), text("""
+            SELECT actor_authority_snapshot->>'evidenceArtifactId'
+            FROM business_confirmation_actions WHERE id = ?
             """, confirmation.recordId()));
 
         List<DomainEffect> invoice = apply("12_invoices", values(
@@ -377,6 +419,33 @@ class MigrationDomainAdapterIT {
             effect -> effect.table().equals("invoices")));
         assertTrue(invoice.stream().anyMatch(
             effect -> effect.table().equals("invoice_versions")));
+
+        List<DomainEffect> metadataOnlyInvoice = apply(
+            CERTIFICATION_MONTH, "12_invoices", values(
+                "invoice_number", "F06-ALL-INV-METADATA",
+                "invoice_date", "2026-08-01",
+                "billing_start_date", "2026-07-01",
+                "billing_end_date", "2026-07-31",
+                "currency", "INR",
+                "invoice_filename", "metadata-only.pdf",
+                "source_reference", "legacy-register-row-17",
+                "represented_uploaded_at", "2026-08-01T06:30:00Z"
+            ));
+        UUID metadataInvoiceId = oneUuid("""
+            SELECT id FROM invoices
+            WHERE invoice_number = 'F06-ALL-INV-METADATA'
+            """);
+        assertEquals(0, count("""
+            SELECT count(*)
+            FROM invoice_versions
+            WHERE invoice_id = ? AND document_artifact_id IS NOT NULL
+            """, metadataInvoiceId));
+        assertEquals("UNVERIFIED_METADATA_ONLY", text("""
+            SELECT metadata_manifest->>'documentHashStatus'
+            FROM invoice_versions WHERE invoice_id = ?
+            """, metadataInvoiceId));
+        assertTrue(metadataOnlyInvoice.stream().noneMatch(
+            effect -> effect.table().equals("f05_private_artifacts")));
 
         DomainEffect approval = only(apply(
             "13_approval_history", values(

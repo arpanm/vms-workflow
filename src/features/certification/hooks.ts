@@ -144,6 +144,14 @@ export function useSubmitSubmission(monthId: string) {
   );
 }
 
+export function useWithdrawSubmission(monthId: string, submissionId: string) {
+  return useMonthMutation(
+    monthId,
+    (input: { expectedSubmissionVersion: number; reason: string }, idempotencyKey) =>
+      certificationApi.withdraw(submissionId, input, idempotencyKey),
+  );
+}
+
 export function useClarification(monthId: string, submissionId: string) {
   return useMonthMutation(monthId, (input: ClarificationRequest, idempotencyKey) =>
     certificationApi.requestClarification(submissionId, input, idempotencyKey),

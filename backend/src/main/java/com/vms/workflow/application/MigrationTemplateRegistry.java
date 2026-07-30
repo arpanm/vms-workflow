@@ -132,8 +132,100 @@ public final class MigrationTemplateRegistry {
             Arrays.asList(naturalKeys.split("\\|", -1)),
             dependencies.isBlank()
                 ? List.of() : Arrays.asList(dependencies.split("\\|")),
+            requiredFields(code),
             sampleChecksum, sha256(headers + "\r\n"),
             SOURCE_TYPES, CONFIDENCE));
+    }
+
+    private static List<String> requiredFields(String code) {
+        List<String> common = List.of("template_version", "source_system");
+        List<String> domain = switch (code) {
+            case "01_employees" -> List.of(
+                "organization_code", "employee_number", "first_name",
+                "last_name", "display_name", "work_email", "join_date",
+                "employment_status", "timezone", "working_calendar_code",
+                "attendance_policy_code", "leave_policy_code",
+                "attendance_source_mode", "activation_status",
+                "source_reference");
+            case "02_employee_allocations" -> List.of(
+                "organization_code", "employee_number", "engagement_code",
+                "project_code", "valid_from", "deployment_status",
+                "allocation_percent", "source_reference");
+            case "03_holidays" -> List.of(
+                "organization_code", "holiday_calendar_code",
+                "calendar_version", "holiday_date", "holiday_name",
+                "holiday_type", "day_fraction", "expected_minutes",
+                "approved_by_email", "represented_approval_at",
+                "source_reference");
+            case "04_employee_date_overrides" -> List.of(
+                "organization_code", "employee_number", "override_date",
+                "resulting_classification", "expected_minutes", "reason",
+                "approved_by_email", "represented_approval_at",
+                "source_reference");
+            case "05_leave_balances" -> List.of(
+                "organization_code", "employee_number", "leave_type_code",
+                "entry_type", "quantity_days", "effective_date",
+                "idempotency_reference", "represented_approval_at",
+                "source_reference");
+            case "06_leave_requests" -> List.of(
+                "organization_code", "leave_request_external_id",
+                "employee_number", "leave_date", "session",
+                "leave_type_code", "quantity_days", "request_status",
+                "decision_status", "requested_at", "approver_email",
+                "paid_lwp_classification", "source_reference");
+            case "07a_attendance_punches" -> List.of(
+                "organization_code", "attendance_event_external_id",
+                "employee_number", "event_type", "occurred_at", "timezone",
+                "source_reference");
+            case "07b_attendance_daily" -> List.of(
+                "organization_code", "employee_number", "attendance_date",
+                "timezone", "calendar_classification", "expected_minutes",
+                "net_worked_minutes", "final_attendance_status",
+                "source_finalized_at", "source_reference");
+            case "08_deliverables" -> List.of(
+                "organization_code", "engagement_code", "billing_month",
+                "plan_external_id", "plan_version", "plan_type",
+                "plan_status", "deliverable_code", "project_code", "title",
+                "product_owner_email", "vendor_owner_email", "priority",
+                "target_completion_date", "delivery_category",
+                "acceptance_criteria", "source_reference");
+            case "09_deliverable_linear_links" -> List.of(
+                "engagement_code", "billing_month", "deliverable_code",
+                "linear_issue_url", "linear_issue_identifier",
+                "relationship_type", "snapshot_confidence",
+                "source_reference");
+            case "10_delivery_certifications" -> List.of(
+                "engagement_code", "billing_month", "deliverable_code",
+                "vendor_declared_outcome", "vendor_completion_percent",
+                "vendor_completion_date", "vendor_summary",
+                "vendor_evidence_references", "source_reference",
+                "confidence");
+            case "11_business_confirmations" -> List.of(
+                "engagement_code", "billing_month",
+                "confirmation_external_id", "request_subject",
+                "request_message_id", "request_sent_at", "request_to",
+                "request_cc", "confirmed_version_reference", "decision",
+                "actor_email", "represented_response_at",
+                "response_message_id", "response_thread_reference",
+                "capture_method", "source_reference", "confidence",
+                "reviewer_email");
+            case "12_invoices" -> List.of(
+                "vendor_organization_code", "client_organization_code",
+                "engagement_code", "billing_month", "invoice_number",
+                "invoice_date", "billing_start_date", "billing_end_date",
+                "currency", "invoice_filename", "source_reference");
+            case "13_approval_history" -> List.of(
+                "engagement_code", "billing_month", "object_type",
+                "object_external_id", "object_version", "action", "decision",
+                "actor_email", "actor_role", "represented_at",
+                "evidence_reference", "source_reference",
+                "confidence");
+            default -> throw new IllegalArgumentException(
+                "Required-field schema is missing for migration template.");
+        };
+        return java.util.stream.Stream.concat(common.stream(), domain.stream())
+            .distinct()
+            .toList();
     }
 
     public static String sha256(String value) {
@@ -154,6 +246,7 @@ public final class MigrationTemplateRegistry {
         List<String> headers,
         List<String> naturalKeys,
         List<String> dependencies,
+        List<String> requiredFields,
         String referenceSampleSha256,
         String generatedSampleSha256,
         Set<String> allowedSourceTypes,

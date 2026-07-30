@@ -7,6 +7,7 @@ import type {
   AttendanceDay,
   CreateLeaveRequestInput,
   CreateRegularizationInput,
+  CreateEmployeeInput,
   EmployeeDetail,
   EmployeeSummary,
   EmployeeAlias,
@@ -60,9 +61,113 @@ export const workforceApi = {
       `${workforcePath}/employees/${encoded(employeeId)}`,
     ),
 
+  createEmployee: (input: CreateEmployeeInput) =>
+    apiClient.post<EmployeeDetail>(`${workforcePath}/employees`, input),
+
+  editEmployee: (
+    employeeId: string,
+    input: {
+      effectiveFrom: string;
+      firstName: string;
+      lastName: string;
+      displayName: string;
+      designation?: string | null;
+      reason: string;
+    },
+  ) =>
+    apiClient.patch<EmployeeDetail>(
+      `${workforcePath}/employees/${encoded(employeeId)}`,
+      input,
+    ),
+
+  archiveEmployee: (
+    employeeId: string,
+    input: { effectiveFrom: string; reason: string },
+  ) =>
+    apiClient.patch<EmployeeDetail>(
+      `${workforcePath}/employees/${encoded(employeeId)}/lifecycle`,
+      {
+        ...input,
+        employmentStatus: "ARCHIVED",
+        activationStatus: "DISABLED",
+      },
+    ),
+
+  disableEmployeeAccess: (
+    employeeId: string,
+    input: {
+      effectiveFrom: string;
+      employmentStatus: EmployeeDetail["employmentStatus"];
+      exitDate?: string | null;
+      reason: string;
+    },
+  ) =>
+    apiClient.patch<EmployeeDetail>(
+      `${workforcePath}/employees/${encoded(employeeId)}/lifecycle`,
+      { ...input, activationStatus: "DISABLED" },
+    ),
+
   allocations: (employeeId: string) =>
     apiClient.get<Allocation[]>(
       `${workforcePath}/employees/${encoded(employeeId)}/allocations`,
+    ),
+
+  createAllocation: (
+    employeeId: string,
+    input: {
+      engagementId: string;
+      projectId: string;
+      validFrom: string;
+      validTo?: string | null;
+      allocationPercent: number;
+      roleOnProject?: string | null;
+    },
+  ) =>
+    apiClient.post<Allocation>(
+      `${workforcePath}/employees/${encoded(employeeId)}/allocations`,
+      input,
+    ),
+
+  editAllocation: (
+    employeeId: string,
+    allocationId: string,
+    input: {
+      validFrom: string;
+      validTo?: string | null;
+      allocationPercent: number;
+      roleOnProject?: string | null;
+    },
+  ) =>
+    apiClient.patch<Allocation>(
+      `${workforcePath}/employees/${encoded(employeeId)}/allocations/${encoded(allocationId)}`,
+      input,
+    ),
+
+  endAllocation: (
+    employeeId: string,
+    allocationId: string,
+    input: { effectiveTo: string; reason: string },
+  ) =>
+    apiClient.post<Allocation>(
+      `${workforcePath}/employees/${encoded(employeeId)}/allocations/${encoded(allocationId)}/end`,
+      input,
+    ),
+
+  splitAllocation: (
+    employeeId: string,
+    allocationId: string,
+    input: {
+      splitFrom: string;
+      engagementId: string;
+      projectId: string;
+      allocationPercent: number;
+      roleOnProject?: string | null;
+      reason: string;
+    },
+  ) =>
+    apiClient.post<Allocation>(
+      `${workforcePath}/employees/${encoded(employeeId)}/allocations/${encoded(allocationId)}/split`,
+      input,
     ),
 
   aliases: (employeeId: string) =>

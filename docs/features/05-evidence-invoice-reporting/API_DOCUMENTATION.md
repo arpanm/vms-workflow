@@ -61,6 +61,12 @@ fixed at the first-page cutoff while current package, invoice, readiness and
 payment projections are read live on every page. Consumers must not describe
 those mutable values as an as-of snapshot.
 
+Dashboard metrics use `metricCode`, `displayName`, nullable `value`,
+`AVAILABLE | UNAVAILABLE`, dictionary `version`, source/freshness and
+`temporalMode`. They are aggregated across the complete current authorized
+engagement scope rather than inferred from the first control-tower page, and
+are labeled `LIVE`.
+
 ## API verification
 
 `FinanceOpenApiIT` and frontend contract tests cover the surface. Final

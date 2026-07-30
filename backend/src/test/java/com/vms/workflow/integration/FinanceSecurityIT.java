@@ -106,4 +106,22 @@ class FinanceSecurityIT {
             .andExpect(jsonPath("$.permissions").isArray())
             .andExpect(jsonPath("$.exports.items").isArray());
     }
+
+    @Test
+    void dashboardPublishesTheExecutableReactMetricContract()
+        throws Exception {
+        mvc.perform(get("/api/v1/finance/dashboard")
+                .with(token("user-procurement")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.metrics[0].metricCode")
+                .value("INVOICE_READINESS"))
+            .andExpect(jsonPath("$.metrics[0].displayName").isNotEmpty())
+            .andExpect(jsonPath("$.metrics[0].version").isNumber())
+            .andExpect(jsonPath("$.metrics[0].availability")
+                .value(org.hamcrest.Matchers.oneOf(
+                    "AVAILABLE", "UNAVAILABLE")))
+            .andExpect(jsonPath("$.metrics[0].temporalMode").value("LIVE"))
+            .andExpect(jsonPath("$.metrics[0].metricId").doesNotExist())
+            .andExpect(jsonPath("$.metrics[0].displayValue").doesNotExist());
+    }
 }

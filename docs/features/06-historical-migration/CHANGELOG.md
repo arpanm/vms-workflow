@@ -26,3 +26,26 @@ external and are not represented as locally complete.
 - Verified the complete local backend, frontend, browser-contract and F06
   system suites; production scanner/storage, scale and rehearsal gates remain
   `ACTION_REQUIRED`.
+
+## 2026-07-30 — Complete pre-commit row-schema validation
+
+- Moved all 14 templates' required fields into the server-owned template
+  registry and exposed that schema with the template contract.
+- Validation now reports stable row findings for missing required values,
+  malformed ISO dates/months/timestamps and invalid evidence hashes before
+  approval or domain-adapter execution.
+- Added PostgreSQL integration coverage for incomplete/malformed holiday rows
+  and strengthened registry-contract assertions. Updated legacy F06 fixtures
+  to the specified `YYYY-MM` billing-month format and explicit imported-punch
+  evidence.
+
+## 2026-07-30 — Independent review closure
+
+- Enforced hash-resolved, same-scope, scan-approved confirmation evidence.
+- Made allocation approval actor/time fields conditional as one pair.
+- Removed synthetic invoice byte hashes for metadata-only imports.
+- Deduplicated validation findings by stable identity.
+- Supported local attendance timestamps plus IANA timezone through validation,
+  authority arbitration and domain commit.
+- Focused evidence passed: 3 registry/parser unit tests, 15 migration-workflow
+  PostgreSQL tests and 1 all-template domain-adapter PostgreSQL test.

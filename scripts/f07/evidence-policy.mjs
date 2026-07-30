@@ -207,7 +207,11 @@ const groups = {
 const explicitCaseRequirements = {
   "F07-T001": ["F07-SELF-RELEASE-GATE"],
   "F07-T002": ["F07-SELF-RELEASE-GATE"],
-  "F07-T003": ["F07-SELF-RELEASE-GATE", "F07-SELF-CI-CONTRACT"],
+  "F07-T003": [
+    "F07-SELF-RELEASE-GATE",
+    "F07-SELF-CI-CONTRACT",
+    "F07-SELF-TRACEABILITY",
+  ],
   "F07-T004": ["F07-SELF-RELEASE-GATE"],
   "F07-T005": [
     "com.vms.workflow.infrastructure.DatabaseRoleGuardTest#failsClosedWhenEnabledWithoutExpectedRole",
@@ -419,7 +423,7 @@ const explicitCaseRequirements = {
   "F07-T079": ["OPS-RUNBOOK-CATALOG"],
   "F07-T080": ["OPS-RUNBOOK-CATALOG"],
   "F07-T081": ["F07-SELF-CI-CONTRACT"],
-  "F07-T082": [],
+  "F07-T082": ["F07-SELF-REVIEW-CONTROL"],
   "F07-A11Y-001": [
     "F07-A11Y-001A@f07-accessibility-chromium",
     "F07-A11Y-001B@f07-accessibility-chromium",
@@ -531,7 +535,11 @@ const explicitCaseRequirements = {
     "MIGRATION-EVIDENCE-PRESERVATION",
     "MIGRATION-INCOMPATIBLE-BLOCKED",
   ],
-  "F07-REL-004": ["F07-SELF-RELEASE-GATE", "F07-SELF-CI-CONTRACT"],
+  "F07-REL-004": [
+    "F07-SELF-RELEASE-GATE",
+    "F07-SELF-CI-CONTRACT",
+    "F07-SELF-TRACEABILITY",
+  ],
   "F07-RET-001": [
     "com.vms.workflow.integration.F07RetentionPrivacyIT#scheduleAndDryRunAreOrganizationScopedAndVersioned",
     "com.vms.workflow.integration.F07RetentionPrivacyIT#executionIsSingleOwnerAndDeadLetterRecoveryStartsNewBoundedCycle",
@@ -540,7 +548,7 @@ const explicitCaseRequirements = {
     "com.vms.workflow.integration.F07RetentionPrivacyIT#legalHoldRequiresDifferentReleaseApproverAndIsAppendOnly",
     "com.vms.workflow.integration.F07RetentionPrivacyIT#committedHoldLinearizesBeforeRetentionCapabilityExpiry",
   ],
-  "F07-REV-001": [],
+  "F07-REV-001": ["F07-SELF-REVIEW-CONTROL"],
   "F07-ROL-001": [
     "com.vms.workflow.integration.F07FeatureFlagObservabilityIT#scopeDependencyWindowAndAuditAreServerAuthoritative",
     "com.vms.workflow.integration.F07FeatureFlagObservabilityIT#directClientInputCannotCreateAuthorityOrBypassRbac",

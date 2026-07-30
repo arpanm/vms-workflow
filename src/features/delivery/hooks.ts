@@ -130,6 +130,24 @@ export function useCreatePlan() {
   });
 }
 
+export function useUpdatePlan(planId: string, expectedVersion: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreatePlanRequest) =>
+      deliveryApi.updatePlan(planId, expectedVersion, input),
+    onSuccess: (plan) => {
+      queryClient.setQueryData(deliveryKeys.plan(planId), plan);
+      return queryClient.invalidateQueries({
+        queryKey: deliveryKeys.plans(plan.engagementMonthId),
+      });
+    },
+    onError: () =>
+      queryClient.invalidateQueries({
+        queryKey: deliveryKeys.plan(planId),
+      }),
+  });
+}
+
 export function useSubmitPlan(planId: string) {
   const queryClient = useQueryClient();
   return useMutation({

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const apiMocks = vi.hoisted(() => ({
   get: vi.fn(),
   post: vi.fn(),
+  put: vi.fn(),
 }));
 
 vi.mock("@/lib/api-client", () => ({ apiClient: apiMocks }));
@@ -19,6 +20,7 @@ describe("delivery API contract", () => {
   beforeEach(() => {
     apiMocks.get.mockReset();
     apiMocks.post.mockReset();
+    apiMocks.put.mockReset();
   });
 
   it("loads plans only through engagement-month scope", async () => {
@@ -39,6 +41,17 @@ describe("delivery API contract", () => {
       decision: "APPROVE",
       comment: "Reviewed",
     });
+  });
+
+  it("updates only the exact optimistic draft version", async () => {
+    const input = { engagementMonthId: "month-1" } as never;
+    await deliveryApi.updatePlan("plan/1", 3, input);
+
+    expect(apiMocks.put).toHaveBeenCalledWith(
+      "/delivery/plans/plan%2F1",
+      input,
+      { headers: { "If-Match": "3" } },
+    );
   });
 
   it("loads revision comparison from the exact plan resource", async () => {

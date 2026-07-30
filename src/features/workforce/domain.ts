@@ -35,6 +35,7 @@ export type EmployeeSummary = {
   organizationId: string;
   employeeNumber: string;
   displayName: string;
+  designation?: string;
   workEmail: string;
   employmentStatus: EmploymentStatus;
   activationStatus: "ENABLED" | "DISABLED";
@@ -49,6 +50,18 @@ export type EmployeeDetail = EmployeeSummary & {
   exitDate?: string;
   firstName: string;
   lastName: string;
+};
+
+export type CreateEmployeeInput = {
+  organizationId: string;
+  employeeNumber: string;
+  firstName: string;
+  lastName: string;
+  displayName: string;
+  workEmail: string;
+  joinDate: string;
+  designation?: string;
+  attendanceSourceMode: AttendanceSourceMode;
 };
 
 export type Allocation = {

@@ -60,6 +60,12 @@ public final class CertificationDtos {
     public record SubmitSubmissionRequest(@Min(0) long expectedSubmissionVersion) {
     }
 
+    public record WithdrawSubmissionRequest(
+        @Min(0) long expectedSubmissionVersion,
+        @NotBlank @Size(max = 4_000) String reason
+    ) {
+    }
+
     public record ClarificationRequest(
         @Min(0) long expectedSubmissionVersion,
         @NotNull UUID deliverableId,
@@ -524,6 +530,18 @@ public final class CertificationDtos {
         OffsetDateTime submittedAt,
         boolean locked,
         List<SubmissionItemView> items
+    ) {
+    }
+
+    public record ArtifactUploadView(
+        UUID id,
+        UUID monthId,
+        String displayName,
+        String classification,
+        String scanStatus,
+        long sizeBytes,
+        String sha256,
+        OffsetDateTime recordedAt
     ) {
     }
 

@@ -4,6 +4,10 @@ import com.vms.workflow.api.WorkforceDtos.AllocationRequest;
 import com.vms.workflow.api.WorkforceDtos.AllocationView;
 import com.vms.workflow.api.WorkforceDtos.CreateEmployeeRequest;
 import com.vms.workflow.api.WorkforceDtos.EmployeeLifecycleRequest;
+import com.vms.workflow.api.WorkforceDtos.EmployeeMasterRequest;
+import com.vms.workflow.api.WorkforceDtos.AllocationEditRequest;
+import com.vms.workflow.api.WorkforceDtos.AllocationEndRequest;
+import com.vms.workflow.api.WorkforceDtos.AllocationSplitRequest;
 import com.vms.workflow.api.WorkforceDtos.EmployeeView;
 import com.vms.workflow.api.WorkforceDtos.LeaveBalanceView;
 import com.vms.workflow.api.WorkforceDtos.LeaveRequest;
@@ -72,6 +76,13 @@ public class WorkforceController {
         return workforce.changeLifecycle(jwt.getSubject(), id, request);
     }
 
+    @PatchMapping("/employees/{id}")
+    @Operation(summary = "Create a new effective-dated employee master-field version")
+    EmployeeView editEmployee(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+                              @Valid @RequestBody EmployeeMasterRequest request) {
+        return workforce.editEmployee(jwt.getSubject(), id, request);
+    }
+
     @GetMapping("/employees/{id}/allocations")
     @Operation(summary = "List effective project allocations")
     List<AllocationView> allocations(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id) {
@@ -84,6 +95,31 @@ public class WorkforceController {
     AllocationView createAllocation(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
                                     @Valid @RequestBody AllocationRequest request) {
         return workforce.createAllocation(jwt.getSubject(), id, request);
+    }
+
+    @PatchMapping("/employees/{id}/allocations/{allocationId}")
+    @Operation(summary = "Edit an effective project allocation")
+    AllocationView editAllocation(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+                                  @PathVariable UUID allocationId,
+                                  @Valid @RequestBody AllocationEditRequest request) {
+        return workforce.editAllocation(jwt.getSubject(), id, allocationId, request);
+    }
+
+    @PostMapping("/employees/{id}/allocations/{allocationId}/end")
+    @Operation(summary = "End an allocation while preserving its history")
+    AllocationView endAllocation(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+                                 @PathVariable UUID allocationId,
+                                 @Valid @RequestBody AllocationEndRequest request) {
+        return workforce.endAllocation(jwt.getSubject(), id, allocationId, request);
+    }
+
+    @PostMapping("/employees/{id}/allocations/{allocationId}/split")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Split an allocation into an ended source and a new bounded allocation")
+    AllocationView splitAllocation(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID id,
+                                   @PathVariable UUID allocationId,
+                                   @Valid @RequestBody AllocationSplitRequest request) {
+        return workforce.splitAllocation(jwt.getSubject(), id, allocationId, request);
     }
 
     @PostMapping("/employees/{id}/policy-assignments")

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Check, GitCompareArrows, LockKeyhole, Send, X } from "lucide-react";
 import { useState } from "react";
 
@@ -115,6 +115,19 @@ function PlanReview({ plan }: { plan: PlanView }) {
         <MetricCard label="Linear coverage" value={`${coverage}% (${linkCount})`} />
         <MetricCard label="Commitment" value={commitment.label} />
       </div>
+
+      {plan.state === "DRAFT" && (
+        <div className="flex justify-end">
+          <Button asChild variant="outline">
+            <Link
+              to="/delivery/plans/$planId/edit"
+              params={{ planId: plan.id }}
+            >
+              Edit draft content
+            </Link>
+          </Button>
+        </div>
+      )}
 
       {readOnly && (
         <Card className="border-info/30 bg-info/5">

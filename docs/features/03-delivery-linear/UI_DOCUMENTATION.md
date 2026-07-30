@@ -1,5 +1,16 @@
 # F03 UI Documentation
 
+## Complete plan and revision editing
+
+The plan builder supports multiple deliverables. Each deliverable supports
+repeatable acceptance criteria, contributor assignments and dependencies, with
+add/remove controls and indexed validation. A current draft exposes **Edit
+draft content**. Frozen commitments remain read-only; **Create revision**
+captures reason and impact, clones the prior commitment, and then exposes the
+new draft to the same complete editor. Saving uses the exact server
+`editVersion`, so a stale browser must refresh instead of overwriting another
+editor's changes.
+
 ## Local screens
 
 - **Delivery plans:** monthly plan list and a nested draft builder.

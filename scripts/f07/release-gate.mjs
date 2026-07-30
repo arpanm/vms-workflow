@@ -31,6 +31,7 @@ import {
 } from "./machine-reports.mjs";
 import { validateOperationalDocument } from "./operational-report.mjs";
 import { commandOutputProvesSuccess } from "./command-evidence.mjs";
+import { validateTraceability } from "./traceability.mjs";
 
 const allowedResults = new Set([
   "PASS",
@@ -180,6 +181,8 @@ function resolveRecords(manifest, inventory, state) {
       records.push({
         ...template,
         ...override,
+        requirementIds:
+          state.traceabilityRecords.get(id)?.requirements ?? [],
         ...(classification === "local"
           ? {
               command: `derived:${recordEvidencePolicy[id]?.laneId ?? "missing"}`,
@@ -728,9 +731,12 @@ async function validateRecord(record, releaseCommit, now, state) {
       state.errors.push(`${prefix} ${field} is required`);
     }
   }
-  for (const requirement of mandatoryRequirements) {
-    if (!record.requirementIds?.includes(requirement)) {
-      state.errors.push(`${prefix} mandatory traceability is missing ${requirement}`);
+  if (!Array.isArray(record.requirementIds) || record.requirementIds.length === 0) {
+    state.errors.push(`${prefix} canonical requirement traceability is missing`);
+  }
+  for (const requirement of record.requirementIds ?? []) {
+    if (!mandatoryRequirements.has(requirement)) {
+      state.errors.push(`${prefix} unknown F07 requirement ${requirement}`);
     }
   }
   if (!record.external) {
@@ -861,6 +867,7 @@ export async function evaluateRelease(manifestPath, options = {}) {
     errors: [],
     now: options.now ?? new Date(),
     provenanceCache: new Map(),
+    traceabilityRecords: new Map(),
     verifiedResultIds: new Set(),
   };
   let manifest;
@@ -926,6 +933,13 @@ export async function evaluateRelease(manifestPath, options = {}) {
     state.errors.push(`required inventory cannot be validated: ${safeError(error)}`);
   }
   if (inventory) {
+    try {
+      const traceability = await validateTraceability(inventory);
+      state.errors.push(...traceability.findings);
+      state.traceabilityRecords = traceability.records;
+    } catch (error) {
+      state.errors.push(`traceability matrix cannot be validated: ${safeError(error)}`);
+    }
     const records = resolveRecords(manifest, inventory, state);
     for (const record of records) {
       await validateRecord(record, manifest.release?.commit, state.now, state);

@@ -1,5 +1,13 @@
 # F04 Code Review — Consolidated Decision
 
+## 2026-07-30 withdrawal/artifact completion review
+
+- Removed raw `File` values from query mutation state and removed invalid nested-form markup.
+- Added scan-time SHA-256 verification plus executable/EICAR rejection.
+- Added rollback object cleanup and pending temporary-file cleanup.
+- Restricted database provider status to agree with the terminal scan result.
+- Replaced the user-entered withdrawal reason in the domain event with a deterministic hash; the reason remains in the access-controlled audit record.
+
 **Decision:** The reviewed local implementation satisfies the recorded G0–G3 provider-neutral scope, subject to a root-agent rerun. It is **not** full-stack or provider-accepted.
 
 The review covered F04 Java/Spring services, V11/V12 PostgreSQL/Flyway migrations, React routes/contracts, authorization, state transitions, privacy, and prior-feature regression boundaries. Local fixes address the earlier backend, frontend, security, and independent-analysis findings; their detailed historical disposition is retained in [FIXES-BACKEND.md](FIXES-BACKEND.md), [FIXES-FRONTEND.md](FIXES-FRONTEND.md), [CODE_ANALYSIS.md](CODE_ANALYSIS.md), and [SECURITY_ANALYSIS.md](SECURITY_ANALYSIS.md).

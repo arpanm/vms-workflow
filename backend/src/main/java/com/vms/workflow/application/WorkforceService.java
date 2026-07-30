@@ -5,6 +5,10 @@ import com.vms.workflow.api.WorkforceDtos.AllocationRequest;
 import com.vms.workflow.api.WorkforceDtos.AllocationView;
 import com.vms.workflow.api.WorkforceDtos.CreateEmployeeRequest;
 import com.vms.workflow.api.WorkforceDtos.EmployeeLifecycleRequest;
+import com.vms.workflow.api.WorkforceDtos.EmployeeMasterRequest;
+import com.vms.workflow.api.WorkforceDtos.AllocationEditRequest;
+import com.vms.workflow.api.WorkforceDtos.AllocationEndRequest;
+import com.vms.workflow.api.WorkforceDtos.AllocationSplitRequest;
 import com.vms.workflow.api.WorkforceDtos.EmployeeView;
 import com.vms.workflow.api.WorkforceDtos.LeaveBalanceView;
 import com.vms.workflow.api.WorkforceDtos.LeaveRequest;
@@ -35,7 +39,7 @@ public class WorkforceService {
 
     private static final String EMPLOYEE_SELECT = """
         SELECT emp.id, emp.organization_id, emp.employee_number,
-               ev.first_name, ev.last_name, ev.display_name, emp.work_email,
+               ev.first_name, ev.last_name, ev.display_name, ev.designation, emp.work_email,
                ev.employment_status, emp.join_date, ev.exit_date, ev.activation_status,
                source.mode, ev.valid_from, ev.valid_to, ev.version
         FROM employees emp
@@ -108,10 +112,13 @@ public class WorkforceService {
                                         EmployeeLifecycleRequest request) {
         authorization.requireEmployeeManage(subject, employeeId);
         validateLifecycle(request);
+        lockEmployee(employeeId);
         var current = jdbc.query("""
-            SELECT id, version, valid_from, first_name, last_name, display_name, designation
+            SELECT id, version, valid_from, first_name, last_name, display_name,
+                   designation, employment_status, activation_status
             FROM employee_versions
             WHERE employee_id = ? AND valid_to IS NULL
+            FOR UPDATE
             """, rs -> {
                 if (!rs.next()) {
                     return null;
@@ -120,13 +127,21 @@ public class WorkforceService {
                     rs.getObject("id", UUID.class), rs.getInt("version"),
                     rs.getObject("valid_from", LocalDate.class),
                     rs.getString("first_name"), rs.getString("last_name"),
-                    rs.getString("display_name"), rs.getString("designation"));
+                    rs.getString("display_name"), rs.getString("designation"),
+                    rs.getString("employment_status"),
+                    rs.getString("activation_status"));
             }, employeeId);
         if (current == null) {
             throw notFound();
         }
         if (!request.effectiveFrom().isAfter(current.validFrom())) {
             throw new DomainConflictException("Lifecycle changes must start after the current version.");
+        }
+        if ("ARCHIVED".equals(request.employmentStatus())
+            && !"EXITED".equals(current.employmentStatus())
+            && !"DISABLED".equals(current.activationStatus())) {
+            throw new DomainConflictException(
+                "Archive requires an earlier exit or access-disable lifecycle version.");
         }
         LocalDate joinDate = jdbc.queryForObject(
             "SELECT join_date FROM employees WHERE id = ?", LocalDate.class, employeeId);
@@ -148,11 +163,41 @@ public class WorkforceService {
         return findEmployee(employeeId);
     }
 
+    @Transactional
+    public EmployeeView editEmployee(String subject, UUID employeeId,
+                                     EmployeeMasterRequest request) {
+        authorization.requireEmployeeManage(subject, employeeId);
+        lockEmployee(employeeId);
+        CurrentEmployeeVersion current = currentEmployeeVersion(employeeId);
+        if (!request.effectiveFrom().isAfter(current.validFrom())) {
+            throw new DomainConflictException(
+                "Employee master changes must start after the current version.");
+        }
+        jdbc.update("UPDATE employee_versions SET valid_to = ? WHERE id = ?",
+            request.effectiveFrom().minusDays(1), current.id());
+        jdbc.update("""
+            INSERT INTO employee_versions
+                (id, employee_id, version, valid_from, first_name, last_name,
+                 display_name, designation, employment_status, activation_status,
+                 exit_date, reason, recorded_by_subject)
+            SELECT ?, employee_id, version + 1, ?, ?, ?, ?, ?,
+                   employment_status, activation_status, exit_date, ?, ?
+            FROM employee_versions WHERE id = ?
+            """, UUID.randomUUID(), request.effectiveFrom(), request.firstName(),
+            request.lastName(), request.displayName(), request.designation(),
+            request.reason(), subject, current.id());
+        audit("EMPLOYEE", employeeId, employeeId, "EMPLOYEE_MASTER_EDITED", subject);
+        return findEmployee(employeeId);
+    }
+
     public List<AllocationView> allocations(String subject, UUID employeeId) {
         authorization.requireEmployeeRead(subject, employeeId);
         return jdbc.query("""
             SELECT id, employee_id, engagement_id, project_id, valid_from, valid_to,
-                   allocation_percent, role_on_project, status
+                   allocation_percent, role_on_project,
+                   CASE WHEN valid_to < CURRENT_DATE THEN 'ENDED'
+                        WHEN valid_from > CURRENT_DATE THEN 'PLANNED'
+                        ELSE status END AS status
             FROM employee_project_allocations
             WHERE employee_id = ?
             ORDER BY valid_from, project_id
@@ -172,6 +217,7 @@ public class WorkforceService {
     @Transactional
     public AllocationView createAllocation(String subject, UUID employeeId, AllocationRequest request) {
         authorization.requireEmployeeManage(subject, employeeId);
+        lockEmployee(employeeId);
         if (request.validTo() != null && request.validTo().isBefore(request.validFrom())) {
             throw new IllegalArgumentException("Allocation end date cannot precede start date.");
         }
@@ -180,13 +226,105 @@ public class WorkforceService {
             INSERT INTO employee_project_allocations
                 (id, employee_id, engagement_id, project_id, valid_from, valid_to,
                  allocation_percent, role_on_project, status, created_by_subject)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'ACTIVE', ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?,
+                    CASE WHEN ?::date > CURRENT_DATE THEN 'PLANNED' ELSE 'ACTIVE' END, ?)
             """, id, employeeId, request.engagementId(), request.projectId(), request.validFrom(),
-            request.validTo(), request.allocationPercent(), request.roleOnProject(), subject);
+            request.validTo(), request.allocationPercent(), request.roleOnProject(),
+            request.validFrom(), subject);
         return allocations(subject, employeeId).stream()
             .filter(value -> value.id().equals(id))
             .findFirst()
             .orElseThrow(this::notFound);
+    }
+
+    @Transactional
+    public AllocationView editAllocation(String subject, UUID employeeId, UUID allocationId,
+                                         AllocationEditRequest request) {
+        authorization.requireEmployeeManage(subject, employeeId);
+        validateAllocationDates(request.validFrom(), request.validTo());
+        lockEmployee(employeeId);
+        AllocationView current = requireAllocation(employeeId, allocationId);
+        if (!"PLANNED".equals(current.status())) {
+            throw new DomainConflictException(
+                "Effective allocations must be changed with end or split; past days are immutable.");
+        }
+        jdbc.update("""
+            UPDATE employee_project_allocations
+            SET valid_from = ?, valid_to = ?, allocation_percent = ?,
+                role_on_project = ?,
+                status = CASE WHEN ?::date < CURRENT_DATE THEN 'ENDED'
+                              WHEN ?::date > CURRENT_DATE THEN 'PLANNED'
+                              ELSE 'ACTIVE' END
+            WHERE id = ? AND employee_id = ?
+            """, request.validFrom(), request.validTo(), request.allocationPercent(),
+            request.roleOnProject(), request.validTo(), request.validFrom(),
+            allocationId, employeeId);
+        audit("PROJECT_ALLOCATION", allocationId, employeeId,
+            "ALLOCATION_EDITED", subject);
+        return allocation(subject, employeeId, allocationId);
+    }
+
+    @Transactional
+    public AllocationView endAllocation(String subject, UUID employeeId, UUID allocationId,
+                                        AllocationEndRequest request) {
+        authorization.requireEmployeeManage(subject, employeeId);
+        lockEmployee(employeeId);
+        AllocationView current = requireAllocation(employeeId, allocationId);
+        if ("ENDED".equals(current.status())) {
+            throw new DomainConflictException("The allocation is already ended.");
+        }
+        validateAllocationDates(current.validFrom(), request.effectiveTo());
+        if (current.validTo() != null && request.effectiveTo().isAfter(current.validTo())) {
+            throw new IllegalArgumentException(
+                "Ending cannot extend the allocation beyond its existing end date.");
+        }
+        jdbc.update("""
+            UPDATE employee_project_allocations
+            SET valid_to = ?,
+                status = CASE WHEN ?::date < CURRENT_DATE THEN 'ENDED' ELSE status END
+            WHERE id = ? AND employee_id = ?
+            """, request.effectiveTo(), request.effectiveTo(), allocationId, employeeId);
+        audit("PROJECT_ALLOCATION", allocationId, employeeId,
+            "ALLOCATION_ENDED", subject);
+        return allocation(subject, employeeId, allocationId);
+    }
+
+    @Transactional
+    public AllocationView splitAllocation(String subject, UUID employeeId, UUID allocationId,
+                                          AllocationSplitRequest request) {
+        authorization.requireEmployeeManage(subject, employeeId);
+        lockEmployee(employeeId);
+        AllocationView source = requireAllocation(employeeId, allocationId);
+        if ("ENDED".equals(source.status())) {
+            throw new DomainConflictException("An ended allocation cannot be split.");
+        }
+        if (!request.splitFrom().isAfter(source.validFrom())
+            || (source.validTo() != null && request.splitFrom().isAfter(source.validTo()))) {
+            throw new IllegalArgumentException(
+                "Split date must fall after the source start and inside its effective range.");
+        }
+        jdbc.update("""
+            UPDATE employee_project_allocations
+            SET valid_to = ?,
+                status = CASE WHEN ?::date < CURRENT_DATE THEN 'ENDED' ELSE status END
+            WHERE id = ? AND employee_id = ?
+            """, request.splitFrom().minusDays(1), request.splitFrom().minusDays(1),
+            allocationId, employeeId);
+        UUID id = UUID.randomUUID();
+        jdbc.update("""
+            INSERT INTO employee_project_allocations
+                (id, employee_id, engagement_id, project_id, valid_from, valid_to,
+                 allocation_percent, role_on_project, status, created_by_subject)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?,
+                    CASE WHEN ?::date > CURRENT_DATE THEN 'PLANNED' ELSE 'ACTIVE' END, ?)
+            """, id, employeeId, request.engagementId(), request.projectId(),
+            request.splitFrom(), source.validTo(), request.allocationPercent(),
+            request.roleOnProject(), request.splitFrom(), subject);
+        audit("PROJECT_ALLOCATION", allocationId, employeeId,
+            "ALLOCATION_SPLIT_SOURCE_ENDED", subject);
+        audit("PROJECT_ALLOCATION", id, employeeId,
+            "ALLOCATION_SPLIT_CREATED", subject);
+        return allocation(subject, employeeId, id);
     }
 
     @Transactional
@@ -550,6 +688,70 @@ public class WorkforceService {
             rs -> null, employeeId.toString());
     }
 
+    private CurrentEmployeeVersion currentEmployeeVersion(UUID employeeId) {
+        CurrentEmployeeVersion current = jdbc.query("""
+            SELECT id, version, valid_from, first_name, last_name, display_name,
+                   designation, employment_status, activation_status
+            FROM employee_versions
+            WHERE employee_id = ? AND valid_to IS NULL
+            FOR UPDATE
+            """, rs -> rs.next()
+                ? new CurrentEmployeeVersion(
+                    rs.getObject("id", UUID.class), rs.getInt("version"),
+                    rs.getObject("valid_from", LocalDate.class),
+                    rs.getString("first_name"), rs.getString("last_name"),
+                    rs.getString("display_name"), rs.getString("designation"),
+                    rs.getString("employment_status"),
+                    rs.getString("activation_status"))
+                : null, employeeId);
+        if (current == null) {
+            throw notFound();
+        }
+        return current;
+    }
+
+    private AllocationView requireAllocation(UUID employeeId, UUID allocationId) {
+        return allocationsWithoutAuthorization(employeeId).stream()
+            .filter(value -> value.id().equals(allocationId))
+            .findFirst()
+            .orElseThrow(this::notFound);
+    }
+
+    private AllocationView allocation(String subject, UUID employeeId, UUID allocationId) {
+        authorization.requireEmployeeRead(subject, employeeId);
+        return requireAllocation(employeeId, allocationId);
+    }
+
+    private List<AllocationView> allocationsWithoutAuthorization(UUID employeeId) {
+        return jdbc.query("""
+            SELECT id, employee_id, engagement_id, project_id, valid_from, valid_to,
+                   allocation_percent, role_on_project,
+                   CASE WHEN valid_to < CURRENT_DATE THEN 'ENDED'
+                        WHEN valid_from > CURRENT_DATE THEN 'PLANNED'
+                        ELSE status END AS status
+            FROM employee_project_allocations
+            WHERE employee_id = ?
+            ORDER BY valid_from, project_id
+            """, (rs, rowNum) -> new AllocationView(
+                rs.getObject("id", UUID.class),
+                rs.getObject("employee_id", UUID.class),
+                rs.getObject("engagement_id", UUID.class),
+                rs.getObject("project_id", UUID.class),
+                rs.getObject("valid_from", LocalDate.class),
+                rs.getObject("valid_to", LocalDate.class),
+                rs.getBigDecimal("allocation_percent"),
+                rs.getString("role_on_project"),
+                rs.getString("status")
+            ), employeeId);
+    }
+
+    private void validateAllocationDates(LocalDate validFrom, LocalDate validTo) {
+        if (validTo != null && validTo.isBefore(validFrom)) {
+            throw new IllegalArgumentException(
+                "Allocation end date cannot precede start date.");
+        }
+    }
+
     private EmployeeView findEmployee(UUID employeeId) {
         List<EmployeeView> values = jdbc.query(EMPLOYEE_SELECT + " WHERE emp.id = ?",
             (rs, rowNum) -> employeeView(rs), employeeId);
@@ -567,6 +769,7 @@ public class WorkforceService {
             rs.getString("first_name"),
             rs.getString("last_name"),
             rs.getString("display_name"),
+            rs.getString("designation"),
             rs.getString("work_email"),
             rs.getString("employment_status"),
             rs.getObject("join_date", LocalDate.class),
@@ -655,7 +858,9 @@ public class WorkforceService {
         String firstName,
         String lastName,
         String displayName,
-        String designation
+        String designation,
+        String employmentStatus,
+        String activationStatus
     ) {
     }
 

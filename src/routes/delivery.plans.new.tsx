@@ -15,8 +15,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import type { CreatePlanRequest, DeliverableInput } from "@/features/delivery/contracts";
-import { useCreatePlan } from "@/features/delivery/hooks";
+import type {
+  CreatePlanRequest,
+  DeliverableInput,
+  PlanView,
+} from "@/features/delivery/contracts";
+import { useCreatePlan, useUpdatePlan } from "@/features/delivery/hooks";
 import { DeliveryMutationError } from "@/features/delivery/query-boundary";
 import { type FieldErrors, validateCreatePlanRequest } from "@/features/delivery/presentation";
 import { MonthScope } from "@/features/workforce/scope-selectors";
@@ -28,7 +32,27 @@ export const Route = createFileRoute("/delivery/plans/new")({
   component: NewPlanPage,
 });
 
-const emptyDeliverable: DeliverableInput = {
+const emptyCriterion = (): DeliverableInput["criteria"][number] => ({
+  statement: "",
+  validationMethod: "",
+  expectedResult: "",
+  mandatory: true,
+});
+
+const emptyDependency = (): DeliverableInput["dependencies"][number] => ({
+  type: "EXTERNAL",
+  description: "",
+  ownerSubject: "",
+  targetResolutionDate: "",
+  blocking: true,
+});
+
+const emptyAssignment = (): DeliverableInput["assignments"][number] => ({
+  employeeId: "",
+  effectiveFrom: "",
+});
+
+const emptyDeliverable = (): DeliverableInput => ({
   deliverableCode: "",
   title: "",
   description: "",
@@ -42,30 +66,10 @@ const emptyDeliverable: DeliverableInput = {
   dependencyNoneDeclared: false,
   riskAndAssumptions: "",
   deliveryCategory: "FEATURE",
-  criteria: [
-    {
-      statement: "",
-      validationMethod: "",
-      expectedResult: "",
-      mandatory: true,
-    },
-  ],
-  dependencies: [
-    {
-      type: "EXTERNAL",
-      description: "",
-      ownerSubject: "",
-      targetResolutionDate: "",
-      blocking: true,
-    },
-  ],
-  assignments: [
-    {
-      employeeId: "",
-      effectiveFrom: "",
-    },
-  ],
-};
+  criteria: [emptyCriterion()],
+  dependencies: [emptyDependency()],
+  assignments: [emptyAssignment()],
+});
 
 const list = (value: string) =>
   value
@@ -89,25 +93,86 @@ function NewPlanPage() {
   );
 }
 
-function PlanBuilder({ engagementMonthId }: { engagementMonthId: string }) {
+export function PlanBuilder({
+  engagementMonthId,
+  initialPlan,
+}: {
+  engagementMonthId: string;
+  initialPlan?: PlanView;
+}) {
   const navigate = useNavigate();
-  const mutation = useCreatePlan();
+  const createMutation = useCreatePlan();
+  const updateMutation = useUpdatePlan(initialPlan?.id ?? "", initialPlan?.editVersion ?? 0);
+  const mutation = initialPlan ? updateMutation : createMutation;
   const [errors, setErrors] = useState<FieldErrors>({});
   const [plan, setPlan] = useState({
-    title: "",
-    summary: "",
-    businessOutcomes: "",
-    coordinatorSubject: "",
-    baselineType: "ON_TIME" as CreatePlanRequest["baselineType"],
-    quorumMode: "ANY_ONE" as CreatePlanRequest["quorumMode"],
-    quorumRequired: 1,
-    approvers: "",
-    arrowFoundry: "",
-    relianceStakeholders: "",
-    procurementCc: "",
+    title: initialPlan?.title ?? "",
+    summary: initialPlan?.summary ?? "",
+    businessOutcomes: initialPlan?.businessOutcomes ?? "",
+    coordinatorSubject: initialPlan?.coordinatorSubject ?? "",
+    baselineType: initialPlan?.baselineType ?? ("ON_TIME" as CreatePlanRequest["baselineType"]),
+    quorumMode:
+      initialPlan?.quorumMode ?? ("ANY_ONE" as CreatePlanRequest["quorumMode"]),
+    quorumRequired: initialPlan?.quorumRequired ?? 1,
+    approvers:
+      initialPlan?.approverSubjects?.join(", ") ??
+      initialPlan?.approvals.map((approval) => approval.approverSubject).join(", ") ??
+      "",
+    arrowFoundry: initialPlan?.recipients.arrowFoundry.join(", ") ?? "",
+    relianceStakeholders: initialPlan?.recipients.relianceStakeholders.join(", ") ?? "",
+    procurementCc: initialPlan?.recipients.procurementCc.join(", ") ?? "",
   });
-  const [deliverable, setDeliverable] = useState<DeliverableInput>(emptyDeliverable);
-  const [evidenceText, setEvidenceText] = useState("");
+  const [deliverables, setDeliverables] = useState<DeliverableInput[]>(
+    initialPlan?.deliverables.map((deliverable) => ({
+      deliverableCode: deliverable.deliverableCode,
+      title: deliverable.title,
+      description: deliverable.description,
+      businessObjective: deliverable.businessObjective,
+      projectId: deliverable.projectId,
+      productOwnerSubject: deliverable.productOwnerSubject,
+      vendorOwnerSubject: deliverable.vendorOwnerSubject,
+      priority: deliverable.priority,
+      targetCompletionDate: deliverable.targetCompletionDate,
+      evidenceExpectations: deliverable.evidenceExpectations,
+      dependencyNoneDeclared: deliverable.dependencyNoneDeclared,
+      riskAndAssumptions: deliverable.riskAndAssumptions,
+      deliveryCategory: deliverable.deliveryCategory,
+      linkExceptionReason: deliverable.linkExceptionReason ?? undefined,
+      criteria: deliverable.criteria.map(
+        ({ statement, validationMethod, expectedResult, mandatory }) => ({
+          statement,
+          validationMethod,
+          expectedResult,
+          mandatory,
+        }),
+      ),
+      dependencies: deliverable.dependencies.map(
+        ({
+          type,
+          dependsOnDeliverableId,
+          description,
+          ownerSubject,
+          targetResolutionDate,
+          blocking,
+        }) => ({
+          type,
+          dependsOnDeliverableId: dependsOnDeliverableId ?? undefined,
+          description,
+          ownerSubject,
+          targetResolutionDate,
+          blocking,
+        }),
+      ),
+      assignments: deliverable.assignments.map(
+        ({ employeeId, effectiveFrom, effectiveTo, exceptionReason }) => ({
+          employeeId,
+          effectiveFrom,
+          effectiveTo,
+          exceptionReason,
+        }),
+      ),
+    })) ?? [emptyDeliverable()],
+  );
 
   const request = (): CreatePlanRequest => ({
     engagementMonthId,
@@ -124,7 +189,10 @@ function PlanBuilder({ engagementMonthId }: { engagementMonthId: string }) {
       relianceStakeholders: list(plan.relianceStakeholders),
       procurementCc: list(plan.procurementCc),
     },
-    deliverables: [{ ...deliverable, evidenceExpectations: evidenceText.trim() }],
+    deliverables: deliverables.map((deliverable) => ({
+      ...deliverable,
+      evidenceExpectations: deliverable.evidenceExpectations.trim(),
+    })),
   });
 
   function submit(event: React.FormEvent) {
@@ -268,17 +336,42 @@ function PlanBuilder({ engagementMonthId }: { engagementMonthId: string }) {
         </CardContent>
       </Card>
 
-      <DeliverableEditor
-        value={deliverable}
-        evidenceText={evidenceText}
-        errors={errors}
-        onChange={setDeliverable}
-        onEvidenceChange={setEvidenceText}
-      />
+      <div className="space-y-4">
+        {deliverables.map((deliverable, index) => (
+          <DeliverableEditor
+            key={index}
+            index={index}
+            value={deliverable}
+            errors={errors}
+            removable={deliverables.length > 1}
+            onRemove={() =>
+              setDeliverables((current) => current.filter((_, itemIndex) => itemIndex !== index))
+            }
+            onChange={(next) =>
+              setDeliverables((current) =>
+                current.map((item, itemIndex) => (itemIndex === index ? next : item)),
+              )
+            }
+          />
+        ))}
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => setDeliverables((current) => [...current, emptyDeliverable()])}
+        >
+          Add deliverable
+        </Button>
+      </div>
       <DeliveryMutationError error={mutation.error} />
       <div className="flex justify-end">
         <Button type="submit" disabled={mutation.isPending}>
-          {mutation.isPending ? "Creating…" : "Create draft"}
+          {mutation.isPending
+            ? initialPlan
+              ? "Saving…"
+              : "Creating…"
+            : initialPlan
+              ? "Save draft"
+              : "Create draft"}
         </Button>
       </div>
     </form>
@@ -286,26 +379,33 @@ function PlanBuilder({ engagementMonthId }: { engagementMonthId: string }) {
 }
 
 function DeliverableEditor({
+  index,
   value,
-  evidenceText,
   errors,
+  removable,
   onChange,
-  onEvidenceChange,
+  onRemove,
 }: {
+  index: number;
   value: DeliverableInput;
-  evidenceText: string;
   errors: FieldErrors;
+  removable: boolean;
   onChange: (value: DeliverableInput) => void;
-  onEvidenceChange: (value: string) => void;
+  onRemove: () => void;
 }) {
   const set = <K extends keyof DeliverableInput>(field: K, next: DeliverableInput[K]) =>
     onChange({ ...value, [field]: next });
-  const error = (field: string) => errors[`deliverables.0.${field}`];
+  const error = (field: string) => errors[`deliverables.${index}.${field}`];
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Deliverable</CardTitle>
+      <CardHeader className="flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-base">Deliverable {index + 1}</CardTitle>
+        {removable && (
+          <Button type="button" variant="outline" size="sm" onClick={onRemove}>
+            Remove deliverable {index + 1}
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-2">
         <TextField
@@ -399,66 +499,149 @@ function DeliverableEditor({
         </Select>
         <TextField
           label="Evidence expectations (comma-separated)"
-          value={evidenceText}
-          onChange={onEvidenceChange}
+          value={value.evidenceExpectations}
+          onChange={(next) => set("evidenceExpectations", next)}
           error={error("evidenceExpectations")}
         />
-        <TextField
-          label="Assigned employee ID"
-          value={value.assignments[0]?.employeeId ?? ""}
-          onChange={(employeeId) =>
-            set("assignments", [
-              {
-                ...(value.assignments[0] ?? {}),
-                employeeId,
-                effectiveFrom: value.assignments[0]?.effectiveFrom ?? "",
-              },
-            ])
-          }
-          error={error("assignments")}
-        />
-        <TextField
-          label="Assignment effective from"
-          type="date"
-          value={value.assignments[0]?.effectiveFrom ?? ""}
-          onChange={(effectiveFrom) =>
-            set("assignments", [
-              {
-                ...(value.assignments[0] ?? { employeeId: "" }),
-                effectiveFrom,
-              },
-            ])
-          }
-        />
+        <div className="space-y-3 rounded-md border p-3 md:col-span-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Contributor assignments</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => set("assignments", [...value.assignments, emptyAssignment()])}
+            >
+              Add assignment
+            </Button>
+          </div>
+          {value.assignments.map((assignment, assignmentIndex) => (
+            <div
+              className="grid gap-3 rounded-md border p-3 md:grid-cols-3"
+              key={assignmentIndex}
+            >
+              <TextField
+                label={`Assigned employee ID ${assignmentIndex + 1}`}
+                value={assignment.employeeId}
+                onChange={(employeeId) =>
+                  set(
+                    "assignments",
+                    value.assignments.map((item, itemIndex) =>
+                      itemIndex === assignmentIndex ? { ...item, employeeId } : item,
+                    ),
+                  )
+                }
+                error={assignmentIndex === 0 ? error("assignments") : undefined}
+              />
+              <TextField
+                label={`Assignment ${assignmentIndex + 1} effective from`}
+                type="date"
+                value={assignment.effectiveFrom}
+                onChange={(effectiveFrom) =>
+                  set(
+                    "assignments",
+                    value.assignments.map((item, itemIndex) =>
+                      itemIndex === assignmentIndex ? { ...item, effectiveFrom } : item,
+                    ),
+                  )
+                }
+              />
+              <div className="flex items-end">
+                {value.assignments.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      set(
+                        "assignments",
+                        value.assignments.filter((_, itemIndex) => itemIndex !== assignmentIndex),
+                      )
+                    }
+                  >
+                    Remove assignment {assignmentIndex + 1}
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
         <AreaField
           label="Risks and assumptions (enter None when applicable)"
           value={value.riskAndAssumptions}
           onChange={(v) => set("riskAndAssumptions", v)}
           error={error("riskAndAssumptions")}
         />
-        <AreaField
-          label="Acceptance criterion"
-          value={value.criteria[0]?.statement ?? ""}
-          onChange={(statement) => set("criteria", [{ ...value.criteria[0]!, statement }])}
-          error={error("criteria")}
-        />
-        <TextField
-          label="Criterion validation method"
-          value={value.criteria[0]?.validationMethod ?? ""}
-          onChange={(validationMethod) =>
-            set("criteria", [{ ...value.criteria[0]!, validationMethod }])
-          }
-        />
-        <TextField
-          label="Criterion expected result"
-          value={value.criteria[0]?.expectedResult ?? ""}
-          onChange={(expectedResult) =>
-            set("criteria", [{ ...value.criteria[0]!, expectedResult }])
-          }
-        />
+        <div className="space-y-3 rounded-md border p-3 md:col-span-2">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Acceptance criteria</p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => set("criteria", [...value.criteria, emptyCriterion()])}
+            >
+              Add criterion
+            </Button>
+          </div>
+          {value.criteria.map((criterion, criterionIndex) => (
+            <div className="grid gap-3 rounded-md border p-3 md:grid-cols-3" key={criterionIndex}>
+              <AreaField
+                label={`Acceptance criterion ${criterionIndex + 1}`}
+                value={criterion.statement}
+                onChange={(statement) =>
+                  set(
+                    "criteria",
+                    value.criteria.map((item, itemIndex) =>
+                      itemIndex === criterionIndex ? { ...item, statement } : item,
+                    ),
+                  )
+                }
+                error={criterionIndex === 0 ? error("criteria") : undefined}
+              />
+              <TextField
+                label={`Criterion ${criterionIndex + 1} validation method`}
+                value={criterion.validationMethod}
+                onChange={(validationMethod) =>
+                  set(
+                    "criteria",
+                    value.criteria.map((item, itemIndex) =>
+                      itemIndex === criterionIndex ? { ...item, validationMethod } : item,
+                    ),
+                  )
+                }
+              />
+              <TextField
+                label={`Criterion ${criterionIndex + 1} expected result`}
+                value={criterion.expectedResult}
+                onChange={(expectedResult) =>
+                  set(
+                    "criteria",
+                    value.criteria.map((item, itemIndex) =>
+                      itemIndex === criterionIndex ? { ...item, expectedResult } : item,
+                    ),
+                  )
+                }
+              />
+              {value.criteria.length > 1 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    set(
+                      "criteria",
+                      value.criteria.filter((_, itemIndex) => itemIndex !== criterionIndex),
+                    )
+                  }
+                >
+                  Remove criterion {criterionIndex + 1}
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
         <div className="flex items-center gap-2">
           <Checkbox
-            id="dependency-none"
+            id={`dependency-none-${index}`}
             checked={value.dependencyNoneDeclared}
             onCheckedChange={(checked) =>
               onChange({
@@ -469,93 +652,143 @@ function DeliverableEditor({
                     ? []
                     : value.dependencies.length
                       ? value.dependencies
-                      : [
-                          {
-                            type: "EXTERNAL",
-                            description: "",
-                            ownerSubject: "",
-                            targetResolutionDate: "",
-                            blocking: true,
-                          },
-                        ],
+                      : [emptyDependency()],
               })
             }
           />
-          <Label htmlFor="dependency-none">Explicitly declare no dependencies</Label>
+          <Label htmlFor={`dependency-none-${index}`}>Explicitly declare no dependencies</Label>
         </div>
         {error("dependencies") && (
           <p className="text-xs text-destructive" role="alert">
             {error("dependencies")}
           </p>
         )}
-        {!value.dependencyNoneDeclared && value.dependencies[0] && (
-          <div className="grid gap-3 rounded-md border p-3 md:col-span-2 md:grid-cols-2">
-            <Select
-              value={value.dependencies[0].type}
-              onValueChange={(type: DeliverableInput["dependencies"][number]["type"]) =>
-                set("dependencies", [{ ...value.dependencies[0]!, type }])
-              }
-            >
-              <SelectTrigger aria-label="Dependency type">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="INTERNAL">Internal deliverable</SelectItem>
-                <SelectItem value="LINEAR">Linear issue</SelectItem>
-                <SelectItem value="EXTERNAL">External</SelectItem>
-              </SelectContent>
-            </Select>
-            <TextField
-              label="Dependency description"
-              value={value.dependencies[0].description}
-              onChange={(description) =>
-                set("dependencies", [{ ...value.dependencies[0]!, description }])
-              }
-            />
-            {value.dependencies[0].type === "INTERNAL" && (
-              <TextField
-                label="Depends-on deliverable ID"
-                value={value.dependencies[0].dependsOnDeliverableId ?? ""}
-                onChange={(dependsOnDeliverableId) =>
-                  set("dependencies", [
-                    {
-                      ...value.dependencies[0]!,
-                      dependsOnDeliverableId,
-                    },
-                  ])
-                }
-              />
-            )}
-            <TextField
-              label="Dependency owner subject"
-              value={value.dependencies[0].ownerSubject}
-              onChange={(ownerSubject) =>
-                set("dependencies", [{ ...value.dependencies[0]!, ownerSubject }])
-              }
-            />
-            <TextField
-              label="Target resolution date"
-              type="date"
-              value={value.dependencies[0].targetResolutionDate}
-              onChange={(targetResolutionDate) =>
-                set("dependencies", [{ ...value.dependencies[0]!, targetResolutionDate }])
-              }
-            />
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="dependency-blocking"
-                checked={value.dependencies[0].blocking}
-                onCheckedChange={(checked) =>
-                  set("dependencies", [
-                    {
-                      ...value.dependencies[0]!,
-                      blocking: checked === true,
-                    },
-                  ])
-                }
-              />
-              <Label htmlFor="dependency-blocking">Blocking dependency</Label>
+        {!value.dependencyNoneDeclared && (
+          <div className="space-y-3 rounded-md border p-3 md:col-span-2">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium">Dependencies</p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => set("dependencies", [...value.dependencies, emptyDependency()])}
+              >
+                Add dependency
+              </Button>
             </div>
+            {value.dependencies.map((dependency, dependencyIndex) => (
+              <div
+                className="grid gap-3 rounded-md border p-3 md:grid-cols-2"
+                key={dependencyIndex}
+              >
+                <Select
+                  value={dependency.type}
+                  onValueChange={(type: DeliverableInput["dependencies"][number]["type"]) =>
+                    set(
+                      "dependencies",
+                      value.dependencies.map((item, itemIndex) =>
+                        itemIndex === dependencyIndex ? { ...item, type } : item,
+                      ),
+                    )
+                  }
+                >
+                  <SelectTrigger aria-label={`Dependency ${dependencyIndex + 1} type`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="INTERNAL">Internal deliverable</SelectItem>
+                    <SelectItem value="LINEAR">Linear issue</SelectItem>
+                    <SelectItem value="EXTERNAL">External</SelectItem>
+                  </SelectContent>
+                </Select>
+                <TextField
+                  label={`Dependency ${dependencyIndex + 1} description`}
+                  value={dependency.description}
+                  onChange={(description) =>
+                    set(
+                      "dependencies",
+                      value.dependencies.map((item, itemIndex) =>
+                        itemIndex === dependencyIndex ? { ...item, description } : item,
+                      ),
+                    )
+                  }
+                />
+                {dependency.type === "INTERNAL" && (
+                  <TextField
+                    label={`Dependency ${dependencyIndex + 1} deliverable ID`}
+                    value={dependency.dependsOnDeliverableId ?? ""}
+                    onChange={(dependsOnDeliverableId) =>
+                      set(
+                        "dependencies",
+                        value.dependencies.map((item, itemIndex) =>
+                          itemIndex === dependencyIndex
+                            ? { ...item, dependsOnDeliverableId }
+                            : item,
+                        ),
+                      )
+                    }
+                  />
+                )}
+                <TextField
+                  label={`Dependency ${dependencyIndex + 1} owner subject`}
+                  value={dependency.ownerSubject}
+                  onChange={(ownerSubject) =>
+                    set(
+                      "dependencies",
+                      value.dependencies.map((item, itemIndex) =>
+                        itemIndex === dependencyIndex ? { ...item, ownerSubject } : item,
+                      ),
+                    )
+                  }
+                />
+                <TextField
+                  label={`Dependency ${dependencyIndex + 1} target resolution date`}
+                  type="date"
+                  value={dependency.targetResolutionDate}
+                  onChange={(targetResolutionDate) =>
+                    set(
+                      "dependencies",
+                      value.dependencies.map((item, itemIndex) =>
+                        itemIndex === dependencyIndex ? { ...item, targetResolutionDate } : item,
+                      ),
+                    )
+                  }
+                />
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id={`dependency-blocking-${index}-${dependencyIndex}`}
+                    checked={dependency.blocking}
+                    onCheckedChange={(checked) =>
+                      set(
+                        "dependencies",
+                        value.dependencies.map((item, itemIndex) =>
+                          itemIndex === dependencyIndex
+                            ? { ...item, blocking: checked === true }
+                            : item,
+                        ),
+                      )
+                    }
+                  />
+                  <Label htmlFor={`dependency-blocking-${index}-${dependencyIndex}`}>
+                    Blocking dependency
+                  </Label>
+                </div>
+                {value.dependencies.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      set(
+                        "dependencies",
+                        value.dependencies.filter((_, itemIndex) => itemIndex !== dependencyIndex),
+                      )
+                    }
+                  >
+                    Remove dependency {dependencyIndex + 1}
+                  </Button>
+                )}
+              </div>
+            ))}
           </div>
         )}
         <TextField

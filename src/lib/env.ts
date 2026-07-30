@@ -13,6 +13,8 @@ const publicEnvironmentSchema = z.object({
   VITE_OIDC_LOGOUT_PATH: originRelativePath.default("/api/v1/auth/logout"),
   VITE_DEMO_MODE: z.enum(["true", "false"]).optional(),
   VITE_E2E_SYSTEM_AUTH: z.enum(["true", "false"]).optional(),
+  VITE_LOCAL_DEV_AUTH: z.enum(["true", "false"]).optional(),
+  VITE_LOCAL_DEV_ACCESS_TOKEN: z.string().trim().min(1).optional(),
 });
 
 export type PublicEnvironment = z.infer<typeof publicEnvironmentSchema>;
@@ -34,6 +36,15 @@ export function validatePublicEnvironment(
   }
   if (production && parsed.VITE_E2E_SYSTEM_AUTH === "true") {
     throw new Error("VITE_E2E_SYSTEM_AUTH must be false in production.");
+  }
+  if (
+    production &&
+    (parsed.VITE_LOCAL_DEV_AUTH === "true" ||
+      parsed.VITE_LOCAL_DEV_ACCESS_TOKEN !== undefined)
+  ) {
+    throw new Error(
+      "Local development authentication must not be configured in production.",
+    );
   }
 
   return parsed;

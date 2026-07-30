@@ -26,11 +26,18 @@ export const browserAccessTokenProvider = new MemoryAccessTokenProvider();
 
 const systemTestAuthEnabled =
   import.meta.env.DEV && import.meta.env.VITE_E2E_SYSTEM_AUTH === "true";
+const localDevelopmentAuthEnabled =
+  import.meta.env.DEV && import.meta.env.VITE_LOCAL_DEV_AUTH === "true";
 const systemTestTokenKey = "__vms_system_e2e_access_token";
 
 if (systemTestAuthEnabled && typeof window !== "undefined") {
   browserAccessTokenProvider.setAccessToken(
     window.sessionStorage.getItem(systemTestTokenKey),
+  );
+}
+if (localDevelopmentAuthEnabled) {
+  browserAccessTokenProvider.setAccessToken(
+    import.meta.env.VITE_LOCAL_DEV_ACCESS_TOKEN || null,
   );
 }
 

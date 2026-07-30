@@ -54,7 +54,7 @@ check-in p95 404ms, replay p95 69ms, 10,000-employee search p95 2ms and
 - F07/F05/F06 local-system suites pass 7/7, 4/4 and 6/6.
 - The complete browser matrix passes 274/274 after the preserved 268/274 and
   exact 7/7 rerun history.
-- Production migrations are V1–V33; V1000+ scripts are test fixtures only.
+- Production migrations are V1–V38; V1000+ scripts are test fixtures only.
 - Complete Maven R3 is **PASS**: 73 unit + 217 integration (290/290), zero
   failures/errors/skips, BUILD SUCCESS in 03:21. R2's 215/217 IT result was a
   shared test-database isolation problem; the dedicated worker database passes.

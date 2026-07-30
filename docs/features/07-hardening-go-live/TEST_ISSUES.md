@@ -3,7 +3,7 @@
 | ID | Severity | State | Issue / closure condition |
 |---|---:|---|---|
 | F07-TEST-001 | P1 | FIXED / VERIFIED | V21 Flyway-history exclusion/lock timeout passes focused upgrade evidence and definitive Maven R3. |
-| F07-TEST-002 | P1 | FIXED / VERIFIED | Split V22 ownership statements pass the production V1–V33 migration chain and definitive Maven R3. |
+| F07-TEST-002 | P1 | FIXED / VERIFIED AT RECORDED BASELINE | Split V22 ownership statements pass the then-current V1–V33 migration chain and definitive Maven R3. The current V1–V38 chain requires the new commit-bound full verification gate. |
 | F07-TEST-003 | P2 | FIXED / VERIFIED | Preserved 24/30 plus isolated Firefox 6/6; final complete browser matrix passes 274/274. |
 | F07-TEST-004 | P1 | LOCAL GATES PASS / PROVENANCE PENDING | Exact final frontend, Maven R3, browser and system gates pass; bind their outputs to the final local commit. |
 | F07-TEST-005 | P1 | ACTION_REQUIRED | Execute controlled production-like capacity and a 24-hour-or-longer soak; approve headroom. |

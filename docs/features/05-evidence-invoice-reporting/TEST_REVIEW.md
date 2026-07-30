@@ -30,3 +30,12 @@ fresh evidence for all newly added backend tests and browser cases.
 Detailed backend and frontend findings are retained in
 [TEST_ISSUES-BACKEND.md](TEST_ISSUES-BACKEND.md) and
 [TEST_ISSUES-FRONTEND.md](TEST_ISSUES-FRONTEND.md).
+
+## 2026-07-30 focused re-review
+
+Focused execution closed the dashboard DTO/full-scope aggregate defect and
+added expiry/checksum download denial evidence. It did not run a full
+repository regression. The remaining required closure is natural
+blocked-readiness exception coverage, independent commit/concurrency and
+lease-loss/restart fault injection, the updated system-browser journey,
+performance/DR, and the explicitly external provider/Procurement gates.

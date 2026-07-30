@@ -1,5 +1,13 @@
 # F02 code review
 
+## 2026-07-30 lifecycle/allocation completion review
+
+- Fixed a concurrency gap: lifecycle commands now take the employee-scoped transaction lock.
+- Fixed an archival gap: `ARCHIVED` requires an earlier `EXITED` or `DISABLED` effective version; the UI exposes access disable separately.
+- Confirmed allocation create/edit/split serialize before PostgreSQL evaluates the effective-date 100% invariant.
+- Confirmed end/split retain source rows and execute atomically with audit facts.
+- Restricted direct edits to planned allocations; effective changes must use end/split so prior days cannot be rewritten. Scheduled/future status is derived from effective dates.
+
 > Historical pre-fix review snapshot. Read the dated post-fix disposition at the
 > end of this file and [FIXES.md](FIXES.md) for current status.
 

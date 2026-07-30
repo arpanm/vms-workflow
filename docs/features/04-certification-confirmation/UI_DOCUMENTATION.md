@@ -1,5 +1,9 @@
 # F04 UI Documentation
 
+## Vendor evidence commands (2026-07-30)
+
+The vendor workspace uploads a classified file and explicitly starts scanning. Only later scan-passed safe metadata becomes selectable; bytes and object keys never enter React state. A clean saved draft may be withdrawn with a required reason.
+
 ## Routes and users
 
 | Route | User flow |

@@ -8,14 +8,21 @@ Java/PostgreSQL integration and production acceptance prove different things.
 | Lane | Command | Primary coverage |
 |---|---|---|
 | Frontend quality | `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build` | Type contracts, safe error redaction and frontend build integrity. |
-| Backend unit/integration | `mvn -B -f backend/pom.xml verify` | Flyway V1–V33, Spring Security/HTTP, PostgreSQL roles, retention/legal hold, flags/metrics, telemetry redaction, provider authority, workers, lineage and capacity. |
+| Backend unit/integration | `mvn -B -f backend/pom.xml verify` | Flyway V1–V38, Spring Security/HTTP, PostgreSQL roles, retention/legal hold, flags/metrics, telemetry redaction, provider authority, workers, lineage and capacity. |
 | Focused F07 database bootstrap | `mvn -B -f backend/pom.xml -Dit.test=F07MigrationBootstrapIT verify` | A constrained migration login upgrades a fresh database without giving runtime migration authority. |
 | Browser contract regression | `npm run e2e` | Existing product journeys plus the F07 five-browser/project accessibility matrix with deterministic intercepted APIs. |
 | Prior-feature local systems | `npm run e2e:finance:system`, `npm run e2e:migration:system` | Real local browser/Spring/Flyway/PostgreSQL regression for F05 and F06. |
 | Post-deploy aggregate | `node scripts/f07/post-deploy-regression.mjs --evidence-dir <raw-evidence>` | Re-parses current-commit machine evidence and fails unless E2E-01–10, audit/outbox and rollback integrity all pass. |
 | Harness self-test | `npm run f07:self-test` | Adversarial release evidence, path, manifest, migration, rollout and backup/restore validation. |
+| Traceability/review controls | `npm run f07:self-test` | Exact 85-task/76-test inventory; differentiated requirement/PRD/schema/API/UI/runbook/rollback policy; five required independent review dimensions and explicit open-local-P0/P1 ledger. |
 | Release/ops schemas | `npm run f07:ops:check` | Checked-in JSON/schema/runbook consistency and fail-closed local decision. |
 | Supply chain | `npm run f07:supply-chain:run` | Trivy, npm audit, Semgrep, license checks, artifacts and CycloneDX SBOMs. |
+
+The review-control self-test rejects an incorrect schema/type, a 40-character
+Git tree object used as `reviewedThroughCommit`, a reviewed commit outside the
+validated release ancestry, a missing structured closure dimension and a
+runbook fragment without an explicit anchor. Current focused results:
+`f07:self-test` **9/9 passed** and `f07:ops:check` **1/1 passed**.
 
 The GitHub workflow wraps each command in structured evidence, binds it to
 clean commit provenance and assembles a candidate manifest. The release gate
@@ -63,7 +70,7 @@ checksummed output. Preserve failed runs and append later reruns. Never relabel
 intercepted UI tests as provider/full-stack acceptance, and never generate fake
 external approvals.
 
-The canonical policy currently binds 122 of 131 local records to exact
+The canonical policy binds every local record to one or more exact
 machine-report cases. F07-T030/F07-SUP-003 are backed by a database integration
 case that searches success, retry and error responses, captured logs and
 persisted security telemetry for the full restricted corpus. E2E-06 and E2E-09

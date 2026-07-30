@@ -1,5 +1,9 @@
 # F04 Certification and Confirmation — Security Analysis
 
+## 2026-07-30 local artifact boundary
+
+The browser does not retain uploaded bytes in component or query mutation state. The server enforces a 25 MiB bound, sanitized non-public object name, immutable UUID path, extension/signature allowlisting, SHA-256 at upload and scan, executable/EICAR rejection, authorization before upload/scan, and scan-passed-only selection. PostgreSQL permits only a consistent one-way terminal scan transition, and the new trigger function is owned by the migration capability with public/worker execution revoked. Transaction rollback performs best-effort private-object cleanup; reconciliation remains the operational backstop for filesystem failure.
+
 **Review date:** 26 July 2026
 **Scope:** F04 Java/React implementation, V11 schema, configuration, F04 task/test/review evidence, and PRD 14. This is a static and test-evidence review only; no live provider, mailbox, token, database, or external-system mutation was attempted.
 

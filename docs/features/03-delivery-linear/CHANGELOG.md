@@ -1,5 +1,16 @@
 # F03 Changelog
 
+## 2026-07-30 — Complete draft and revision editor
+
+- Added repeatable deliverables, acceptance criteria, dependencies and
+  contributor assignments to the React plan builder.
+- Added a secured, tenant-scoped draft replacement API and edit route.
+- Added PostgreSQL-enforced draft optimistic locking in Flyway V39 without
+  weakening submitted/frozen/rejected evidence immutability.
+- Exposed exact configured approvers, quorum and draft `editVersion` in the
+  plan response so the editor never reconstructs authority from approval
+  actions.
+
 ## 2026-07-26 — Provider-neutral local vertical
 
 - Added delivery planning/version/baseline/approval, recorded Linear evidence,

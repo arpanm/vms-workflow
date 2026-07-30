@@ -12,6 +12,7 @@
 - [x] Independent code-review, static-analysis and security-review passes, their issue registers, and the local fixes are recorded in the F05 documentation set.
 - [x] Backend and frontend automation has been added. The finance-focused Spring/Flyway/PostgreSQL integration gate is green (**34/34**) and the isolated real-system F05 Playwright lane is green (**3/3**); evidence is recorded in `FINAL_CLOSURE_REVIEW.md` and [the feature-status ledger](../../FEATURE_STATUS.md).
 - [x] Final combined local execution is green: backend **154/154**, Vitest **88/88**, combined intercepted Playwright **69/69**, isolated system Playwright **3/3**, plus typecheck/lint/build.
+- [x] The 2026-07-30 completion audit reconciled the executable Java/React dashboard metric DTO, replaced first-page-derived dashboard totals with full authorized-scope SQL aggregates, preserved zero-versus-unavailable and live temporal semantics, and added permanent integration/system-E2E coverage. Focused evidence is recorded in `TEST_AUTOMATION.md`; older full-regression counts are not restated as fresh.
 - [ ] External provider/deployment/Procurement acceptance remains unconfigured and must not be marked complete locally.
 
 ### Checkbox convention

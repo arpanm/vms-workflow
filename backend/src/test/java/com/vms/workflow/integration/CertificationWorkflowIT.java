@@ -6,7 +6,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.dao.DataAccessException;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -22,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -35,7 +38,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
     "vms.security.issuer=https://issuer.example.test",
     "vms.security.audience=vms-api",
     "vms.certification.email-provider-status=NOT_CONFIGURED",
-    "vms.certification.object-storage-provider-status=NOT_CONFIGURED"
+    "vms.certification.object-storage-provider-status=NOT_CONFIGURED",
+    "vms.certification.local-artifact-root=target/test-artifacts"
 })
 @AutoConfigureMockMvc
 @Transactional
@@ -48,6 +52,71 @@ class CertificationWorkflowIT {
 
     @Autowired
     private JdbcTemplate jdbc;
+
+    @Test
+    void draftCanBeWithdrawnAndLocalArtifactRequiresExplicitScan() throws Exception {
+        F04TestSupport.FrozenBaseline baseline = F04TestSupport.frozenBaseline(mvc, mapper);
+        JsonNode workspace = F04TestSupport.workspace(mvc, mapper, "user-arrow");
+        JsonNode draft = F04TestSupport.saveCompleteDraft(
+            mvc, mapper, baseline, "user-arrow", workspace.path("version").asLong(),
+            "withdraw-save");
+        String submissionId = draft.path("submission").path("id").asText();
+
+        mvc.perform(post("/api/v1/certification/submissions/{id}/withdraw", submissionId)
+                .with(token("user-arrow"))
+                .header("If-Match", "1")
+                .header("Idempotency-Key", "withdraw-command")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"expectedSubmissionVersion":1,"reason":"Incorrect reporting scope"}
+                    """))
+            .andExpect(status().isOk());
+        assertEquals("WITHDRAWN", jdbc.queryForObject(
+            "SELECT status FROM delivery_submissions WHERE id = ?::uuid",
+            String.class, submissionId));
+
+        MockMultipartFile file = new MockMultipartFile(
+            "file", "acceptance.txt", "text/plain", "verified acceptance".getBytes());
+        String uploaded = mvc.perform(multipart(
+                    "/api/v1/certification/months/{monthId}/artifacts", MONTH)
+                .file(file)
+                .param("classification", "CONFIDENTIAL")
+                .with(token("user-arrow")))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.scanStatus").value("PENDING"))
+            .andReturn().getResponse().getContentAsString();
+        String artifactId = mapper.readTree(uploaded).path("id").asText();
+
+        mvc.perform(post("/api/v1/certification/artifacts/{id}/scans", artifactId)
+                .with(token("user-arrow")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.scanStatus").value("PASSED"));
+
+        MockMultipartFile eicar = new MockMultipartFile(
+            "file", "unsafe.txt", "text/plain",
+            "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE"
+                .getBytes());
+        String unsafeUpload = mvc.perform(multipart(
+                    "/api/v1/certification/months/{monthId}/artifacts", MONTH)
+                .file(eicar)
+                .param("classification", "CONFIDENTIAL")
+                .with(token("user-arrow")))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.scanStatus").value("PENDING"))
+            .andReturn().getResponse().getContentAsString();
+        mvc.perform(post("/api/v1/certification/artifacts/{id}/scans",
+                    mapper.readTree(unsafeUpload).path("id").asText())
+                .with(token("user-arrow")))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.scanStatus").value("FAILED"));
+
+        org.junit.jupiter.api.Assertions.assertThrows(DataAccessException.class, () ->
+            jdbc.update("""
+                UPDATE evidence_artifacts
+                SET classification = 'PUBLIC'
+                WHERE id = ?::uuid
+                """, artifactId));
+    }
 
     @Test
     void frozenBaselineSubmissionCertificationSummaryAndReadinessRemainExplicit()

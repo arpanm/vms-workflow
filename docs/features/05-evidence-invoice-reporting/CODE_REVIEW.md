@@ -32,3 +32,13 @@ approval. In particular, the final validation must demonstrate:
 The authoritative historical issue detail remains in
 [CODE_ISSUES.md](CODE_ISSUES.md); resolution evidence must be added only after
 the fresh run.
+
+## 2026-07-30 focused re-review
+
+The audit found one additional local contract/product defect not captured by
+the historical green counts: dashboard metric fields differed between Java and
+React, and the Java aggregate silently counted only page one. Both are fixed
+with focused PostgreSQL and React evidence. The audit did not convert the
+overall historical review to a fresh full-regression GO; natural exception
+setup, independent committed concurrency/lease-loss, performance/DR and G4
+external acceptance remain separate gates.

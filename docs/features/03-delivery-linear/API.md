@@ -1,5 +1,15 @@
 # F03 Backend API
 
+## Draft replacement
+
+`PUT /api/v1/delivery/plans/{planId}` replaces the exact current `DRAFT`
+content, including repeated deliverables, criteria, dependencies, assignments,
+approvers and recipient groups. `If-Match` carries the server-provided
+`editVersion`; a successful edit advances that lock version. Submitted,
+rejected, frozen and superseded versions remain immutable. A frozen version
+must first use the reasoned revision command, after which the cloned draft can
+be edited through this operation.
+
 All planning and administration routes require a bearer JWT and active
 organization/engagement-scoped permission. Inaccessible object IDs return the
 same sanitized `404` as unknown IDs. The provider webhook is the only public

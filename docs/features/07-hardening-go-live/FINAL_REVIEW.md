@@ -35,7 +35,7 @@ yet recorded.
 - frontend exact result: typecheck pass; lint 0 errors/6 non-blocking Fast
   Refresh warnings; Vitest 24 files/92 tests; build pass with 3,006 modules and
   a 586.90 kB largest-chunk optimization advisory; diff-check pass;
-- production Flyway schema: **V1–V33**; V1000+ remains test-fixture-only;
+- production Flyway schema: **V1–V38**; V1000+ remains test-fixture-only;
 - complete Maven verification R3: **PASS — 73 unit + 217 integration
   (290/290)**, zero failures/errors/skips, BUILD SUCCESS in 03:21;
 - complete Maven verification R4 on digest-pinned Chainguard PostgreSQL 18.4:
@@ -49,6 +49,19 @@ yet recorded.
   worker database correction passes in R3.
 - final independent Terra product review and supply-remediation re-review:
   **CLOSED**, no open P0–P3 finding.
+- release-control self-test: **PASS — 9/9**, including differentiated
+  85-task/76-test traceability and the five-dimension review evidence control.
+
+The machine-readable [review evidence](review-evidence.json) records the exact
+reviewed-through commit and scope boundary. Later commit binding, rehearsal,
+soak and external evidence remain separate gates and are not inferred from
+that review result.
+
+The record now uses typed schema `f07-review-evidence-v2`. Its validator
+requires the reviewed SHA to resolve to a Git commit object and be an ancestor
+of the release being checked. It also validates one structured local closure
+disposition per review dimension and exact traceability runbook anchors;
+Markdown keywords and SHA-shaped strings are not accepted as proof.
 
 This is strong local development evidence. It is still not production
 acceptance.

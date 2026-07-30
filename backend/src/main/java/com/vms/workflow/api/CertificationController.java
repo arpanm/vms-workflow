@@ -7,6 +7,7 @@ import com.vms.workflow.api.CertificationDtos.ClarificationRequest;
 import com.vms.workflow.api.CertificationDtos.CloseMonthInput;
 import com.vms.workflow.api.CertificationDtos.AttendanceExceptionInput;
 import com.vms.workflow.api.CertificationDtos.AttendanceExceptionView;
+import com.vms.workflow.api.CertificationDtos.ArtifactUploadView;
 import com.vms.workflow.api.CertificationDtos.ConfirmationActionRequest;
 import com.vms.workflow.api.CertificationDtos.ConfirmationRequestInput;
 import com.vms.workflow.api.CertificationDtos.ConfirmationRequestView;
@@ -33,9 +34,11 @@ import com.vms.workflow.api.CertificationDtos.ReopenDecisionView;
 import com.vms.workflow.api.CertificationDtos.ReopenRequestInput;
 import com.vms.workflow.api.CertificationDtos.SaveSubmissionRequest;
 import com.vms.workflow.api.CertificationDtos.SubmitSubmissionRequest;
+import com.vms.workflow.api.CertificationDtos.WithdrawSubmissionRequest;
 import com.vms.workflow.api.CertificationDtos.SummaryRequest;
 import com.vms.workflow.application.BusinessConfirmationService;
 import com.vms.workflow.application.CertificationOperationsService;
+import com.vms.workflow.application.CertificationArtifactService;
 import com.vms.workflow.application.CertificationPolicyService;
 import com.vms.workflow.application.CertificationReadinessService;
 import com.vms.workflow.application.CertificationReviewService;
@@ -59,6 +62,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
 
 import java.util.UUID;
 
@@ -79,6 +85,7 @@ public class CertificationController {
     private final CertificationReviewService reviews;
     private final CertificationOperationsService operations;
     private final CertificationPolicyService policies;
+    private final CertificationArtifactService artifacts;
 
     public CertificationController(
         CertificationWorkflowService workflow,
@@ -86,7 +93,8 @@ public class CertificationController {
         BusinessConfirmationService confirmation,
         CertificationReviewService reviews,
         CertificationOperationsService operations,
-        CertificationPolicyService policies
+        CertificationPolicyService policies,
+        CertificationArtifactService artifacts
     ) {
         this.workflow = workflow;
         this.readiness = readiness;
@@ -94,6 +102,7 @@ public class CertificationController {
         this.reviews = reviews;
         this.operations = operations;
         this.policies = policies;
+        this.artifacts = artifacts;
     }
 
     @GetMapping("/months/{monthId}")
@@ -158,6 +167,43 @@ public class CertificationController {
         return monthResponse(workflow.submit(
             jwt.getSubject(), submissionId, request.expectedSubmissionVersion(),
             ifMatch, idempotencyKey));
+    }
+
+    @PostMapping("/submissions/{submissionId}/withdraw")
+    @Operation(summary = "Withdraw an unsubmitted vendor draft without deleting its history")
+    public ResponseEntity<MonthCertificationView> withdraw(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID submissionId,
+        @Valid @RequestBody WithdrawSubmissionRequest request,
+        @RequestHeader("If-Match") String ifMatch,
+        @RequestHeader("Idempotency-Key") String idempotencyKey
+    ) {
+        return monthResponse(workflow.withdraw(
+            jwt.getSubject(), submissionId, request, ifMatch, idempotencyKey));
+    }
+
+    @PostMapping(
+        value = "/months/{monthId}/artifacts",
+        consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @Operation(summary = "Upload governed evidence into provider-neutral local storage")
+    public ResponseEntity<ArtifactUploadView> uploadArtifact(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID monthId,
+        @RequestParam(defaultValue = "CONFIDENTIAL") String classification,
+        @RequestPart("file") MultipartFile file
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+            .body(artifacts.upload(jwt.getSubject(), monthId, classification, file));
+    }
+
+    @PostMapping("/artifacts/{artifactId}/scans")
+    @Operation(summary = "Initiate a local provider-neutral malware scan")
+    public ResponseEntity<ArtifactUploadView> scanArtifact(
+        @AuthenticationPrincipal Jwt jwt,
+        @PathVariable UUID artifactId
+    ) {
+        return ResponseEntity.ok(artifacts.scan(jwt.getSubject(), artifactId));
     }
 
     @PostMapping("/submissions/{submissionId}/clarifications")

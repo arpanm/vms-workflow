@@ -83,9 +83,9 @@ describe("finance backend response adapters", () => {
       definitions: [{
         reportId: "INVOICE_READINESS",
         version: "v1",
-        label: "Invoice readiness",
-        formats: ["CSV", "JSON"],
-        temporalModes: ["CURRENT", "SNAPSHOT"],
+        name: "Invoice readiness",
+        availableFormats: ["CSV", "JSON"],
+        snapshotMode: "SELECTABLE",
       }],
       exports: {
         items: [{
@@ -120,6 +120,34 @@ describe("finance backend response adapters", () => {
       status: "QUEUED",
       sha256: null,
       sourceFreshness: "CURRENT",
+    });
+  });
+
+  it("[F05-UNIT-CONTRACT-004] remains compatible with the prior Java metric projection", () => {
+    const result = normalizeDashboard({
+      refreshedAt: "2026-07-27T00:00:00Z",
+      freshness: "CURRENT",
+      metrics: [{
+        metricId: "INVOICE_READINESS",
+        label: "Invoice readiness",
+        displayValue: "7",
+        unavailable: false,
+        definitionVersion: "v1",
+        policyVersion: "f05-policy-v1",
+        sourceLabel: "F05 governed facts",
+        freshness: "CURRENT",
+        temporalMode: "LIVE",
+      }],
+      queues: [],
+      permissions: [],
+    });
+
+    expect(result.metrics[0]).toMatchObject({
+      metricId: "INVOICE_READINESS",
+      label: "Invoice readiness",
+      displayValue: "7",
+      unavailable: false,
+      temporalMode: "LIVE",
     });
   });
 });

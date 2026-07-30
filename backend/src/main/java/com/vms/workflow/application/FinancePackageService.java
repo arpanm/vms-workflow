@@ -81,6 +81,20 @@ public class FinancePackageService {
             return summary(subject, replay);
         }
 
+        /*
+         * Serialize canonical package generation on the owning month before
+         * reading the current package version or probing the input hash. A
+         * SELECT ... FOR UPDATE on the latest package row is insufficient
+         * when the month has no package yet: two committed transactions could
+         * both observe version zero and race the first insert.
+         */
+        jdbc.queryForObject("""
+            SELECT id
+            FROM engagement_months
+            WHERE id = ?
+            FOR UPDATE
+            """, UUID.class, monthId);
+
         FinanceF04EvidenceResolver.HandoffEvidence source =
             f04Evidence.resolve(monthId);
         if (!source.readinessRunId().equals(readinessRunId)) {

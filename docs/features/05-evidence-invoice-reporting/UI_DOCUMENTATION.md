@@ -49,5 +49,10 @@ server-recorded approving actor and timestamp; expired cards have no approval
 control. UI permission checks are presentational only—the API authenticates the
 current actor and enforces separation of duties.
 
+Dashboard cards consume the Java metric dictionary contract directly. A
+numeric zero is shown only for an available governed metric; missing evidence
+remains visibly unavailable. Current aggregates are labeled live and cover the
+complete authorized scope rather than only the visible first page.
+
 Automated browser runtime and accessibility-depth evidence is pending; see
 [TEST_ISSUES.md](TEST_ISSUES.md).

@@ -151,12 +151,16 @@ export type PlanView = {
   engagementMonthId: string;
   currentVersionId: string;
   version: number;
+  editVersion?: number;
   state: PlanState;
   title: string;
   summary: string;
   businessOutcomes: string;
   coordinatorSubject: string;
   baselineType: BaselineType;
+  quorumMode?: CreatePlanRequest["quorumMode"];
+  quorumRequired?: number;
+  approverSubjects?: string[];
   checksum: string | null;
   priorVersionId: string | null;
   revisionReason: string | null;

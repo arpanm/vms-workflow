@@ -50,6 +50,10 @@ export const deliveryApi = {
     ),
   createPlan: (input: CreatePlanRequest) =>
     apiClient.post<PlanView>(`${deliveryPath}/plans`, input),
+  updatePlan: (planId: string, expectedVersion: number, input: CreatePlanRequest) =>
+    apiClient.put<PlanView>(`${deliveryPath}/plans/${encoded(planId)}`, input, {
+      headers: { "If-Match": String(expectedVersion) },
+    }),
   submitPlan: (planId: string) =>
     apiClient.post<PlanView>(
       `${deliveryPath}/plans/${encoded(planId)}/submit`,

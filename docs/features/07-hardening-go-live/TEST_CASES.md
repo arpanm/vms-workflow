@@ -17,7 +17,8 @@ evidence manifest.
 |---|---|---|
 | Frontend/static | **PASS** | Typecheck; lint 0 errors/6 non-blocking Fast Refresh warnings; Vitest 24 files/92 tests; build 3,006 modules with largest chunk 586.90 kB advisory; diff-check. |
 | Focused backend pre-final | **PASS — 73 unit + 45 integration** | Supporting evidence for the hardening, tenant, worker, provider and lineage cases; it is not a substitute for the complete Maven gate. |
-| F07 local-system E2E | **PASS — 7/7** | E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-07 and E2E-10 pass through local Vite/Spring Security/Flyway V1–V33/PostgreSQL boundaries. |
+| F07 local-system E2E | **PASS — 7/7** | E2E-01, E2E-02, E2E-03, E2E-04, E2E-05, E2E-07 and E2E-10 pass through local Vite/Spring Security/Flyway V1–V38/PostgreSQL boundaries. |
+| F07 release-control self-test | **PASS — 9/9** | Release, migration, rollout, DR, supply, operations, CI, differentiated traceability and five-dimension review controls pass. |
 | F05 finance local-system E2E | **PASS — 4/4** | E2E-06 and E2E-09 are covered; production Procurement, identity and provider acceptance remain external. |
 | F06 migration local-system E2E | **PASS — 6/6** | E2E-08 is covered; production scanner/storage and source-owner rehearsal remain external. |
 | Capacity | **PASS — 73 unit + 2 capacity** | F07-PERF-001/002 local thresholds pass: dashboard 101ms, check-in p95 404ms, replay p95 69ms, 10k search p95 2ms and 300k report p95 9ms. This is not production-like headroom or the ≥24-hour soak case. |

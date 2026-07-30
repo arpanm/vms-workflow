@@ -23,6 +23,7 @@ public final class WorkforceDtos {
         String firstName,
         String lastName,
         String displayName,
+        String designation,
         String workEmail,
         String employmentStatus,
         LocalDate joinDate,
@@ -32,6 +33,16 @@ public final class WorkforceDtos {
         LocalDate validFrom,
         LocalDate validTo,
         int version
+    ) {
+    }
+
+    public record EmployeeMasterRequest(
+        @NotNull LocalDate effectiveFrom,
+        @NotBlank String firstName,
+        @NotBlank String lastName,
+        @NotBlank String displayName,
+        @Size(max = 160) String designation,
+        @NotBlank @Size(max = 4_000) String reason
     ) {
     }
 
@@ -65,6 +76,30 @@ public final class WorkforceDtos {
         LocalDate validTo,
         @NotNull @DecimalMin("0.01") @DecimalMax("100.00") BigDecimal allocationPercent,
         String roleOnProject
+    ) {
+    }
+
+    public record AllocationEditRequest(
+        @NotNull LocalDate validFrom,
+        LocalDate validTo,
+        @NotNull @DecimalMin("0.01") @DecimalMax("100.00") BigDecimal allocationPercent,
+        String roleOnProject
+    ) {
+    }
+
+    public record AllocationEndRequest(
+        @NotNull LocalDate effectiveTo,
+        @NotBlank @Size(max = 4_000) String reason
+    ) {
+    }
+
+    public record AllocationSplitRequest(
+        @NotNull LocalDate splitFrom,
+        @NotNull UUID engagementId,
+        @NotNull UUID projectId,
+        @NotNull @DecimalMin("0.01") @DecimalMax("100.00") BigDecimal allocationPercent,
+        String roleOnProject,
+        @NotBlank @Size(max = 4_000) String reason
     ) {
     }
 

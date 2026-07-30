@@ -19,3 +19,15 @@ Storage/scanner/rendering, legal hold, AP/ERP, deployed grants, recovery and
 Procurement acceptance remain external test cases, not failures that local
 code can close. See `T-STOR-006`, `E2E-F05-PROVIDER-001` and
 `E2E-F05-PROVIDER-002` in [TEST_CASES.md](TEST_CASES.md).
+
+## 2026-07-30 focused disposition
+
+- Dashboard DTO and >50-row aggregate regressions are implemented and green.
+- Export expiry and checksum-mismatch download guards are implemented and green,
+  reducing `F05-TEST-004`; renderer/storage-write injection, worker restart,
+  concurrent claim and lease-loss cases remain open.
+- The permanent real-system dashboard assertion was added to
+  `E2E-F05-SYS-001`, but this audit did not rerun the system browser project.
+- Natural blocked-readiness exception setup, independent-transaction
+  concurrency, performance/DR and external acceptance remain open exactly as
+  described above.

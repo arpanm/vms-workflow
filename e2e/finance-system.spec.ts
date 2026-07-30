@@ -39,6 +39,26 @@ test("[E2E-F05-SYS-001] browser and vendor flow use real Spring, Flyway and Post
   await expect(
     page.getByRole("heading", { name: "Finance evidence workspace" }),
   ).toBeVisible();
+  await expect(
+    page.getByText("Invoice readiness", { exact: true }),
+  ).toBeVisible();
+  const dashboard = await json(
+    await request.get("/api/v1/finance/dashboard", {
+      headers: authorization(tokens.vendor),
+    }),
+    200,
+  );
+  const readinessMetric = dashboard.metrics.find(
+    (metric: { metricCode?: string }) =>
+      metric.metricCode === "INVOICE_READINESS",
+  );
+  expect(readinessMetric).toMatchObject({
+    metricCode: "INVOICE_READINESS",
+    temporalMode: "LIVE",
+  });
+  expect(["AVAILABLE", "UNAVAILABLE"]).toContain(
+    readinessMetric.availability,
+  );
   const seededMonthRow = page.getByRole("row").filter({
     has: page.getByText("Northstar / ArrowFoundry Synthetic Engagement", {
       exact: true,

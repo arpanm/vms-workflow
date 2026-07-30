@@ -1,5 +1,34 @@
 # F07 — Changelog
 
+## 2026-07-30 — review-evidence validator hardening
+
+- Advanced review evidence to the current reviewed commit and typed schema
+  `f07-review-evidence-v2`.
+- Validation now proves `reviewedThroughCommit` is a Git commit object and an
+  ancestor of the validated release, rather than accepting a SHA-shaped value.
+- Added traceability schema/type checks, exact runbook-anchor verification and
+  per-dimension structured closure dispositions linked to their review and
+  issue documents.
+- Added adversarial tests for stale schema, a Git tree masquerading as a
+  commit, missing closure dimensions and missing anchors. Corrected stale
+  traceability anchor names. Self-test passes 9/9; ops verification passes 1/1.
+
+## 2026-07-30 — traceability and review-control closure
+
+- Replaced blanket RQ-033/RQ-034/RQ-035 assignment with a machine-validated
+  85-task/76-test impact matrix covering PRD, schema, API, UI, runbook and
+  rollback consequences.
+- Bound F07-T082 and F07-REV-001 to a five-dimension review-evidence case
+  instead of treating an empty required-case list as completion evidence.
+- Made the release gate derive each record's requirement IDs from canonical
+  traceability policy and fail on missing, unknown or orphaned mappings.
+- Updated F07 architecture and automation documentation for the current
+  production Flyway V1–V38 chain while preserving historical V1–V33 execution
+  claims as historical evidence.
+- Removed the self-test's nondeterministic assumption that the shared worktree
+  must always be dirty; the assertion now compares the gate result with the
+  actual decision-time repository state.
+
 ## 2026-07-28 — active hardening/go-live worktree
 
 ### Added

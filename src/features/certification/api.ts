@@ -56,6 +56,35 @@ export const certificationApi = {
   month: (monthId: string) =>
     apiClient.get<MonthCertificationView>(`${root}/months/${encoded(monthId)}`),
 
+  uploadArtifact: (
+    monthId: string,
+    file: File,
+    classification: "PUBLIC" | "INTERNAL" | "CONFIDENTIAL" | "RESTRICTED",
+  ) => {
+    const body = new FormData();
+    body.set("file", file);
+    return apiClient.post<{
+      id: string;
+      monthId: string;
+      displayName: string;
+      classification: string;
+      scanStatus: string;
+      sizeBytes: number;
+      sha256: string;
+      recordedAt: string;
+    }>(
+      `${root}/months/${encoded(monthId)}/artifacts?classification=${encoded(classification)}`,
+      body,
+    );
+  },
+
+  scanArtifact: (artifactId: string) =>
+    apiClient.post<{
+      id: string;
+      displayName: string;
+      scanStatus: string;
+    }>(`${root}/artifacts/${encoded(artifactId)}/scans`),
+
   saveSubmission: (monthId: string, input: SaveSubmissionRequest, idempotencyKey: string) =>
     apiClient.post<MonthCertificationView>(
       `${root}/months/${encoded(monthId)}/submissions`,
@@ -68,6 +97,17 @@ export const certificationApi = {
       `${root}/submissions/${encoded(submissionId)}/submit`,
       { expectedSubmissionVersion: expectedVersion },
       { headers: mutationHeaders(expectedVersion, idempotencyKey) },
+    ),
+
+  withdraw: (
+    submissionId: string,
+    input: { expectedSubmissionVersion: number; reason: string },
+    idempotencyKey: string,
+  ) =>
+    apiClient.post<MonthCertificationView>(
+      `${root}/submissions/${encoded(submissionId)}/withdraw`,
+      input,
+      { headers: mutationHeaders(input.expectedSubmissionVersion, idempotencyKey) },
     ),
 
   requestClarification: (

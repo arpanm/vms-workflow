@@ -252,15 +252,122 @@ class MigrationWorkflowIT {
     }
 
     @Test
+    void schemaValidationRejectsIncompleteAndMalformedTemplateRows()
+        throws Exception {
+        String csv = String.join(",",
+            templates.require("03_holidays").headers())
+            + "\r\n"
+            + "1,ARROWFOUNDRY,,,Arrow Calendar,1,not-a-date,,PUBLIC,"
+            + "FULL,540,false,,governance@example.test,not-a-timestamp,"
+            + "OTHER,synthetic-holiday,\r\n";
+
+        JsonNode job = upload(
+            "03_holidays", csv, null, "invalid-holiday.csv");
+        job = validate(job);
+
+        assertEquals("READY_TO_COMMIT", job.path("state").asText());
+        assertEquals(1, job.path("invalidRows").asInt());
+        UUID jobId = UUID.fromString(job.path("id").asText());
+        assertEquals(1, count("""
+            SELECT count(*)
+            FROM migration_row_findings
+            WHERE job_id = ? AND code = 'FIELD_REQUIRED'
+              AND field_name = 'holiday_name'
+            """, jobId));
+        assertEquals(1, count("""
+            SELECT count(*)
+            FROM migration_row_findings
+            WHERE job_id = ? AND code = 'FIELD_INVALID_DATE'
+              AND field_name = 'holiday_date'
+            """, jobId));
+        assertEquals(1, count("""
+            SELECT count(*)
+            FROM migration_row_findings
+            WHERE job_id = ? AND code = 'FIELD_INVALID_TIMESTAMP'
+              AND field_name = 'represented_approval_at'
+            """, jobId));
+    }
+
+    @Test
+    void evidenceAndConditionalValidationUsesHashOnlyAndDeduplicatedFindings()
+        throws Exception {
+        String confirmationCsv = String.join(",",
+            templates.require("11_business_confirmations").headers())
+            + "\r\n"
+            + String.join(",", List.of(
+                "1", "RI-AF-2026", "2026-07", "CONF-HASH-ONLY",
+                "Historical confirmation", "request-message",
+                "2026-07-01T10:00:00Z", "owner@example.test", "",
+                "PACKAGE-V1", "CONFIRMED", "ravi@reliance.example",
+                "2026-07-02T10:00:00Z", "response-message",
+                "thread-reference", "arbitrary-name.eml", "",
+                "MANUAL_EVIDENCE", "ORIGINAL_EMAIL", "mailbox-export",
+                "HIGH", "governance@example.test", "Reviewed", ""))
+            + "\r\n";
+        JsonNode confirmation = validate(upload(
+            "11_business_confirmations", confirmationCsv, JULY,
+            "confirmation-hash-only.csv"));
+        UUID confirmationJob = UUID.fromString(
+            confirmation.path("id").asText());
+        assertEquals(1, count("""
+            SELECT count(*) FROM migration_row_findings
+            WHERE job_id = ? AND code = 'CONFIRMATION_EVIDENCE_MISSING'
+              AND field_name = 'evidence_sha256'
+            """, confirmationJob));
+
+        String invoiceCsv = String.join(",",
+            templates.require("12_invoices").headers())
+            + "\r\n"
+            + String.join(",", List.of(
+                "1", "ARROWFOUNDRY", "RELIANCE_INTELLIGENCE",
+                "RI-AF-2026", "2026-07", "INV-BAD-HASH",
+                "2026-08-01", "2026-07-01", "2026-07-31", "", "",
+                "INR", "", "", "", "invoice.pdf", "not-a-sha256",
+                "2026-08-01T10:00:00Z", "", "", "", "", "", "",
+                "OTHER", "register-row", ""))
+            + "\r\n";
+        JsonNode invoice = validate(upload(
+            "12_invoices", invoiceCsv, JULY, "invoice-bad-hash.csv"));
+        UUID invoiceJob = UUID.fromString(invoice.path("id").asText());
+        assertEquals(1, count("""
+            SELECT count(*) FROM migration_row_findings
+            WHERE job_id = ? AND code = 'FIELD_INVALID_HASH'
+              AND field_name = 'invoice_sha256'
+            """, invoiceJob));
+
+        String allocationCsv = String.join(",",
+            templates.require("02_employee_allocations").headers())
+            + "\r\n"
+            + String.join(",", List.of(
+                "1", "ARROWFOUNDRY", "AF-001", "RI-AF-2026",
+                "AGENTIC_SHOPOS", "", "2026-07-01", "", "ACTIVE",
+                "100", "Engineer", "true", "",
+                "2026-06-30T10:00:00Z", "", "OTHER",
+                "allocation-register", ""))
+            + "\r\n";
+        JsonNode allocation = validate(upload(
+            "02_employee_allocations", allocationCsv, null,
+            "allocation-conditional-approval.csv"));
+        UUID allocationJob = UUID.fromString(
+            allocation.path("id").asText());
+        assertEquals(1, count("""
+            SELECT count(*) FROM migration_row_findings
+            WHERE job_id = ? AND code = 'FIELD_REQUIRED'
+              AND field_name = 'approved_by_email'
+            """, allocationJob));
+    }
+
+    @Test
     void rawAndDailyAttendanceCannotBothOwnOneEmployeeDay()
         throws Exception {
         seedAttendancePredecessors();
         String raw = String.join(",",
             templates.require("07a_attendance_punches").headers())
             + "\r\n"
-            + "1,ARROWFOUNDRY,PUNCH-MIG-1,AF-001,IN,"
-            + "2026-07-08T09:00:00+05:30,Asia/Kolkata,OTHER,"
-            + "synthetic-raw,,,,,\r\n";
+            + "1,ARROWFOUNDRY,PUNCH-MIG-1,AF-001,CHECK_IN,"
+            + "2026-07-08T09:00:00,Asia/Kolkata,OTHER,"
+            + "synthetic-raw,,,Governed historical import,"
+            + "SYNTHETIC-EVIDENCE,\r\n";
         JsonNode rawJob = upload(
             "07a_attendance_punches", raw, null, "raw-authority.csv");
         rawJob = validate(rawJob);
@@ -435,7 +542,7 @@ class MigrationWorkflowIT {
                 + "\r\n"
                 + String.join(",", List.of(
                     "1", "ARROWFOUNDRY", "RELIANCE_INTELLIGENCE",
-                    "RI-AF-2026", "2026-07-01", "INV-MIG-ROLLBACK",
+                    "RI-AF-2026", "2026-07", "INV-MIG-ROLLBACK",
                     "2026-07-31", "2026-07-01", "2026-07-31",
                     "PO-MIG", "WO-MIG", "INR", "100", "18", "118",
                     "invoice-migration.pdf", "a".repeat(64),

@@ -66,7 +66,35 @@ class FinancePaginationIT {
                 ON CONFLICT DO NOTHING
                 """, monthId, ENGAGEMENT,
                 LocalDate.of(2010, 1, 1).plusMonths(index));
+            UUID invoiceId = UUID.nameUUIDFromBytes(
+                ("f05-dashboard-invoice-" + index)
+                    .getBytes(StandardCharsets.UTF_8));
+            LocalDate monthStart = LocalDate.of(2010, 1, 1)
+                .plusMonths(index);
+            jdbc.update("""
+                INSERT INTO invoices(
+                    id, engagement_month_id, vendor_organization_id,
+                    invoice_type, invoice_number, normalized_invoice_number,
+                    invoice_date, billing_period_start, billing_period_end,
+                    currency, status, current_version, optimistic_version,
+                    created_by_subject, correlation_id
+                ) VALUES (?, ?, '00000000-0000-0000-0000-000000000101',
+                          'PRIMARY', ?, ?, ?, ?, ?,
+                          'INR', 'SUBMITTED_TO_PROCUREMENT', 1, 1,
+                          'user-arrow', ?)
+                """, invoiceId, monthId, "DASHBOARD " + index,
+                "dashboard " + index, monthStart.plusMonths(1).minusDays(1),
+                monthStart, monthStart.plusMonths(1).minusDays(1),
+                UUID.randomUUID());
         }
+
+        JsonNode dashboard = mapper.readTree(mvc.perform(
+                get("/api/v1/finance/dashboard")
+                    .with(token("user-procurement")))
+            .andExpect(status().isOk())
+            .andReturn().getResponse().getContentAsString());
+        assertEquals(55, dashboard.path("queues").get(0).path("count").asLong(),
+            "Dashboard aggregates must cover the full authorized scope, not only the first 50-row control-tower page.");
 
         JsonNode first = mapper.readTree(mvc.perform(get(
                     "/api/v1/finance/procurement/control-tower")
@@ -106,12 +134,19 @@ class FinancePaginationIT {
                 invoice_type, invoice_number, normalized_invoice_number,
                 invoice_date, billing_period_start, billing_period_end,
                 currency, status, current_version, optimistic_version,
-                created_by_subject, correlation_id
+                note_for_invoice_id, created_by_subject,
+                created_at, updated_at, correlation_id
             ) VALUES (?, ?, '00000000-0000-0000-0000-000000000101',
-                      'PRIMARY', 'LIVE PAGE VALUE', 'live page value',
+                      'CREDIT_NOTE', 'LIVE PAGE VALUE', 'live page value',
                       '2010-01-31', '2010-01-01', '2010-01-31',
-                      'INR', 'DRAFT', 1, 1, 'user-arrow', ?)
-            """, liveInvoice, liveValueMonth, UUID.randomUUID());
+                      'INR', 'DRAFT', 1, 1, ?, 'user-arrow',
+                      '2040-01-01T00:00:00Z',
+                      '2040-01-01T00:00:00Z', ?)
+            """, liveInvoice, liveValueMonth,
+            UUID.nameUUIDFromBytes(
+                "f05-dashboard-invoice-0"
+                    .getBytes(StandardCharsets.UTF_8)),
+            UUID.randomUUID());
 
         JsonNode second = mapper.readTree(mvc.perform(get(
                     "/api/v1/finance/procurement/control-tower")

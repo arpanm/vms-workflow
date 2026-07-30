@@ -12,6 +12,7 @@ PostgreSQL. Production source-owner/rehearsal cases are explicitly external.
 - `T-MIG-004` — Salary/rate/markup/margin/payroll headers cause file-level rejection and neither raw payload, log, error detail nor canonical table contains their values.
 - `T-MIG-005` — Formula prefixes (`=`, `+`, `-`, `@`) remain inert text in preview/error exports; HTML/script/control characters are escaped or rejected.
 - `T-MIG-006` — Source file metadata is immutable and includes safe filename, MIME, size, byte hash, uploader, scope, scan status and recorded time.
+- `T-MIG-006A` — Every template's registry-owned required fields are a subset of its exact headers; missing values and malformed ISO date/month/timestamp or SHA-256 fields remain invalid staged rows with stable field-level codes and cannot reach domain-adapter execution.
 
 ## Job lifecycle, idempotency and recovery
 
@@ -103,3 +104,30 @@ the synthetic local pass counts.
 - `T-MIG-EXT-002` — Masked production rehearsal proves storage/scan capacity, operational window, backup/restore checkpoint and rollback decision.
 
 These external cases remain `ACTION_REQUIRED`; fixtures cannot close them.
+
+## 30 July schema-closure evidence
+
+`MigrationCsvParserTest` verifies all 14 registry entries have a non-empty
+required schema wholly contained by the exact header contract.
+`MigrationWorkflowIT.schemaValidationRejectsIncompleteAndMalformedTemplateRows`
+verifies `FIELD_REQUIRED`, `FIELD_INVALID_DATE` and
+`FIELD_INVALID_TIMESTAMP` against PostgreSQL. Focused result: **3 unit + 14
+integration = 17/17 passed**.
+
+## Independent-review regression cases
+
+- `T-MIG-043` — A filename without a SHA-256 cannot authorize a historical
+  business confirmation; the hash must resolve uniquely to retained,
+  scan-approved evidence in the same engagement/month.
+- `T-MIG-044` — Invoice metadata without bytes/hash creates no document
+  artifact and no synthetic byte-content hash.
+- `T-MIG-045` — Allocation approver/time values are absent together or present
+  together.
+- `T-MIG-046` — Duplicate validators persist one finding per stable
+  severity/code/field/dependency identity.
+- `T-MIG-047` — Local attendance timestamp plus validated IANA timezone
+  produces the same employee-local date at validation, authority arbitration
+  and commit.
+
+Current focused result: **3/3 unit, 15/15 workflow integration and 1/1
+all-template adapter integration tests passed**.

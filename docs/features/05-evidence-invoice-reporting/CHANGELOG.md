@@ -28,3 +28,15 @@
 
 **Not a production release tag:** performance/scale evidence and all G4
 external acceptance remain `ACTION_REQUIRED`.
+
+## 2026-07-30 — Completion audit
+
+- Reconciled the Java dashboard metric response with the React adapter.
+- Replaced first-page-derived dashboard counts with full authorized-scope
+  PostgreSQL aggregates and corrected live/unavailable semantics.
+- Added permanent Java, React and real-system E2E regressions plus expired and
+  checksum-mismatched export download guards.
+- Added a non-transactional two-worker race proving one committed export
+  artifact/event/outbox effect.
+- No schema migration was needed. External provider, Procurement and
+  production acceptance gates remain unchanged.

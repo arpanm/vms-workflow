@@ -32,6 +32,7 @@ import com.vms.workflow.api.CertificationDtos.SubmissionView;
 import com.vms.workflow.api.CertificationDtos.SummaryRequest;
 import com.vms.workflow.api.CertificationDtos.TimelineEventView;
 import com.vms.workflow.api.CertificationDtos.VendorCriterionResponse;
+import com.vms.workflow.api.CertificationDtos.WithdrawSubmissionRequest;
 import com.vms.workflow.api.CoreAdministrationDtos.ApprovalActionInput;
 import com.vms.workflow.api.CoreAdministrationDtos.ApprovalRequestView;
 import com.vms.workflow.api.DomainConflictException;
@@ -246,6 +247,60 @@ public class CertificationWorkflowService {
         recordIdempotency(subject, "SUBMIT_DELIVERY", submissionId, idempotencyKey,
             requestHash, "delivery_submission", submissionId);
         bumpMonth(submission.monthId(), "DELIVERY_SUBMITTED");
+        return workspaceView(subject, submission.monthId(),
+            authorization.requireMonthRead(subject, submission.monthId()));
+    }
+
+    @Transactional
+    public MonthCertificationView withdraw(
+        String subject,
+        UUID submissionId,
+        WithdrawSubmissionRequest request,
+        String ifMatch,
+        String idempotencyKey
+    ) {
+        authorization.requireSubmission(
+            subject, submissionId,
+            CertificationAuthorizationService.SUBMISSION_MANAGE, Party.VENDOR);
+        requireIdempotencyKey(idempotencyKey);
+        long expected = expectedVersion(ifMatch);
+        requireMatchingVersion(expected, request.expectedSubmissionVersion());
+        String requestHash = hasher.hash(Map.of(
+            "submissionId", submissionId.toString(),
+            "submissionVersion", request.expectedSubmissionVersion(),
+            "reason", request.reason())).checksum();
+        UUID prior = priorResult(subject, "WITHDRAW_DELIVERY_DRAFT", submissionId,
+            idempotencyKey, requestHash);
+        if (prior != null) {
+            SubmissionRow replayed = submission(submissionId);
+            return workspaceView(subject, replayed.monthId(),
+                authorization.requireMonthRead(subject, replayed.monthId()));
+        }
+        SubmissionRow submission = lockSubmission(submissionId);
+        if (submission.version() != expected) {
+            throw conflict("SUBMISSION_VERSION_CONFLICT",
+                "The submission version is stale.", submission.version());
+        }
+        if (!"DRAFT".equals(submission.status())) {
+            throw conflict("SUBMISSION_LOCKED",
+                "Only an unsubmitted draft can be withdrawn.", submission.version());
+        }
+        lockMonth(submission.monthId());
+        jdbc.update("""
+            UPDATE delivery_submissions
+            SET status = 'WITHDRAWN', optimistic_version = optimistic_version + 1
+            WHERE id = ?
+            """, submissionId);
+        UUID correlationId = CorrelationIdFilter.currentOrNew();
+        audit(submission.monthId(), "DELIVERY_DRAFT_WITHDRAWN", subject,
+            "delivery_submission", submissionId, submission.version(), "IN_APP",
+            request.reason(), "SUCCESS", submission.policyVersionId(), correlationId);
+        event(submission.monthId(), "delivery.submission.withdrawn.v1", subject,
+            "delivery_submission", submissionId, submission.version(), correlationId,
+            Map.of("reasonHash", requestHash));
+        recordIdempotency(subject, "WITHDRAW_DELIVERY_DRAFT", submissionId,
+            idempotencyKey, requestHash, "delivery_submission", submissionId);
+        bumpMonth(submission.monthId(), null);
         return workspaceView(subject, submission.monthId(),
             authorization.requireMonthRead(subject, submission.monthId()));
     }

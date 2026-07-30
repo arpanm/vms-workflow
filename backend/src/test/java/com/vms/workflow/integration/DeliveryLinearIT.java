@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -601,19 +602,91 @@ class DeliveryLinearIT {
                 .value(frozen.path("currentVersionId").asText()))
             .andExpect(jsonPath("$.deliverables[0].deliverableCode").value("DLV-001"))
             .andReturn().getResponse().getContentAsString());
+        JsonNode edited = json(mvc.perform(put("/api/v1/delivery/plans/{planId}", planId)
+                .with(token("user-arrow"))
+                .header("If-Match", "0")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "engagementMonthId":"%s",
+                      "title":"Revised July delivery plan",
+                      "summary":"Committed July outcomes with governed revision",
+                      "businessOutcomes":"Reliable local evidence",
+                      "coordinatorSubject":"user-arrow",
+                      "baselineType":"ON_TIME",
+                      "quorumMode":"ANY_ONE",
+                      "quorumRequired":1,
+                      "approverSubjects":["user-approver"],
+                      "recipients":{
+                        "arrowFoundry":["vendor@example.test"],
+                        "relianceStakeholders":["owner@example.test"],
+                        "procurementCc":["procurement@example.test"]
+                      },
+                      "deliverables":[{
+                        "deliverableCode":"DLV-001",
+                        "title":"Provider-neutral planning revision",
+                        "description":"Implement and edit a local durable vertical",
+                        "businessObjective":"Retain verifiable commitments",
+                        "projectId":"%s",
+                        "productOwnerSubject":"user-reliance",
+                        "vendorOwnerSubject":"user-arrow",
+                        "priority":"P1",
+                        "targetCompletionDate":"2026-07-31",
+                        "evidenceExpectations":"Automated tests and immutable snapshot",
+                        "dependencyNoneDeclared":true,
+                        "riskAndAssumptions":"No live provider configuration",
+                        "deliveryCategory":"INTEGRATION",
+                        "linkExceptionReason":"Approved local provider exception",
+                        "criteria":[{
+                          "statement":"Durable evidence is retained",
+                          "validationMethod":"Integration test",
+                          "expectedResult":"One immutable baseline",
+                          "mandatory":true
+                        },{
+                          "statement":"Draft revisions remain editable",
+                          "validationMethod":"Secured API integration test",
+                          "expectedResult":"The exact draft version is replaced",
+                          "mandatory":true
+                        }],
+                        "dependencies":[],
+                        "assignments":[{
+                          "employeeId":"%s",
+                          "effectiveFrom":"2026-07-01",
+                          "effectiveTo":"2026-07-31"
+                        }]
+                      }]
+                    }
+                    """.formatted(JULY_MONTH, PROJECT, EMPLOYEE)))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.version").value(2))
+            .andExpect(jsonPath("$.editVersion").value(1))
+            .andExpect(jsonPath("$.state").value("DRAFT"))
+            .andExpect(jsonPath("$.title").value("Revised July delivery plan"))
+            .andExpect(jsonPath("$.quorumMode").value("ANY_ONE"))
+            .andExpect(jsonPath("$.quorumRequired").value(1))
+            .andExpect(jsonPath("$.approverSubjects[0]").value("user-approver"))
+            .andExpect(jsonPath("$.deliverables[0].criteria.length()").value(2))
+            .andReturn().getResponse().getContentAsString());
+        mvc.perform(put("/api/v1/delivery/plans/{planId}", planId)
+                .with(token("user-arrow"))
+                .header("If-Match", "0")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+            .andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/delivery/plans/{planId}/revision-comparison", planId)
                 .with(token("user-arrow")))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.priorVersionId")
                 .value(frozen.path("currentVersionId").asText()))
             .andExpect(jsonPath("$.currentVersionId")
-                .value(revised.path("currentVersionId").asText()))
+                .value(edited.path("currentVersionId").asText()))
             .andExpect(jsonPath("$.priorVersion").value(1))
             .andExpect(jsonPath("$.currentVersion").value(2))
-            .andExpect(jsonPath("$.changedPlanFields").isArray())
+            .andExpect(jsonPath("$.changedPlanFields[0]").value("summary"))
+            .andExpect(jsonPath("$.changedPlanFields[1]").value("title"))
             .andExpect(jsonPath("$.addedDeliverableCount").value(0))
             .andExpect(jsonPath("$.removedDeliverableCount").value(0))
-            .andExpect(jsonPath("$.changedDeliverableCount").value(0));
+            .andExpect(jsonPath("$.changedDeliverableCount").value(1));
         assertEquals("FROZEN", jdbc.queryForObject("""
             SELECT state FROM delivery_plan_versions WHERE id = ?::uuid
             """, String.class, frozen.path("currentVersionId").asText()));

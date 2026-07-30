@@ -45,6 +45,7 @@ import { Route as DeliveryPlansPlanIdRouteImport } from './routes/delivery.plans
 import { Route as DeliveryPlansNewRouteImport } from './routes/delivery.plans.new'
 import { Route as WorkforceEmployeesIndexRouteImport } from './routes/workforce.employees.index'
 import { Route as WorkforceEmployeesEmployeeIdRouteImport } from './routes/workforce.employees.$employeeId'
+import { Route as DeliveryPlansPlanIdEditRouteImport } from './routes/delivery.plans.$planId.edit'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -237,6 +238,11 @@ const WorkforceEmployeesEmployeeIdRoute =
     path: '/workforce/employees/$employeeId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DeliveryPlansPlanIdEditRoute = DeliveryPlansPlanIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => DeliveryPlansPlanIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -268,13 +274,14 @@ export interface FileRoutesByFullPath {
   '/administration/approval-requests/$requestId': typeof AdministrationApprovalRequestsRequestIdRoute
   '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
   '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
-  '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
+  '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRouteWithChildren
   '/delivery/plans/new': typeof DeliveryPlansNewRoute
   '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
   '/administration/approval-requests/': typeof AdministrationApprovalRequestsIndexRoute
   '/certification/$monthId/': typeof CertificationMonthIdIndexRoute
   '/delivery/plans/': typeof DeliveryPlansIndexRoute
   '/workforce/employees/': typeof WorkforceEmployeesIndexRoute
+  '/delivery/plans/$planId/edit': typeof DeliveryPlansPlanIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -305,13 +312,14 @@ export interface FileRoutesByTo {
   '/administration/approval-requests/$requestId': typeof AdministrationApprovalRequestsRequestIdRoute
   '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
   '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
-  '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
+  '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRouteWithChildren
   '/delivery/plans/new': typeof DeliveryPlansNewRoute
   '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
   '/administration/approval-requests': typeof AdministrationApprovalRequestsIndexRoute
   '/certification/$monthId': typeof CertificationMonthIdIndexRoute
   '/delivery/plans': typeof DeliveryPlansIndexRoute
   '/workforce/employees': typeof WorkforceEmployeesIndexRoute
+  '/delivery/plans/$planId/edit': typeof DeliveryPlansPlanIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -344,13 +352,14 @@ export interface FileRoutesById {
   '/administration/approval-requests/$requestId': typeof AdministrationApprovalRequestsRequestIdRoute
   '/certification/$monthId/review': typeof CertificationMonthIdReviewRoute
   '/confirmation/requests/$requestId': typeof ConfirmationRequestsRequestIdRoute
-  '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRoute
+  '/delivery/plans/$planId': typeof DeliveryPlansPlanIdRouteWithChildren
   '/delivery/plans/new': typeof DeliveryPlansNewRoute
   '/workforce/employees/$employeeId': typeof WorkforceEmployeesEmployeeIdRoute
   '/administration/approval-requests/': typeof AdministrationApprovalRequestsIndexRoute
   '/certification/$monthId/': typeof CertificationMonthIdIndexRoute
   '/delivery/plans/': typeof DeliveryPlansIndexRoute
   '/workforce/employees/': typeof WorkforceEmployeesIndexRoute
+  '/delivery/plans/$planId/edit': typeof DeliveryPlansPlanIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -391,6 +400,7 @@ export interface FileRouteTypes {
     | '/certification/$monthId/'
     | '/delivery/plans/'
     | '/workforce/employees/'
+    | '/delivery/plans/$planId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -428,6 +438,7 @@ export interface FileRouteTypes {
     | '/certification/$monthId'
     | '/delivery/plans'
     | '/workforce/employees'
+    | '/delivery/plans/$planId/edit'
   id:
     | '__root__'
     | '/'
@@ -466,6 +477,7 @@ export interface FileRouteTypes {
     | '/certification/$monthId/'
     | '/delivery/plans/'
     | '/workforce/employees/'
+    | '/delivery/plans/$planId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -497,7 +509,7 @@ export interface RootRouteChildren {
   MigrationIndexRoute: typeof MigrationIndexRoute
   AdministrationApprovalRequestsRequestIdRoute: typeof AdministrationApprovalRequestsRequestIdRoute
   ConfirmationRequestsRequestIdRoute: typeof ConfirmationRequestsRequestIdRoute
-  DeliveryPlansPlanIdRoute: typeof DeliveryPlansPlanIdRoute
+  DeliveryPlansPlanIdRoute: typeof DeliveryPlansPlanIdRouteWithChildren
   DeliveryPlansNewRoute: typeof DeliveryPlansNewRoute
   WorkforceEmployeesEmployeeIdRoute: typeof WorkforceEmployeesEmployeeIdRoute
   AdministrationApprovalRequestsIndexRoute: typeof AdministrationApprovalRequestsIndexRoute
@@ -759,6 +771,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkforceEmployeesEmployeeIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/delivery/plans/$planId/edit': {
+      id: '/delivery/plans/$planId/edit'
+      path: '/edit'
+      fullPath: '/delivery/plans/$planId/edit'
+      preLoaderRoute: typeof DeliveryPlansPlanIdEditRouteImport
+      parentRoute: typeof DeliveryPlansPlanIdRoute
+    }
   }
 }
 
@@ -774,6 +793,17 @@ const CertificationMonthIdRouteChildren: CertificationMonthIdRouteChildren = {
 
 const CertificationMonthIdRouteWithChildren =
   CertificationMonthIdRoute._addFileChildren(CertificationMonthIdRouteChildren)
+
+interface DeliveryPlansPlanIdRouteChildren {
+  DeliveryPlansPlanIdEditRoute: typeof DeliveryPlansPlanIdEditRoute
+}
+
+const DeliveryPlansPlanIdRouteChildren: DeliveryPlansPlanIdRouteChildren = {
+  DeliveryPlansPlanIdEditRoute: DeliveryPlansPlanIdEditRoute,
+}
+
+const DeliveryPlansPlanIdRouteWithChildren =
+  DeliveryPlansPlanIdRoute._addFileChildren(DeliveryPlansPlanIdRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -805,7 +835,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdministrationApprovalRequestsRequestIdRoute:
     AdministrationApprovalRequestsRequestIdRoute,
   ConfirmationRequestsRequestIdRoute: ConfirmationRequestsRequestIdRoute,
-  DeliveryPlansPlanIdRoute: DeliveryPlansPlanIdRoute,
+  DeliveryPlansPlanIdRoute: DeliveryPlansPlanIdRouteWithChildren,
   DeliveryPlansNewRoute: DeliveryPlansNewRoute,
   WorkforceEmployeesEmployeeIdRoute: WorkforceEmployeesEmployeeIdRoute,
   AdministrationApprovalRequestsIndexRoute:

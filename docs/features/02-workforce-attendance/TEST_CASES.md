@@ -1,5 +1,14 @@
 # F02 — Workforce and Attendance Test Cases
 
+## Employee/allocation completion regression
+
+- `F02-EMP-LIFECYCLE-001`: create/edit/archive retains effective-dated history.
+- `F02-ALLOC-LIFECYCLE-001`: edit/end/split preserves source facts and date boundaries.
+- `F02-ALLOC-CONCURRENCY-001`: two HTTP sessions race to add 30% over an existing 50%; exactly one commits and one receives `409`.
+- `F02-UI-EMP-001`: directory/profile expose the complete employee/allocation command set.
+- `F02-EMP-ARCHIVE-001`: active-to-archived is rejected; an earlier disabled/exited version permits archive.
+- `F02-ALLOC-LIFECYCLE-002`: a planned allocation can be edited, split, and scheduled to end while preserving the source boundary.
+
 Status reflects executable automation in the current worktree, not the wider
 planned feature.
 

@@ -1,5 +1,14 @@
 # F02 API documentation
 
+## Employee and allocation lifecycle commands (2026-07-30)
+
+- `POST /api/v1/workforce/employees` creates an authorized effective-dated employee.
+- `PATCH /api/v1/workforce/employees/{employeeId}` preserves the prior employee version and starts a new master-field version.
+- `PATCH /api/v1/workforce/employees/{employeeId}/lifecycle` records archive/exit/access changes.
+- Allocation create, edit, end, and split commands live below `/employees/{employeeId}/allocations`.
+
+Every allocation mutation takes an employee-scoped PostgreSQL transaction lock. The database recomputes effective-date boundary sums and rejects a committed total above 100%, including competing sessions.
+
 All F02 endpoints are under `/api/v1`, require an authenticated bearer JWT and
 return JSON. Validation and domain failures use RFC 7807 Problem Details.
 Runtime OpenAPI is authenticated at `/v3/api-docs`; Swagger UI is authenticated

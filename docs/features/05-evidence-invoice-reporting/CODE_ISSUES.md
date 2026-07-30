@@ -27,3 +27,20 @@ Approved object storage, malware/quarantine service, renderer hardening,
 retention/legal-hold operations, deployed database grants, SSO policy,
 Procurement process approval and ERP/AP integration are external G4 evidence.
 They must stay explicitly external even after local tests pass.
+
+## 2026-07-30 completion-audit disposition
+
+- **Resolved locally — dashboard API/UI contract:** Java previously returned
+  `metricId/displayValue/unavailable` while React consumed
+  `metricCode/value/availability`. Java now publishes the executable contract,
+  React retains backward compatibility, and focused Java/React tests pass.
+- **Resolved locally — truncated dashboard aggregates:** metrics and queue
+  counts no longer derive from the first 50 tower rows. PostgreSQL aggregates
+  the complete authorized engagement set; a 55-row integration fixture passes.
+- **Still open — F05-VAL-001/F05-TEST-002 depth:** the exception state is
+  executable, but the main exception integration setup still creates its
+  blocked rule as a deterministic test fixture rather than through a naturally
+  failing readiness source. Do not claim that evidence gap closed.
+- **Still open — F05-VAL-005 depth:** independently committed competing
+  package/invoice/review/share mutations and export lease-loss/restart proof
+  remain absent. A two-worker committed export-claim race is now green.

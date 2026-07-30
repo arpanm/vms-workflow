@@ -78,6 +78,50 @@ class WorkforceAttendanceIT {
         assertEquals(2, jdbc.queryForObject(
             "SELECT COUNT(*) FROM employee_versions WHERE employee_id = ?",
             Integer.class, UUID.fromString(EMPLOYEE)));
+
+        mvc.perform(patch("/api/v1/workforce/employees/{id}/lifecycle", EMPLOYEE)
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "effectiveFrom":"2026-07-27",
+                      "employmentStatus":"ARCHIVED",
+                      "activationStatus":"DISABLED",
+                      "reason":"Archive must not combine prerequisite inactivation"
+                    }
+                    """))
+            .andExpect(status().isConflict());
+
+        mvc.perform(patch("/api/v1/workforce/employees/{id}/lifecycle", EMPLOYEE)
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "effectiveFrom":"2026-07-27",
+                      "employmentStatus":"ACTIVE",
+                      "activationStatus":"DISABLED",
+                      "reason":"Disable access before archival"
+                    }
+                    """))
+            .andExpect(status().isOk());
+
+        mvc.perform(patch("/api/v1/workforce/employees/{id}/lifecycle", EMPLOYEE)
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "effectiveFrom":"2026-07-28",
+                      "employmentStatus":"ARCHIVED",
+                      "activationStatus":"DISABLED",
+                      "reason":"Archive an earlier inactivated employee"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.employmentStatus").value("ARCHIVED"));
+
+        assertEquals(4, jdbc.queryForObject(
+            "SELECT COUNT(*) FROM employee_versions WHERE employee_id = ?",
+            Integer.class, UUID.fromString(EMPLOYEE)));
     }
 
     @Test
@@ -112,6 +156,81 @@ class WorkforceAttendanceIT {
                     """.formatted(ENGAGEMENT, PROJECT)))
             .andExpect(status().isConflict())
             .andExpect(jsonPath("$.status").value(409));
+    }
+
+    @Test
+    void plannedAllocationCanBeEditedSplitAndScheduledToEndWithoutRewritingPastDays()
+        throws Exception {
+        String created = mvc.perform(post(
+                    "/api/v1/workforce/employees/{id}/allocations", EMPLOYEE)
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "engagementId":"%s",
+                      "projectId":"%s",
+                      "validFrom":"2029-02-01",
+                      "validTo":"2029-02-28",
+                      "allocationPercent":20,
+                      "roleOnProject":"Planned contributor"
+                    }
+                    """.formatted(ENGAGEMENT, SECOND_PROJECT)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.status").value("PLANNED"))
+            .andReturn().getResponse().getContentAsString();
+        String allocationId = extractId(created);
+
+        mvc.perform(patch(
+                    "/api/v1/workforce/employees/{id}/allocations/{allocationId}",
+                    EMPLOYEE, allocationId)
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "validFrom":"2029-02-01",
+                      "validTo":"2029-02-28",
+                      "allocationPercent":25,
+                      "roleOnProject":"Updated planned contributor"
+                    }
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.allocationPercent").value(25));
+
+        String split = mvc.perform(post(
+                    "/api/v1/workforce/employees/{id}/allocations/{allocationId}/split",
+                    EMPLOYEE, allocationId)
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {
+                      "splitFrom":"2029-02-15",
+                      "engagementId":"%s",
+                      "projectId":"%s",
+                      "allocationPercent":25,
+                      "roleOnProject":"Replacement contributor",
+                      "reason":"Mid-month planned project change"
+                    }
+                    """.formatted(ENGAGEMENT, SECOND_PROJECT)))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.validFrom").value("2029-02-15"))
+            .andExpect(jsonPath("$.status").value("PLANNED"))
+            .andReturn().getResponse().getContentAsString();
+        String replacementId = extractId(split);
+
+        mvc.perform(post(
+                    "/api/v1/workforce/employees/{id}/allocations/{allocationId}/end",
+                    EMPLOYEE, replacementId)
+                .with(token("user-arrow"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"effectiveTo":"2029-02-25","reason":"Planned assignment end"}
+                    """))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.validTo").value("2029-02-25"));
+
+        assertEquals(java.time.LocalDate.of(2029, 2, 14), jdbc.queryForObject("""
+            SELECT valid_to FROM employee_project_allocations WHERE id = ?::uuid
+            """, java.time.LocalDate.class, allocationId));
     }
 
     @Test

@@ -4,7 +4,7 @@
 flowchart LR
   Browser["Vite + React browser"] -->|"Bearer JWT /api/v1"| Edge["Spring Security filters"]
   Edge --> API["Spring controllers and scoped services"]
-  API --> PG[("PostgreSQL 18 / Flyway V1–V33")]
+  API --> PG[("PostgreSQL 18 / Flyway V1–V38")]
   API --> Metrics["Low-cardinality metrics + readiness"]
   Admin["Platform administrator"] --> Bootstrap["Database role bootstrap"]
   Bootstrap --> Flyway["Dedicated migration login"]
@@ -44,11 +44,25 @@ Login roles and credentials are provisioned externally. V21 transfers owned
 objects during a quiesced controlled migration and fails quickly on lock
 contention. Forward migrations own and grant new objects explicitly.
 
-The production migration chain is V1–V33. V28 introduces delivery commitment
+The production migration chain is V1–V38. V28 introduces delivery commitment
 transport, V29 the Linear reconciliation command ledger, V30 greytHR provider
 attestation authority, V31 lineage/proxy hardening, V32 delivery-worker least
-privilege and V33 the employee-policy command tenant gate. V1000+ migrations
-exist only as test fixtures and are not part of the production schema.
+privilege, V33 the employee-policy command tenant gate, and V34–V38 the
+governed identity, workforce, replay, roster, delegation and Linear-cursor
+completion schema. V1000+ migrations exist only as test fixtures and are not
+part of the production schema.
+
+The machine-checked [traceability matrix](traceability-matrix.json) assigns
+every F07 task and test a differentiated requirement/PRD mapping plus explicit
+schema, API, UI, runbook and rollback impact. A catalog item cannot silently
+inherit all three F07 requirements.
+
+Both traceability and independent-review evidence are typed, versioned
+contracts. Review evidence binds a real Git commit object that must be an
+ancestor of the release under validation. Every review dimension has a
+structured local closure disposition linked to its exact review and issue
+documents. Runbook references must resolve to explicit anchors, not merely to
+an existing Markdown file.
 
 API deployments leave every `vms.*.worker-enabled` switch false. The three
 worker profiles are non-web, disable Flyway, enable exactly one scheduler and

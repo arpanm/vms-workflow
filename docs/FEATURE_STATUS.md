@@ -8,16 +8,20 @@ The one-page queue of all unfinished local subfeatures, active findings,
 pending tests and external gates is
 [PENDING_WORK.md](PENDING_WORK.md).
 
-**Last updated:** 2026-07-29 (integrated F01–F03 implementation)
-**Repository commit under test:** `eda3eb8` plus active F01–F03 worktree
-**Working-tree context:** F05–F07 remain locally committed at `eda3eb8`; the
-active integrated worktree adds F01 V34, F02 V35/V37, F03 V36/V38 and the F04
-inbox/operations completion. The current serialized gate passes 73 backend
-unit plus 64 focused PostgreSQL integration tests, with fresh databases
-migrated through V38. Frontend typecheck, zero-error lint, 28 files/117 Vitest
-tests and the 3,037-module production build pass; focused workforce/delivery
-browser regression passes 17/17. The SDLC manifest gate passes for all eight
-feature manifests and preserves distinct Sol codegen/Terra review models.
+**Last updated:** 2026-07-30 (integrated F01–F07 completion and local launcher)
+**Repository commit under test:** `c2d8dfb` plus the active integrated worktree
+**Working-tree context:** The integrated worktree adds F02 employee/allocation
+lifecycle completion, F03 editable delivery drafts, F04 governed artifact
+upload/scan and withdrawal, F05 aggregate/concurrency hardening, F06
+registry-driven validation, and F07 typed release evidence. Production Flyway
+migrations now run through V40. The latest stable frontend gate passes
+typecheck, 28 files/120 Vitest tests and the production build; the SDLC manifest
+gate passes all eight feature manifests and preserves distinct Sol
+codegen/Terra review models. Focused PostgreSQL evidence passes F02 24/24,
+F04 10/10, F06 19/19 and all agent-owned F03/F05 concurrency cases. The
+dynamic local launcher was browser-smoked end to end with authenticated seeded
+data and now selects/propagates PostgreSQL, JWKS, Spring and Vite ports, using a
+dedicated `vms_workflow_local` fixture database.
 Earlier complete F07 evidence (Maven 290/290, browser 274/274, system lanes and
 zero-finding supply gate) remains preserved. Live providers, production
 BFF/identity, legal/privacy decisions, production-like soak/DR/deployment and
@@ -30,12 +34,12 @@ acceptance.
 |---|---|---|---|---|---|
 | F00 Foundation | Implemented locally; external gates open | Java/PostgreSQL decision, rollback tag/plan, environment rules, feature flags, SDLC harness, local validation, Playwright harness | Staging backup references, deployed health/auth smoke, rollback rehearsal | 2 Playwright cases passing as part of the 26-case browser run; existing frontend and backend validation | None in latest local browser-contract run |
 | F01 Identity/core | Local product complete; external identity acceptance blocked | V34 administration, governed approval engine, F04 authoritative reopen bridge, immutable quorum/eligibility evidence, SoD/idempotency/database guards, OpenAPI and React flows | Real OIDC/BFF login/logout, approved provisioning and deployed acceptance remain external | **Focused PostgreSQL:** 45/45 | None in focused lanes |
-| F02 Workforce/attendance | Local product complete; external provider gates open | V35 administration plus V37 versioned shift policy/assignment, overnight and split-session enforcement, exact roster readiness/snapshots and roster-bound close; complete manager/self UI | Real greytHR, production IdP and controlled staging/load acceptance | **Focused:** administration 4/4 + attendance 22/22; browser 8/8 | None in focused lanes |
-| F03 Delivery/Linear | Local product complete; external provider gates open | V36 operations plus V38 delegated approval evidence/quorum de-duplication and bounded cursor reconciliation checkpoints/retries/partial-error handling; complete operator UI | Exhaustive perimeter/failure-injection expansion; live Linear/mail and controlled acceptance | **Focused:** PostgreSQL 19/19; browser 9/9 | None in focused lanes |
-| F04 Certification/confirmation | Local provider-neutral product complete; release acceptance blocked | V11–V13 workflows plus server-scoped cross-month inboxes, notification/reminder/F05-handoff operations health, exact-version replay and actionable React landing pages | Live sender/mailbox/storage, production grants/SSO/provider/F05 consumer and deployed acceptance | New operations PostgreSQL 1/1; frontend focused 6/6 | None in focused lanes |
+| F02 Workforce/attendance | Local product complete; external provider gates open | V35/V37 administration plus employee create/effective edit/disable/archive and serialized allocation create/edit/end/split lifecycle; overnight/split-session and roster-bound close; manager/self UI | Real greytHR, production IdP and controlled staging/load acceptance | **Latest focused:** 24/24 including two-session concurrency | None in focused lanes |
+| F03 Delivery/Linear | Local product complete; external provider gates open | V36/V38 plus V39 repeatable deliverables/criteria/dependencies/assignments, guarded editable drafts and cloned revisions; delegated approval/replay and bounded reconciliation operator UI | Live Linear/mail and controlled acceptance | Focused PostgreSQL and 25/25 delivery frontend tests pass | None in focused lanes |
+| F04 Certification/confirmation | Local provider-neutral product complete; release acceptance blocked | V11–V13 plus V40 exact-version withdrawal and private governed multipart evidence storage/metadata/hash/scan transitions; cross-month operations UI | Live sender/mailbox/object storage/scanner, production grants/SSO/provider/F05 consumer and deployed acceptance | **Latest focused:** 10/10 PostgreSQL | None in focused lanes |
 | F05 Evidence/invoice/reporting | Implemented and locally quality-gated; release acceptance blocked | Flyway V14–V16 finance schema, scoped APIs/OpenAPI, immutable exact invoice/package lineage, private storage/scan/render adapters, package/invoice/Procurement/payment/report/export workflows, React finance workspaces, SDLC/API/UI/runbook docs, independent review fixes, full local quality gate | Production provider/deployment/Procurement acceptance and production-like scale approval | **Full backend:** 154/154 (11 unit + 143 integration); **frontend:** typecheck, build and 88/88 Vitest; **browser:** 69/69 combined Playwright; **current system:** 4/4 isolated Spring/Flyway/PostgreSQL | No failing local quality-gate test; external performance/scale and G4 are ACTION_REQUIRED |
 | F06 Historical migration | Implemented and locally quality-gated; production cutover blocked | Flyway V17–V20, 14 templates and authoritative domain adapters, secure staged upload/scan/parse/validate, dependency/duplicate controls, exact reconciliation, server-derived dual SoD, immutable partial policy, atomic commit/provenance/compensation, rejected-only reprocess, retro workflow, signed pagination, recovery metrics/worker, Migration Center and complete SDLC/API/UI/runbook artifacts | Approved production scanner/storage, controlled 100k-row capacity evidence, source-owner mapping/sign-off, backup/restore checkpoint and masked rehearsal | **Backend:** 172/172 (14 unit + 158 integration); **frontend:** typecheck/build and 90/90 Vitest; **browser:** 74/74 intercepted; **system:** 6/6 real local journeys | None in final local gates; external cutover prerequisites remain |
-| F07 Hardening/go-live | Local engineering/review/commit evidence complete; production blocked | 85-task/76-case catalogs; production Flyway V1–V33; DB/worker least privilege; retention/legal hold; feature flags; HTTP/security and telemetry controls; provider authority/lineage; capacity/accessibility; bounded release/DR/supply-chain harness; clean-commit migration/supply evidence | External production gates only | Frontend **92/92** plus static/build; focused backend **73+45**; capacity **73+2**; systems **7/7, 4/4, 6/6**; browser **274/274**; Maven R3/R4 **290/290**; exact supply gate zero findings; Terra reviews no P0–P3; clean evidence bound to `eda3eb8` | No failing current local regression/review lane. Production provider/legal/identity/deployment/soak/DR/manual/UAT approval remains `ACTION_REQUIRED / NO-GO`. |
+| F07 Hardening/go-live | Local engineering/review evidence complete; production blocked | 85-task/76-case typed traceability; real Git commit/ancestry validation; exact runbook anchors and structured closure dispositions; DB/worker least privilege, retention/legal hold, flags, telemetry, capacity and release/DR/supply-chain harness | External production gates only | Existing complete evidence retained; latest self-test **9/9**, operations check **1/1**, frontend **120/120** | No failing current focused lane. Production provider/legal/identity/deployment/soak/DR/manual/UAT approval remains `ACTION_REQUIRED / NO-GO`. |
 
 ## Open issues and blockers
 

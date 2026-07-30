@@ -22,6 +22,18 @@ describe("validatePublicEnvironment", () => {
     ).toThrow("VITE_E2E_SYSTEM_AUTH must be false in production");
   });
 
+  it("rejects local development authentication in production", () => {
+    expect(() =>
+      validatePublicEnvironment({ VITE_LOCAL_DEV_AUTH: "true" }, true),
+    ).toThrow("Local development authentication must not be configured");
+    expect(() =>
+      validatePublicEnvironment(
+        { VITE_LOCAL_DEV_ACCESS_TOKEN: "must-not-be-bundled" },
+        true,
+      ),
+    ).toThrow("Local development authentication must not be configured");
+  });
+
   it("accepts explicit OIDC paths without browser secrets", () => {
     expect(
       validatePublicEnvironment(

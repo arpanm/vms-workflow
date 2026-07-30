@@ -768,26 +768,58 @@ public class FinanceGovernanceService {
     }
 
     public Map<String, Object> dashboard(String subject) {
-        Map<String, Object> tower = controlTower(subject);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> rowPage =
-            (Map<String, Object>) tower.get("rows");
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> rows =
-            (List<Map<String, Object>>) rowPage.get("items");
-        long ready = rows.stream().filter(row ->
-            "READY".equals(readinessCellState(row))).count();
-        long review = rows.stream().filter(row ->
-            Set.of("SUBMITTED_TO_PROCUREMENT", "PROCUREMENT_REVIEW")
-                .contains(invoiceCellState(row))).count();
-        long payment = rows.stream().filter(row ->
-            paymentCellPresent(row)).count();
+        List<UUID> engagements = authorizedEngagements(
+            subject, "finance.read");
+        if (engagements.isEmpty()) {
+            throw new EntityNotFoundException("Finance scope not found.");
+        }
+        DashboardCounts counts = jdbc.query("""
+            SELECT
+                COUNT(*) FILTER (
+                    WHERE tower.readiness_status LIKE 'PASS%'
+                       OR tower.readiness_status =
+                          'EXCEPTION_ACCEPTED_BY_PROCUREMENT'
+                ),
+                COUNT(*) FILTER (WHERE tower.readiness_status IS NOT NULL),
+                COUNT(*) FILTER (
+                    WHERE EXISTS (
+                        SELECT 1
+                        FROM effective_f05_certification_handoffs handoff
+                        WHERE handoff.engagement_month_id =
+                              tower.engagement_month_id
+                          AND handoff.effective_status <> 'INVALIDATED'
+                    )
+                ),
+                COUNT(*) FILTER (
+                    WHERE EXISTS (
+                        SELECT 1
+                        FROM f05_certification_handoffs handoff
+                        WHERE handoff.engagement_month_id =
+                              tower.engagement_month_id
+                    )
+                ),
+                COUNT(*) FILTER (WHERE tower.payment_status IS NOT NULL),
+                COUNT(*) FILTER (
+                    WHERE tower.invoice_status IN (
+                        'SUBMITTED_TO_PROCUREMENT', 'PROCUREMENT_REVIEW'
+                    )
+                ),
+                COUNT(*) FILTER (WHERE tower.reopened_or_invalidated)
+            FROM f05_control_tower tower
+            WHERE tower.engagement_id = ANY (?::uuid[])
+            """, rs -> rs.next() ? new DashboardCounts(
+                rs.getLong(1), rs.getLong(2), rs.getLong(3),
+                rs.getLong(4), rs.getLong(5), rs.getLong(6),
+                rs.getLong(7)) : new DashboardCounts(0, 0, 0, 0, 0, 0, 0),
+            (Object) engagements.toArray(UUID[]::new));
         List<Map<String, Object>> definitions = metricDefinitions();
         List<Map<String, Object>> metrics = List.of(
-            metric(definitions, "INVOICE_READINESS", ready),
+            metric(definitions, "INVOICE_READINESS", counts.ready(),
+                counts.readinessEvaluated() > 0),
             metric(definitions, "CONFIRMATION_COMPLETION",
-                rows.stream().filter(row -> !isStale(row)).count()),
-            metric(definitions, "PAYMENT_STATUS", payment));
+                counts.confirmed(), counts.confirmationRecorded() > 0),
+            metric(definitions, "PAYMENT_STATUS", counts.payment(),
+                counts.payment() > 0));
         return map(
             "personaLabel", "Scoped finance and Procurement",
             "refreshedAt", OffsetDateTime.now(clock),
@@ -795,13 +827,13 @@ public class FinanceGovernanceService {
             "metrics", metrics,
             "queues", List.of(
                 queue("PROCUREMENT_REVIEW", "Awaiting Procurement review",
-                    review, "/finance/procurement"),
+                    counts.review(), "/finance/procurement"),
                 queue("REOPENED", "Reopened or invalidated",
-                    rows.stream().filter(this::isStale).count(),
+                    counts.reopened(),
                     "/finance/procurement"),
                 queue("PAYMENT", "Payment status available",
-                    payment, "/finance/invoices")),
-            "permissions", tower.get("permissions"));
+                    counts.payment(), "/finance/invoices")),
+            "permissions", governancePermissions(subject, engagements));
     }
 
     public Map<String, Object> reports(String subject) {
@@ -1861,26 +1893,6 @@ public class FinanceGovernanceService {
         return map("type", type, "id", id);
     }
 
-    private String readinessCellState(Map<String, Object> row) {
-        String value = String.valueOf(row.get("readiness"));
-        return value.startsWith("PASS") ? "READY" : value;
-    }
-
-    private String invoiceCellState(Map<String, Object> row) {
-        Object value = row.get("invoiceState");
-        return value == null ? "UNAVAILABLE" : value.toString();
-    }
-
-    private boolean paymentCellPresent(Map<String, Object> row) {
-        Object value = row.get("paymentStatus");
-        return value != null && !"null".equals(value);
-    }
-
-    private boolean isStale(Map<String, Object> row) {
-        return Boolean.TRUE.equals(row.get("reopenedOrInvalidated"))
-            || "STALE".equals(row.get("freshness"));
-    }
-
     private List<Map<String, Object>> metricDefinitions() {
         return jdbc.query("""
             SELECT metric_code, version, display_name, definition,
@@ -1902,24 +1914,25 @@ public class FinanceGovernanceService {
     private Map<String, Object> metric(
         List<Map<String, Object>> definitions,
         String code,
-        long value
+        long value,
+        boolean available
     ) {
         Map<String, Object> definition = definitions.stream()
             .filter(item -> code.equals(item.get("metricCode")))
             .findFirst()
             .orElse(map("metricCode", code, "displayName", code));
         Map<String, Object> result = new LinkedHashMap<>(definition);
-        result.put("metricId", code);
-        result.put("label", definition.getOrDefault("displayName", code));
-        result.put("displayValue", Long.toString(value));
-        result.put("unavailable", false);
-        result.put("definitionVersion",
-            "v" + definition.getOrDefault("version", 1));
+        result.put("metricCode", code);
+        result.put("displayName",
+            definition.getOrDefault("displayName", code));
+        result.put("value", available ? value : null);
+        result.put("availability", available ? "AVAILABLE" : "UNAVAILABLE");
+        result.put("version", definition.getOrDefault("version", 1));
         result.put("policyVersion", "f05-policy-v1");
         result.put("sourceLabel",
             definition.getOrDefault("sourceLabel", "F05 governed facts"));
         result.put("freshness", "CURRENT");
-        result.put("temporalMode", "SNAPSHOT");
+        result.put("temporalMode", "LIVE");
         result.put("refreshedAt", OffsetDateTime.now(clock));
         return result;
     }
@@ -2105,6 +2118,17 @@ public class FinanceGovernanceService {
         long optimisticVersion,
         String status,
         String createdBySubject
+    ) {
+    }
+
+    private record DashboardCounts(
+        long ready,
+        long readinessEvaluated,
+        long confirmed,
+        long confirmationRecorded,
+        long payment,
+        long review,
+        long reopened
     ) {
     }
 

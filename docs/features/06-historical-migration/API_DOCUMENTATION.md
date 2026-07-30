@@ -27,6 +27,16 @@ existing job also require `If-Match`.
 | `POST /reconciliations/{id}/sign-offs` | Bind a server-derived authority and explicit decision to the exact report hash |
 | `POST /retro-requests` | Current-time historical approval request |
 
+Every item returned by `GET /templates` includes `requiredFields` alongside
+headers, natural keys, dependencies and checksums. `POST /jobs/{id}/validate`
+uses that same registry contract and emits row findings such as
+`FIELD_REQUIRED`, `FIELD_INVALID_DATE`, `FIELD_INVALID_TIMESTAMP` and
+`FIELD_INVALID_HASH`; malformed rows are never deferred to commit-time adapter
+exceptions. Conditional fields follow the template semantics (for example,
+supersession evidence and represented approval data), and absent optional
+invoice hashes are disclosed as `UNVERIFIED_METADATA_ONLY` in the immutable
+version manifest.
+
 Typed errors include `MIGRATION_TEMPLATE_UNKNOWN`,
 `MIGRATION_HEADER_MISMATCH`, `MIGRATION_PROHIBITED_COLUMN`,
 `MIGRATION_DEPENDENCY_MISSING`, `MIGRATION_DUPLICATE_CONFLICT`,
@@ -46,3 +56,16 @@ it claims only expired scan/parse/validation work with PostgreSQL
 authority. Micrometer exposes low-cardinality migration operation/outcome,
 duration, row throughput, scan, retry/dead-letter, oldest-job,
 pending-scan, reconciliation-mismatch and authorization-denial measurements.
+
+## Independent-review contract closure
+
+- Business-confirmation decisions require `evidence_sha256`. Commit resolves
+  it uniquely to retained, scan-approved evidence in the same
+  engagement/month. A filename is only an optional additional match. The
+  resolved artifact ID and hash are stored on the confirmation action.
+- Allocation `approved_by_email` and `represented_approval_at` are optional
+  only as an atomic pair.
+- A metadata-only invoice has no `documentArtifactId`; filename and source
+  metadata are never transformed into a byte `content_hash`.
+- Attendance timestamps accept either ISO offset/UTC form or an ISO local
+  date-time accompanied by the template's validated IANA `timezone`.
