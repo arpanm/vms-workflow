@@ -24,6 +24,8 @@ import {
   GitPullRequestArrow,
   CalendarSync,
   CircleHelp,
+  ListTodo,
+  UserRoundPlus,
 } from "lucide-react";
 
 import {
@@ -53,6 +55,16 @@ const nav: Array<{
   permission?: PermissionRequirement;
 }> = [
   {
+    title: "Client work items",
+    url: "/work-items",
+    icon: ListTodo,
+    group: "Delivery",
+    legacy: false,
+    workforce: false,
+    delivery: false,
+    permission: "workitem.read",
+  },
+  {
     title: "Dashboard",
     url: "/",
     icon: LayoutDashboard,
@@ -60,6 +72,16 @@ const nav: Array<{
     legacy: false,
     workforce: false,
     delivery: false,
+  },
+  {
+    title: "Client onboarding",
+    url: "/administration/clients",
+    icon: UserRoundPlus,
+    group: "Administration",
+    legacy: false,
+    workforce: false,
+    delivery: false,
+    permission: "client.onboard",
   },
   {
     title: "Engagements",

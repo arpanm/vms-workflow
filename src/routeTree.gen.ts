@@ -18,7 +18,9 @@ import { Route as RequirementsRouteImport } from './routes/requirements'
 import { Route as ScopeRouteImport } from './routes/scope'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as UatRouteImport } from './routes/uat'
+import { Route as WorkItemsRouteImport } from './routes/work-items'
 import { Route as AdministrationApprovalPoliciesRouteImport } from './routes/administration.approval-policies'
+import { Route as AdministrationClientsRouteImport } from './routes/administration.clients'
 import { Route as AdministrationContactGroupsRouteImport } from './routes/administration.contact-groups'
 import { Route as AdministrationEngagementsRouteImport } from './routes/administration.engagements'
 import { Route as AdministrationMonthsRouteImport } from './routes/administration.months'
@@ -93,12 +95,22 @@ const UatRoute = UatRouteImport.update({
   path: '/uat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const WorkItemsRoute = WorkItemsRouteImport.update({
+  id: '/work-items',
+  path: '/work-items',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdministrationApprovalPoliciesRoute =
   AdministrationApprovalPoliciesRouteImport.update({
     id: '/administration/approval-policies',
     path: '/administration/approval-policies',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AdministrationClientsRoute = AdministrationClientsRouteImport.update({
+  id: '/administration/clients',
+  path: '/administration/clients',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdministrationContactGroupsRoute =
   AdministrationContactGroupsRouteImport.update({
     id: '/administration/contact-groups',
@@ -260,7 +272,9 @@ export interface FileRoutesByFullPath {
   '/scope': typeof ScopeRoute
   '/support': typeof SupportRoute
   '/uat': typeof UatRoute
+  '/work-items': typeof WorkItemsRoute
   '/administration/approval-policies': typeof AdministrationApprovalPoliciesRoute
+  '/administration/clients': typeof AdministrationClientsRoute
   '/administration/contact-groups': typeof AdministrationContactGroupsRoute
   '/administration/engagements': typeof AdministrationEngagementsRoute
   '/administration/months': typeof AdministrationMonthsRoute
@@ -300,7 +314,9 @@ export interface FileRoutesByTo {
   '/scope': typeof ScopeRoute
   '/support': typeof SupportRoute
   '/uat': typeof UatRoute
+  '/work-items': typeof WorkItemsRoute
   '/administration/approval-policies': typeof AdministrationApprovalPoliciesRoute
+  '/administration/clients': typeof AdministrationClientsRoute
   '/administration/contact-groups': typeof AdministrationContactGroupsRoute
   '/administration/engagements': typeof AdministrationEngagementsRoute
   '/administration/months': typeof AdministrationMonthsRoute
@@ -340,7 +356,9 @@ export interface FileRoutesById {
   '/scope': typeof ScopeRoute
   '/support': typeof SupportRoute
   '/uat': typeof UatRoute
+  '/work-items': typeof WorkItemsRoute
   '/administration/approval-policies': typeof AdministrationApprovalPoliciesRoute
+  '/administration/clients': typeof AdministrationClientsRoute
   '/administration/contact-groups': typeof AdministrationContactGroupsRoute
   '/administration/engagements': typeof AdministrationEngagementsRoute
   '/administration/months': typeof AdministrationMonthsRoute
@@ -382,7 +400,9 @@ export interface FileRouteTypes {
     | '/scope'
     | '/support'
     | '/uat'
+    | '/work-items'
     | '/administration/approval-policies'
+    | '/administration/clients'
     | '/administration/contact-groups'
     | '/administration/engagements'
     | '/administration/months'
@@ -422,7 +442,9 @@ export interface FileRouteTypes {
     | '/scope'
     | '/support'
     | '/uat'
+    | '/work-items'
     | '/administration/approval-policies'
+    | '/administration/clients'
     | '/administration/contact-groups'
     | '/administration/engagements'
     | '/administration/months'
@@ -461,7 +483,9 @@ export interface FileRouteTypes {
     | '/scope'
     | '/support'
     | '/uat'
+    | '/work-items'
     | '/administration/approval-policies'
+    | '/administration/clients'
     | '/administration/contact-groups'
     | '/administration/engagements'
     | '/administration/months'
@@ -502,7 +526,9 @@ export interface RootRouteChildren {
   ScopeRoute: typeof ScopeRoute
   SupportRoute: typeof SupportRoute
   UatRoute: typeof UatRoute
+  WorkItemsRoute: typeof WorkItemsRoute
   AdministrationApprovalPoliciesRoute: typeof AdministrationApprovalPoliciesRoute
+  AdministrationClientsRoute: typeof AdministrationClientsRoute
   AdministrationContactGroupsRoute: typeof AdministrationContactGroupsRoute
   AdministrationEngagementsRoute: typeof AdministrationEngagementsRoute
   AdministrationMonthsRoute: typeof AdministrationMonthsRoute
@@ -595,11 +621,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/work-items': {
+      id: '/work-items'
+      path: '/work-items'
+      fullPath: '/work-items'
+      preLoaderRoute: typeof WorkItemsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/administration/approval-policies': {
       id: '/administration/approval-policies'
       path: '/administration/approval-policies'
       fullPath: '/administration/approval-policies'
       preLoaderRoute: typeof AdministrationApprovalPoliciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/administration/clients': {
+      id: '/administration/clients'
+      path: '/administration/clients'
+      fullPath: '/administration/clients'
+      preLoaderRoute: typeof AdministrationClientsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/administration/contact-groups': {
@@ -835,7 +875,9 @@ const rootRouteChildren: RootRouteChildren = {
   ScopeRoute: ScopeRoute,
   SupportRoute: SupportRoute,
   UatRoute: UatRoute,
+  WorkItemsRoute: WorkItemsRoute,
   AdministrationApprovalPoliciesRoute: AdministrationApprovalPoliciesRoute,
+  AdministrationClientsRoute: AdministrationClientsRoute,
   AdministrationContactGroupsRoute: AdministrationContactGroupsRoute,
   AdministrationEngagementsRoute: AdministrationEngagementsRoute,
   AdministrationMonthsRoute: AdministrationMonthsRoute,

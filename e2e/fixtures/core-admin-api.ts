@@ -25,6 +25,7 @@ const engagements = {
       startDate: "2026-06-01",
       endDate: null,
       status: "ACTIVE",
+      defaultProjectId: "project-a",
     },
   ],
   "org-b": [
@@ -39,6 +40,7 @@ const engagements = {
       startDate: "2026-07-01",
       endDate: null,
       status: "ACTIVE",
+      defaultProjectId: "project-b",
     },
   ],
 } as const;
@@ -79,6 +81,20 @@ const allPermissions = [
   "approval.request.act",
   "delegation.manage",
   "month.transition",
+  "client.onboard",
+  "client.user.manage",
+  "workitem.read",
+  "workitem.create",
+  "workitem.update",
+  "workitem.assign",
+  "workitem.comment",
+  "workitem.estimate",
+  "workitem.effort",
+  "workitem.plan.approve",
+  "workitem.delivery.update",
+  "workitem.delivery.approve.l1",
+  "workitem.delivery.approve.l2",
+  "workitem.bulk.import",
 ];
 
 function json(route: Route, body: unknown, status = 200) {
@@ -166,6 +182,56 @@ export async function mockCoreAdminApi(
     stages: policy.stages,
     actions: [] as Array<Record<string, unknown>>,
   };
+  let workItems: Array<Record<string, unknown>> = [
+    {
+      id: "work-item-1",
+      engagementId: "eng-a",
+      projectId: "project-a",
+      engagementMonthId: "month-a",
+      monthStartDate: "2026-07-01",
+      workItemCode: "CLIENT_TASK_001",
+      title: "Client collaboration workspace",
+      description: "Deliver the requested collaboration flow",
+      workflowDescription: "Plan, build, test and approve",
+      acceptanceCriteria: "All persona flows pass",
+      priority: "P1",
+      stackRank: 1,
+      lifecycleStatus: "IN_PROGRESS",
+      deliverySummary: "Implementation in progress",
+      createdOnBehalfOfClient: false,
+      version: 0,
+      createdBySubject: "oidc|client",
+      createdAt: "2026-07-29T08:00:00Z",
+      updatedAt: "2026-07-29T09:00:00Z",
+      totalEstimateHours: 8,
+      totalEffortHours: 3,
+      links: [
+        {
+          id: "link-1",
+          linkType: "PRD",
+          label: "Product requirement",
+          url: "https://docs.example.test/prd",
+          createdBySubject: "oidc|client",
+          createdAt: "2026-07-29T08:00:00Z",
+        },
+      ],
+      assignments: [
+        {
+          id: "assignment-1",
+          userProfileId: "admin-user",
+          displayName: "Admin User",
+          email: "admin@example.invalid",
+          discipline: "DEVELOPER",
+          status: "ACTIVE",
+          assignedAt: "2026-07-29T08:00:00Z",
+        },
+      ],
+      comments: [],
+      estimates: [],
+      efforts: [],
+      approvals: [],
+    },
+  ];
 
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
@@ -210,6 +276,102 @@ export async function mockCoreAdminApi(
     if (url.pathname === "/api/v1/engagement-months") {
       const engagementId = url.searchParams.get("engagementId") ?? "eng-a";
       await json(route, months[engagementId as keyof typeof months] ?? []);
+      return;
+    }
+    if (url.pathname === "/api/v1/collaboration/work-items") {
+      if (method === "POST") {
+        const created = {
+          ...workItems[0],
+          ...body,
+          id: `work-item-${workItems.length + 1}`,
+          version: 0,
+          stackRank: null,
+          deliverySummary: null,
+          totalEstimateHours: 0,
+          totalEffortHours: 0,
+          links: body?.links ?? [],
+          assignments: body?.assignments ?? [],
+          comments: [],
+          estimates: [],
+          efforts: [],
+          approvals: [],
+        };
+        workItems = [...workItems, created];
+        await json(route, created, 201);
+        return;
+      }
+      await json(route, workItems);
+      return;
+    }
+    if (url.pathname === "/api/v1/collaboration/work-items/bulk" && method === "POST") {
+      const rows = body as unknown as Array<Record<string, unknown>>;
+      const created = rows.map((row, index) => ({
+        ...workItems[0],
+        ...row,
+        id: `work-item-bulk-${index + 1}`,
+        version: 0,
+        stackRank: null,
+        deliverySummary: null,
+        totalEstimateHours: 0,
+        totalEffortHours: 0,
+        links: row.links ?? [],
+        assignments: row.assignments ?? [],
+        comments: [],
+        estimates: [],
+        efforts: [],
+        approvals: [],
+      }));
+      workItems = [...workItems, ...created];
+      await json(route, created, 201);
+      return;
+    }
+    if (/\/api\/v1\/collaboration\/work-items\/[^/]+\/comments$/.test(url.pathname)) {
+      const id = url.pathname.split("/").at(-2);
+      workItems = workItems.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              comments: [
+                ...((item.comments as Array<Record<string, unknown>>) ?? []),
+                {
+                  id: "comment-new",
+                  body: body?.body,
+                  authorSubject: "oidc|admin",
+                  mentionedUserIds: body?.mentionedUserIds ?? [],
+                  createdAt: "2026-07-29T10:00:00Z",
+                },
+              ],
+            }
+          : item,
+      );
+      await json(route, workItems.find((item) => item.id === id), 201);
+      return;
+    }
+    if (/\/api\/v1\/collaboration\/work-items\/[^/]+\/delivery-status$/.test(url.pathname)) {
+      const id = url.pathname.split("/").at(-2);
+      workItems = workItems.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              lifecycleStatus: body?.lifecycleStatus,
+              deliverySummary: body?.deliverySummary,
+              version: Number(item.version) + 1,
+            }
+          : item,
+      );
+      await json(route, workItems.find((item) => item.id === id));
+      return;
+    }
+    if (/\/api\/v1\/collaboration\/work-items\/[^/]+$/.test(url.pathname)) {
+      const id = url.pathname.split("/").at(-1);
+      if (method === "PATCH") {
+        workItems = workItems.map((item) =>
+          item.id === id
+            ? { ...item, ...body, version: Number(item.version) + 1 }
+            : item,
+        );
+      }
+      await json(route, workItems.find((item) => item.id === id));
       return;
     }
     if (/\/api\/v1\/core\/engagements\/[^/]+$/.test(url.pathname)) {

@@ -36,6 +36,7 @@ class FinanceRetentionMigrationUpgradeIT {
                     postgres.getJdbcUrl(), postgres.getUsername(),
                     postgres.getPassword())
                 .locations("classpath:db/migration")
+                .target("45")
                 .load()
                 .migrate();
 

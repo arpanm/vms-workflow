@@ -6,14 +6,15 @@ that can only be produced in an approved external environment. Detailed
 feature task and test catalogs remain authoritative for implementation
 requirements; this file answers what is still pending now.
 
-**Last reconciled:** 2026-07-30 (final V45 F05–F07 completion pass)
+**Last reconciled:** 2026-07-30 (V46 persona collaboration completion pass)
 **Implementation commits:** `6f3e9c9` (F01–F07) and `2709447`
 (repeatable local database startup/V44); the V45 completion pass is local only
 and not pushed
-**Current implementation scope:** V45 is the latest production migration; V42
+**Current implementation scope:** V46 is the latest production migration; V42
 is the repeated-reopen invariant, V43 is the durable migration queue, V44
 hardens released V39/V40 functions without changing their checksums and V45
-governs finance-artifact retention/disposal. `dev:all` preserves
+governs finance-artifact retention/disposal and V46 implements client
+onboarding, scoped permissions and collaborative work items. `dev:all` preserves
 checksum-incompatible databases and automatically selects a deterministic
 compatible database. Local product implementation is complete.
 **Production release state:** `NO-GO / ACTION_REQUIRED`; local synthetic or
@@ -25,12 +26,13 @@ capacity, recovery or human approval gates.
 | Work item | State | Completed evidence | Still required |
 |---|---|---|---|
 | F01 core administration | `LOCAL PRODUCT COMPLETE` | V34, typed Java APIs, React administration flows, approval engine, F04 governed-reopen bridge and permanent E2E catalog are implemented. Focused PostgreSQL verification passes 45/45; current cross-feature aggregate evidence is preserved below. | No local product task; production identity remains external. |
+| Persona collaboration | `LOCAL PRODUCT COMPLETE` | All 45 atomic stories are documented and linked; V46/API/UI implement the previously missing onboarding and work-item flows. Focused backend 5/5, browser 2/2, frontend 123/123 and full Maven 352/352 pass. | No pending local persona-story implementation or failing test; external release gates remain below. |
 | F02 workforce/attendance | `LOCAL PRODUCT COMPLETE` | V35 plus V37 implement aliases, allocations, calendars/leave governance, breaks, versioned shift policies, overnight/split-session rules, exact roster readiness and immutable roster snapshots with manager React flows. Focused PostgreSQL passes administration 4/4 and attendance 22/22; browser passes 8/8. | Real greytHR tenant/cutover, production IdP and controlled staging/load acceptance remain external. |
 | F03 delivery/Linear | `LOCAL PRODUCT COMPLETE` | V36/V38/V39 implement replay/reconciliation operations, revision comparison, delegated approval lineage/quorum de-duplication, bounded cursor checkpoints and least-privilege/OpenAPI/failure-injection artifacts. Focused PostgreSQL passes 19/19; browser passes 9/9 and the final three-project locator recovery passes 3/3. | Live Linear/mail acceptance remains external. |
 | F04 certification/confirmation | `LOCAL PRODUCT COMPLETE` | V11–V13 vertical plus cross-month certification/confirmation inboxes, operations health and exact-version reasoned replay UI are implemented. The new PostgreSQL inbox/operations case passes 1/1; typecheck and focused Vitest 6/6 pass. | All remaining provider/deployment gates are external. |
 | F05 evidence/invoice/reporting | `LOCAL PRODUCT COMPLETE` | V45 governed retention/disposal; backend/shared 33/33, browser 7/7 and system 4/4 pass. | External provider/deployment/Procurement/scale gates. |
 | F06 historical migration | `LOCAL PRODUCT COMPLETE` | Scan-before-parse quarantine, effective finalized roster reconciliation and stale-approval protection; backend 32/32, browser 8/8 and system 7/7 pass. | External cutover/source-owner/storage/scale/DR gates. |
-| F07 hardening/go-live | `LOCAL IMPLEMENTATION COMPLETE / RELEASE NO-GO` | V42–V45 controls; checksum-compatible `dev:all`; frontend 120/120, Maven 347/347, browser 292/292, system 7/7, self-test 9/9 and SDLC pass. Nothing was pushed. | Real 24-hour soak (F07-T057), verified post-fix DR/reconciliation (F07-T066/T067), exact-clean-commit artifact execution (F07-T070), then external approvals. |
+| F07 hardening/go-live | `LOCAL IMPLEMENTATION COMPLETE / RELEASE NO-GO` | V42–V46 controls; checksum-compatible `dev:all`; frontend 123/123, Maven 352/352, prior browser 294/294, final browser 293/294 plus exact recovery 1/1, system 7/7, self-test 9/9 and SDLC pass. Nothing was pushed. | Real 24-hour soak (F07-T057), verified post-fix DR/reconciliation (F07-T066/T067), exact-clean-commit artifact execution (F07-T070), then external approvals. |
 
 ## Consolidated local execution backlog
 
@@ -40,7 +42,7 @@ under each feature below.
 
 | ID | Feature | Pending local subtask | Required closure evidence |
 |---|---|---|---|
-| LOCAL-FINAL-REGRESSION | Cross-feature | Complete. Historical failed runs remain in the append-only regression ledger. | Maven 347/347 and browser 292/292 pass |
+| LOCAL-FINAL-REGRESSION | Cross-feature | Complete. Historical failed runs remain in the append-only regression ledger. | Maven 352/352; prior browser 294/294; final browser 293/294 plus exact recovery 1/1 |
 | F07-T057 | F07 | Run the real 24-hour production-like soak. | Timestamped 24-hour result and owner approval |
 | F07-T066/T067 | F07 | Complete and verify the post-fix recovery-boundary/DR rehearsal. Two attempts failed closed on archive validation; the validator was fixed, but the third run was interrupted before reconciliation. | Successful restore, reconciliation and boundary evidence |
 | F07-T070 | F07 | Execute the implemented deterministic artifact/provenance manifest on the final clean candidate commit. | Artifact digests, attestations and exact commit |

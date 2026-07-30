@@ -8,7 +8,7 @@ The one-page queue of all unfinished local subfeatures, active findings,
 pending tests and external gates is
 [PENDING_WORK.md](PENDING_WORK.md).
 
-**Last updated:** 2026-07-30 (final V45 F05–F07 completion pass)
+**Last updated:** 2026-07-30 (V46 persona collaboration completion pass)
 **Implementation commits:** `6f3e9c9` (F01–F07 product workflows) and
 `2709447` (repeatable local database startup/V44); the V45 completion pass is
 included in the final local closeout commit and is not pushed
@@ -16,11 +16,12 @@ included in the final local closeout commit and is not pushed
 lifecycle completion, F03 editable delivery drafts, F04 governed artifact
 upload/scan and withdrawal, F05 aggregate/concurrency hardening, F06
 registry-driven validation, and F07 typed release evidence. Production Flyway
-migrations now run through V45 (V42 is the repeated-reopen invariant, V43 is
+migrations now run through V46 (V42 is the repeated-reopen invariant, V43 is
 the durable asynchronous migration queue, V44 additively hardens the
-already-released V39/V40 functions and V45 governs finance-artifact
-retention/disposal). The latest frontend gate passes
-typecheck, 28 files/120 Vitest tests and the production build; the SDLC manifest
+already-released V39/V40 functions, V45 governs finance-artifact
+retention/disposal and V46 adds client onboarding, scoped RBAC and collaborative
+work items). The latest frontend gate passes
+typecheck, 29 files/123 Vitest tests and the production build; the SDLC manifest
 gate passes all eight feature manifests and preserves distinct Sol
 codegen/Terra review models. Focused PostgreSQL evidence passes F02 24/24,
 F04 10/10, F06 19/19 and all agent-owned F03/F05 concurrency cases. The
@@ -30,8 +31,11 @@ dedicated `vms_workflow_local_v45` fixture database. A real stale-database
 `dev:all` startup preserved the checksum-incompatible database, selected a
 deterministic compatibility database, validated/applied all 51
 production/local migrations and reached Spring and Vite readiness.
-The final aggregate Maven verification passes 74 unit plus 273 integration
-tests (347/347), and the final browser aggregate passes 292/292. Live
+The V46 collaboration slice passes 5/5 PostgreSQL integration cases and 2/2
+browser journeys; full Maven passes 74 unit + 278 integration = 352/352.
+The first full browser aggregate passes 294/294; after the final collaboration
+UI expansion, the full rerun passed 293/294 with one unrelated resource-bound
+WebKit timeout, and its exact recovery passed 1/1. Live
 providers, production
 BFF/identity, legal/privacy decisions, production-like soak/DR/deployment and
 human approval remain external and must not be represented as local release
@@ -43,9 +47,10 @@ acceptance.
 
 | Lane | Result | Interpretation |
 |---|---|---|
-| Full Maven | **74 unit + 273 integration = 347/347 passed** | Zero failures, errors or skips; BUILD SUCCESS. |
-| Full browser | **292/292 passed** | Final full Chromium regression after all implementation. |
-| Frontend | typecheck pass; lint 0 errors/13 warnings; Vitest 28 files, 120/120; build 3,042 modules | Warnings are 6 Fast Refresh and 7 existing hook-dependency warnings; build has only the >500 kB advisory. |
+| Full Maven | **74 unit + 278 integration = 352/352 passed** | Zero failures, errors or skips; BUILD SUCCESS after the V44→V45 historical-upgrade test was bounded to its intended target. |
+| Full browser | **Prior 294/294; final 293/294 + exact recovery 1/1** | Final affected V46 lane is 2/2; the one unrelated WebKit workforce timeout passed alone after host contention ended. |
+| Frontend | typecheck pass; lint 0 errors/13 warnings; Vitest 29 files, 123/123; build 3,050 modules | Warnings are 6 Fast Refresh and 7 existing hook-dependency warnings; build has only the >500 kB advisory. |
+| Persona collaboration | **45/45 stories implemented; V46 focused backend 5/5 and browser 2/2 passed** | Each story has an individual linked specification, UI flow, acceptance criteria, tests and status. |
 | System | F05 finance 4/4; F06 migration 7/7; F07 7/7 | Current ordered local-system evidence. |
 | Focused completion | F05 backend/shared 33/33 and browser 7/7; F06 backend 32/32 and browser 8/8 | Feature completion slices pass. |
 | Harness/static | F07 self-test 9/9; SDLC 8 features; diff check | Pass; SDLC preserves Sol codegen/Terra review separation. |
@@ -65,7 +70,8 @@ or reduce product flows. Nothing was pushed. External production gates remain
 | F04 Certification/confirmation | Local provider-neutral product complete; release acceptance blocked | V11–V13 plus V40 exact-version withdrawal and private governed multipart evidence storage/metadata/hash/scan transitions; cross-month operations UI | Live sender/mailbox/object storage/scanner, production grants/SSO/provider/F05 consumer and deployed acceptance | **Latest focused:** 10/10 PostgreSQL | None in focused lanes |
 | F05 Evidence/invoice/reporting | Local product complete; release acceptance blocked | Existing finance flows plus V45 governed finance-artifact retention/disposal, effective upload policy and typed concurrency handling | Production provider/deployment/Procurement acceptance and production-like scale approval | Backend/shared **33/33**; browser **7/7**; system **4/4**; full aggregate green | No unresolved local product failure |
 | F06 Historical migration | Local product complete; production cutover blocked | Existing migration flows plus scan-before-parse quarantine, latest effective finalized roster reconciliation, version reporting and stale-approval protection | Approved production scanner/storage, controlled capacity window, source-owner sign-off and masked rehearsal | Backend **32/32**; browser **8/8**; system **7/7**; full aggregate green | No unresolved local product failure |
-| F07 Hardening/go-live | Local implementation complete; production release blocked | V42–V45 controls, repeatable dynamic/checksum-compatible local startup, release manifest/provenance and containerized DR harness | T057, verified post-fix T066/T067, exact-clean-commit T070 execution and all external production gates | Frontend **120/120**; Maven **347/347**; browser **292/292**; product system **7/7**; self-test **9/9**; SDLC passes | DR rehearsal evidence remains unverified; provider/legal/identity/deployment/soak/manual/UAT approval remains `ACTION_REQUIRED / NO-GO` |
+| Persona stories | Local product complete; external release gates unchanged | 45 atomic stories across platform admin, client, ArrowFoundry admin/practitioner and Procurement; V46 plus existing F02–F05 flows | Only external identity/provider/deployment/human acceptance gates | Frontend **123/123**; collaboration backend **5/5**; collaboration browser **2/2**; full Maven **352/352** | No unresolved local persona-story failure |
+| F07 Hardening/go-live | Local implementation complete; production release blocked | V42–V46 controls, repeatable dynamic/checksum-compatible local startup, release manifest/provenance and containerized DR harness | T057, verified post-fix T066/T067, exact-clean-commit T070 execution and all external production gates | Frontend **123/123**; Maven **352/352**; browser prior **294/294**, final **293/294 + 1/1 recovery**; product system **7/7**; self-test **9/9**; SDLC passes | DR rehearsal evidence remains unverified; provider/legal/identity/deployment/soak/manual/UAT approval remains `ACTION_REQUIRED / NO-GO` |
 
 ## Open issues and blockers
 

@@ -147,6 +147,15 @@ export default defineConfig({
       },
     },
     {
+      name: "collaboration-chromium",
+      testMatch: /collaboration\.spec\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        baseURL: "http://127.0.0.1:4173",
+        timezoneId: "Asia/Kolkata",
+      },
+    },
+    {
       name: "workforce-chromium",
       testMatch: /workforce\.spec\.ts/,
       use: {

@@ -6,8 +6,8 @@ Lovable, Supabase, Cloudflare and TanStack Start server dependencies have been
 removed.
 
 The implementation baseline is committed locally as `6f3e9c9`
-(`feat: finish F01-F07 governed product workflows`). The current F05–F07
-completion pass is also kept local and is not pushed.
+(`feat: finish F01-F07 governed product workflows`). The V46 persona-story
+completion pass is kept local and is not pushed.
 
 ## Current status
 
@@ -18,18 +18,23 @@ regression catalog is
 cross-feature list of unfinished local work, pending verification, active
 issues and external-only gates is
 [PENDING_WORK.md](docs/PENDING_WORK.md).
+The five requested persona narratives are decomposed into
+[45 independently traceable user stories](docs/user-stories/README.md), with
+one linked specification per story and a shared
+[execution ledger](docs/user-stories/TEST_EXECUTION.md).
 
 | Track | Status | Evidence |
 |---|---|---|
 | F00 foundation and SDLC harness | Implemented locally; staging backup/smoke inputs remain external blockers | [F00 tasks](docs/features/00-foundation/TASKS.md), [changelog](docs/features/00-foundation/CHANGELOG.md) |
 | F01 Java identity/core administration | V34 product vertical and governed F04 reopen bridge implemented; focused PostgreSQL verification passes 45/45 | [F01 tasks](docs/features/01-identity-core/TASKS.md), [codegen](docs/features/01-identity-core/CODEGEN.md), [architecture](docs/features/01-identity-core/ARCHITECTURE.md), [API](docs/features/01-identity-core/API_DOCUMENTATION.md), [UI](docs/features/01-identity-core/UI_DOCUMENTATION.md) |
+| Persona collaboration | V46 implements client onboarding/users/RBAC and collaborative work items with assignments, comments/mentions, links, estimates, effort, timeline filters, proxy/bulk creation, delivery updates and L1/L2 approvals | [45-story catalog](docs/user-stories/README.md), [test execution](docs/user-stories/TEST_EXECUTION.md), [E2E catalog](docs/testing/E2E_REGRESSION_CASES.md) |
 | F01 production identity/provisioning | Blocked until an OIDC provider, same-origin BFF login endpoint and approved user/role provisioning path are selected/configured | [fix disposition](docs/features/01-identity-core/FIXES.md) |
 | F02 workforce/attendance | V35/V37 employee and serialized allocation lifecycle, governed workforce administration, overnight/split sessions, exact roster snapshots and month close with manager/self React flows | [F02 tasks](docs/features/02-workforce-attendance/TASKS.md), [fixes](docs/features/02-workforce-attendance/FIXES.md), [API](docs/features/02-workforce-attendance/API_DOCUMENTATION.md), [UI guide](docs/features/02-workforce-attendance/UI_DOCUMENTATION.md) |
 | F03 Delivery and Linear | V36/V38/V39 editable repeatable delivery drafts, revision/replay operations, delegated approval lineage and bounded cursor reconciliation with operator UI | [F03 tasks](docs/features/03-delivery-linear/TASKS.md), [codegen](docs/features/03-delivery-linear/CODEGEN.md), [API](docs/features/03-delivery-linear/API_DOCUMENTATION.md), [UI](docs/features/03-delivery-linear/UI_DOCUMENTATION.md) |
 | F04 Certification and confirmation | Provider-neutral Java/PostgreSQL + React vertical includes V40 private governed uploads/scans, exact-version withdrawal, cross-month inboxes and operations health; live provider/deployment gates remain external | [F04 tasks](docs/features/04-certification-confirmation/TASKS.md), [evidence](docs/features/04-certification-confirmation/CODEGEN.md), [API](docs/features/04-certification-confirmation/API_DOCUMENTATION.md), [UI](docs/features/04-certification-confirmation/UI_DOCUMENTATION.md) |
 | F05 evidence, invoice and reporting | Local product complete, including governed finance-artifact retention/disposal in V45; focused backend/shared 33/33, intercepted browser 7/7 and system 4/4 pass. External scale/provider/release gates remain ACTION_REQUIRED. | [F05 status](docs/FEATURE_STATUS.md), [F05 E2E catalog](docs/testing/E2E_REGRESSION_CASES.md), [F05 closure](docs/features/05-evidence-invoice-reporting/FINAL_CLOSURE_REVIEW.md) |
 | F06 historical migration | Local product complete, including scan-before-parse quarantine, effective finalized roster reconciliation and stale-approval protection; focused backend 32/32, intercepted browser 8/8 and system 7/7 pass. | [F06 status](docs/FEATURE_STATUS.md), [tasks](docs/features/06-historical-migration/TASKS.md), [tests](docs/features/06-historical-migration/TEST_CASES.md), [test issues](docs/features/06-historical-migration/TEST_ISSUES.md), [API](docs/features/06-historical-migration/API_DOCUMENTATION.md), [UI](docs/features/06-historical-migration/UI_DOCUMENTATION.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md) |
-| F07 hardening/go-live | Current production chain is V1–V45 (V45 adds governed finance retention/disposal); ordered product system verification passes 7/7, the full regression is green and checksum-incompatible local databases are preserved with an automatically selected compatibility database. Production release and unfinished long-running/DR evidence remain NO-GO/ACTION_REQUIRED. | [status](docs/FEATURE_STATUS.md), [pending work](docs/PENDING_WORK.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md), [testing guide](docs/testing/README.md), [tasks](docs/features/07-hardening-go-live/TASKS.md), [tests](docs/features/07-hardening-go-live/TEST_CASES.md), [automation](docs/features/07-hardening-go-live/TEST_AUTOMATION.md), [review status](docs/features/07-hardening-go-live/FINAL_REVIEW.md), [open issues](docs/features/07-hardening-go-live/FINAL_ISSUES.md) |
+| F07 hardening/go-live | Current production chain is V1–V46 (V46 adds governed client onboarding and work-item collaboration); ordered product system verification passes 7/7, Maven passes 352/352, and checksum-incompatible local databases are preserved with an automatically selected compatibility database. Production release and unfinished long-running/DR evidence remain NO-GO/ACTION_REQUIRED. | [status](docs/FEATURE_STATUS.md), [pending work](docs/PENDING_WORK.md), [regression catalog](docs/testing/E2E_REGRESSION_CASES.md), [testing guide](docs/testing/README.md), [tasks](docs/features/07-hardening-go-live/TASKS.md), [tests](docs/features/07-hardening-go-live/TEST_CASES.md), [automation](docs/features/07-hardening-go-live/TEST_AUTOMATION.md), [review status](docs/features/07-hardening-go-live/FINAL_REVIEW.md), [open issues](docs/features/07-hardening-go-live/FINAL_ISSUES.md) |
 
 Production release remains blocked until the identity/BFF decision and staging
 tenant-isolation gate are complete. Local feature development uses explicit
@@ -71,7 +76,7 @@ database URL, issuer/JWKS URL, backend proxy target and frontend URL to every
 dependent process. The selected values are written to the ignored
 `.local-dev/runtime.env` file and printed after startup. `Ctrl+C` stops the
 Java/Node services while retaining the PostgreSQL container and named volume.
-Development fixtures use the dedicated `vms_workflow_local_v45` database,
+Development fixtures use a dedicated checksum-compatible local database,
 keeping the normal `vms_workflow` database's Flyway history production-only.
 When Flyway detects an immutable-history checksum mismatch, the launcher
 preserves that database, derives a deterministic database name from the current
@@ -122,17 +127,17 @@ npm run e2e
 npm run regression
 ```
 
-The production Flyway chain is V1–V45: V42 enforces the repeated-reopen
+The production Flyway chain is V1–V46: V42 enforces the repeated-reopen
 invariant, V43 provides the durable asynchronous migration queue, V44 hardens
 the legacy V39/V40 trigger functions without changing their immutable released
-migrations, and V45 adds governed finance-artifact retention/disposal.
-The final aggregate Maven verification passes 74 unit plus 273 integration
-tests (347/347), with zero failures, errors or skips. The final Playwright
-Chromium regression passes 292/292.
+migrations, V45 adds governed finance-artifact retention/disposal, and V46
+adds client onboarding, scoped permissions and collaborative work items.
+The final aggregate Maven and browser counts are maintained in
+[FEATURE_STATUS.md](docs/FEATURE_STATUS.md).
 
 Current frontend evidence passes typecheck, lint with 0 errors and 13 warnings
-(6 Fast Refresh and 7 existing hook-dependency warnings), Vitest 28 files and
-120/120 tests, and production build (3,042 modules) with only the existing
+(6 Fast Refresh and 7 existing hook-dependency warnings), Vitest 29 files and
+123/123 tests, and production build (3,050 modules) with only the existing
 >500 kB chunk advisory. Current system lanes pass F05 finance 4/4, F06
 migration 7/7 and F07 7/7. Static/harness evidence passes F07 self-test 9/9,
 the eight-feature SDLC model-separation check and `git diff --check`.
